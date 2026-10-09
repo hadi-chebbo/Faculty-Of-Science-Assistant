@@ -1,0 +1,44 @@
+{
+  "name": "university-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "db:migrate": "node --env-file-if-exists=.env ./node_modules/sequelize-cli/lib/sequelize db:migrate",
+    "db:migrate:undo": "node --env-file-if-exists=.env ./node_modules/sequelize-cli/lib/sequelize db:migrate:undo",
+    "db:migrate:status": "node --env-file-if-exists=.env ./node_modules/sequelize-cli/lib/sequelize db:migrate:status",
+    "db:migration:create": "node --env-file-if-exists=.env ./node_modules/sequelize-cli/lib/sequelize migration:generate --name"
+  },
+  "dependencies": {
+    "next": "16.4.0",
+    "pg": "^8.23.1",
+    "pg-hstore": "^2.3.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "sequelize": "^6.37.8",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.0",
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^24.19.1",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.0",
+    "sequelize-cli": "^6.6.5",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
