@@ -1,4 +1,4 @@
-import { getSequelize } from "@/lib/db";
+import { getSequelize } from "@/db/sequelize";
 
 // Route handlers are dynamic by default under cacheComponents, so this is never cached.
 // Liveness plus database reachability. Never returns error details to the caller.

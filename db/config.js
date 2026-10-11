@@ -1,4 +1,4 @@
-// Read by sequelize-cli only. The application uses src/lib/db.ts.
+// Read by sequelize-cli only. The application uses src/db/sequelize.ts.
 // DATABASE_URL is loaded from .env by the db:* npm scripts.
 module.exports = {
   url: process.env.DATABASE_URL,
