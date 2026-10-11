@@ -46,6 +46,10 @@ mock exam generation, personalization.
   official university material.
 - University material is not published publicly until the faculty has
   approved its use. Until then, use seed/sample data.
+- Seed data is placeholder during development: obviously fake course codes,
+  titles and resources. The real course list and files are loaded in a
+  separate data-gathering phase; do not ask for them or invent real-looking
+  ones before then.
 - When a requirement is ambiguous, ask; do not invent product behaviour.
 
 ## Domain model (proposed)
@@ -55,7 +59,11 @@ mock exam generation, personalization.
   solution, other), title, description, academic year, exam session
   (partial, final, second — exams only), language (en, fr), file reference,
   optional link to the resource it is a solution of, published flag.
-- User (role: student or admin), Bookmark, Completion — added with accounts.
+- User: email (stored lowercase), optional name, password hash, role
+  (student or admin).
+- RefreshToken: belongs to a user; token hash, family id, expiry, revoked-at.
+- Bookmark and Completion: each one row per (user, resource). A completion
+  means the student explicitly marked the resource done; un-marking deletes it.
 
 ## Stack (proposed)
 
@@ -67,14 +75,24 @@ mock exam generation, personalization.
 - Package manager: npm. Node 22+. `@types/node` is kept at 24.
 - S3-compatible object storage for files, delivered through short-lived
   signed URLs.
-- Tailwind CSS with shadcn/ui components.
+- Tailwind CSS with shadcn/ui (confirmed). Build UI from shadcn/ui components;
+  add each one through its CLI as it is needed, and do not hand-roll a
+  component that shadcn/ui already provides or add another component library.
 - Zod for validating all external input.
 - Vitest for unit/integration tests, Playwright for the core user journeys.
 - Hosting: Vercel (app), Neon (Postgres), Cloudflare R2 (files).
-- Admin signs in with email and password; the single admin account is created
-  by a seed script, with no public sign-up. Student sign-in method is decided
-  when accounts are built.
-- Auth library and error tracking: not yet decided.
+- Auth (owner's decision): email and password, with short-lived stateless
+  access tokens and long-lived refresh tokens. Refresh tokens are stored only
+  as SHA-256 hashes in `refresh_tokens`, rotated on every use, and grouped by
+  `family_id` so a reused token revokes its whole chain. Our own tables and
+  code; no auth framework.
+- The single admin account is created by a seed script; there is no public
+  sign-up for admins.
+- Migration style: one table per file; Sequelize API (`createTable`,
+  `addConstraint`, `addIndex`), not raw SQL; `Sequelize.literal` only for
+  checks that need a function or compare columns; `up` in a transaction;
+  timestamps default with `Sequelize.fn('now')`, never `Sequelize.NOW`.
+- Error tracking: not yet decided.
 
 ## Engineering rules
 
