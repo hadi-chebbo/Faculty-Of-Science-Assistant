@@ -44,6 +44,30 @@ npm run db:migrate:status
 Every schema change is a migration. Migrations are plain CommonJS files in `db/migrations`,
 and each must implement a working `down`. Set `DATABASE_SSL=true` for hosted databases such as Neon.
 
+### Running migrations against Neon
+
+Create a separate, gitignored file `.env.neon` next to `.env`, once, with two lines:
+
+```
+DATABASE_URL=<Neon direct connection string, not the "-pooler" one>
+DATABASE_SSL=true
+```
+
+Then look first, and migrate:
+
+```bash
+npm run db:migrate:status:neon
+npm run db:migrate:neon
+```
+
+These scripts read only `.env.neon`, never `.env`, and fail immediately if the file is missing.
+
+- Do not name the file `.env.production` or `.env.local`: Next.js loads those automatically.
+- Never `export DATABASE_URL` in your terminal. A variable already set in the shell takes
+  precedence over any env file, so both the local and the Neon scripts would use it.
+- There is deliberately no Neon undo or seed script. Rolling back or seeding production
+  must stay a deliberate manual command.
+
 ## Seeding
 
 ```bash
