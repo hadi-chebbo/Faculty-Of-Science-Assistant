@@ -41,3 +41,26 @@ export function SemesterSkeleton() {
     </div>
   );
 }
+
+export function ExamsFiltersSkeleton() {
+  return (
+    <div aria-hidden>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-[4.25rem] w-full" />
+        ))}
+      </div>
+      <Skeleton className="mt-3 h-11 w-20 md:h-9" />
+    </div>
+  );
+}
+
+export function ExamsListSkeleton() {
+  return (
+    <div className="space-y-2" aria-hidden>
+      {Array.from({ length: 5 }, (_, i) => (
+        <Skeleton key={i} className="h-[4.25rem] w-full" />
+      ))}
+    </div>
+  );
+}
