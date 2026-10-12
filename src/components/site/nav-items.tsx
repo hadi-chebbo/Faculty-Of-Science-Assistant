@@ -36,9 +36,10 @@ export function NavItems({ variant }: { variant: "top" | "bottom" }) {
         const className = cn(
           "flex items-center text-sm font-medium",
           bottom ? "flex-1 flex-col justify-center gap-0.5 text-xs" : "gap-1.5 rounded-md px-3 py-1.5",
-          active ? "text-link" : "text-muted-foreground",
+          active ? "text-link md:bg-muted" : "text-muted-foreground",
           !href && "cursor-not-allowed opacity-60",
-          href && !active && "hover:text-heading",
+          href && !active && "hover:text-heading md:hover:bg-muted/60",
+          href && "outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
         );
         const content = (
           <>

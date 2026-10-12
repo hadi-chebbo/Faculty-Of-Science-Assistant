@@ -1,5 +1,7 @@
+import { FileText, SearchX } from "lucide-react";
 import Link from "next/link";
 import { ResourceRow } from "@/components/site/resource-row";
+import { StateBlock } from "@/components/site/state-block";
 import { Button } from "@/components/ui/button";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { readForPage } from "@/lib/page-errors";
@@ -23,21 +25,25 @@ export async function ExamResults({ params }: { params: ExamParams }) {
   if (result.items.length === 0) {
     const none = result.total === 0 && !hasActiveFilters(params);
     return (
-      <div className="rounded-lg border bg-card p-4">
-        <p>{none ? "No exams yet." : "No exams match these filters."}</p>
-        {!none && (
-          <Button asChild variant="outline" className="mt-3 h-11 md:h-9">
-            <Link href="/exams">Clear filters</Link>
-          </Button>
-        )}
-      </div>
+      <StateBlock
+        icon={none ? FileText : SearchX}
+        actions={
+          !none && (
+            <Button asChild variant="outline" className="h-11 md:h-9">
+              <Link href="/exams">Clear filters</Link>
+            </Button>
+          )
+        }
+      >
+        {none ? "No exams yet." : "No exams match these filters."}
+      </StateBlock>
     );
   }
 
   const { pages, previous, next } = pagerLinks(params, result.total, result.pageSize);
   return (
     <>
-      <p className="mb-3 text-sm" aria-live="polite">
+      <p className="mb-3 text-sm font-medium" aria-live="polite">
         {result.total} {result.total === 1 ? "exam" : "exams"}
         {pages > 1 && ` - page ${result.page} of ${pages}`}
       </p>
@@ -47,7 +53,7 @@ export async function ExamResults({ params }: { params: ExamParams }) {
         ))}
       </ul>
       {pages > 1 && (
-        <Pagination className="mt-6" aria-label="Exam pages">
+        <Pagination className="mt-8" aria-label="Exam pages">
           <PaginationContent>
             {previous && (
               <PaginationItem>
