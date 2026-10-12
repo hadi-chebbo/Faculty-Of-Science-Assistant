@@ -34,7 +34,7 @@ module.exports = {
       );
       const [resources] = await queryInterface.sequelize.query(
         `SELECT r.id FROM resources r JOIN courses c ON c.id = r.course_id
-         WHERE c.code LIKE 'DEMO%' AND r.is_published ORDER BY r.id LIMIT 3`,
+         WHERE c.code LIKE 'DEMO%' AND r.is_published ORDER BY r.title LIMIT 3`,
         { transaction },
       );
       if (resources.length < 3) {

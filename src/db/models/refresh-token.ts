@@ -14,7 +14,7 @@ export class RefreshToken extends Model<
   InferAttributes<RefreshToken>,
   InferCreationAttributes<RefreshToken>
 > {
-  declare id: CreationOptional<number>;
+  declare id: CreationOptional<string>;
   declare userId: ForeignKey<User["id"]>;
   declare tokenHash: string;
   declare familyId: string;
@@ -28,8 +28,8 @@ export class RefreshToken extends Model<
 export function initRefreshToken(sequelize: Sequelize): typeof RefreshToken {
   RefreshToken.init(
     {
-      id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-      userId: { type: DataTypes.INTEGER, allowNull: false },
+      id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+      userId: { type: DataTypes.UUID, allowNull: false },
       tokenHash: { type: DataTypes.STRING(64), allowNull: false },
       familyId: { type: DataTypes.UUID, allowNull: false },
       expiresAt: { type: DataTypes.DATE, allowNull: false },

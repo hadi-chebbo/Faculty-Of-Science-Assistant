@@ -15,7 +15,7 @@ import type { Completion } from "./completion";
 import type { Course } from "./course";
 
 export class Resource extends Model<InferAttributes<Resource>, InferCreationAttributes<Resource>> {
-  declare id: CreationOptional<number>;
+  declare id: CreationOptional<string>;
   declare courseId: ForeignKey<Course["id"]>;
   declare type: ResourceType;
   declare title: string;
@@ -40,8 +40,8 @@ export class Resource extends Model<InferAttributes<Resource>, InferCreationAttr
 export function initResource(sequelize: Sequelize): typeof Resource {
   Resource.init(
     {
-      id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-      courseId: { type: DataTypes.INTEGER, allowNull: false },
+      id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+      courseId: { type: DataTypes.UUID, allowNull: false },
       type: { type: DataTypes.STRING(20), allowNull: false, validate: { isIn: [[...RESOURCE_TYPES]] } },
       title: { type: DataTypes.STRING(200), allowNull: false },
       description: { type: DataTypes.TEXT, allowNull: true },
@@ -55,7 +55,7 @@ export function initResource(sequelize: Sequelize): typeof Resource {
       },
       fileKey: { type: DataTypes.TEXT, allowNull: true },
       externalUrl: { type: DataTypes.TEXT, allowNull: true },
-      solutionOfId: { type: DataTypes.INTEGER, allowNull: true },
+      solutionOfId: { type: DataTypes.UUID, allowNull: true },
       isPublished: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       createdAt: DataTypes.DATE,
       updatedAt: DataTypes.DATE,

@@ -12,7 +12,7 @@ import type { Resource } from "./resource";
 import type { User } from "./user";
 
 export class Completion extends Model<InferAttributes<Completion>, InferCreationAttributes<Completion>> {
-  declare id: CreationOptional<number>;
+  declare id: CreationOptional<string>;
   declare userId: ForeignKey<User["id"]>;
   declare resourceId: ForeignKey<Resource["id"]>;
   declare createdAt: CreationOptional<Date>;
@@ -24,9 +24,9 @@ export class Completion extends Model<InferAttributes<Completion>, InferCreation
 export function initCompletion(sequelize: Sequelize): typeof Completion {
   Completion.init(
     {
-      id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-      userId: { type: DataTypes.INTEGER, allowNull: false },
-      resourceId: { type: DataTypes.INTEGER, allowNull: false },
+      id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+      userId: { type: DataTypes.UUID, allowNull: false },
+      resourceId: { type: DataTypes.UUID, allowNull: false },
       createdAt: DataTypes.DATE,
     },
     { sequelize, tableName: "completions", underscored: true, updatedAt: false },

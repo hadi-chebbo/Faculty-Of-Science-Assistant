@@ -9,14 +9,14 @@ module.exports = {
       await queryInterface.createTable('resources',
         {
           id: {
-            type: Sequelize.INTEGER,
+            type: Sequelize.UUID,
             primaryKey: true,
-            autoIncrement: true,
             allowNull: false,
+            defaultValue: Sequelize.literal('gen_random_uuid()'),
           },
 
           course_id: {
-            type: Sequelize.INTEGER,
+            type: Sequelize.UUID,
             allowNull: false,
             references: { model: 'courses', key: 'id' },
             onDelete: 'RESTRICT',
@@ -67,7 +67,7 @@ module.exports = {
           },
 
           solution_of_id: {
-            type: Sequelize.INTEGER,
+            type: Sequelize.UUID,
             allowNull: true,
             references: { model: 'resources', key: 'id' },
             onDelete: 'SET NULL',
