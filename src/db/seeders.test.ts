@@ -7,6 +7,7 @@ import { closeDb, truncateAllTables } from "./test-utils";
 
 const root = path.resolve(import.meta.dirname, "../..");
 const cli = path.join(root, "node_modules/sequelize-cli/lib/sequelize");
+const FULL_CODES = ["DEMO310", "DEMO410", "DEMO510", "DEMO610"];
 const ADMIN_PASSWORD = "a-long-test-password";
 
 // A controlled child environment: nothing from .env or the parent leaks in.
@@ -63,7 +64,7 @@ describe("seeders", () => {
     const { sequelize } = getDb();
     const query = async (sql: string) => (await sequelize.query(sql))[0] as Record<string, unknown>[];
 
-    expect(await count("courses")).toBe(8);
+    expect(await count("courses")).toBe(12);
     expect(await query("SELECT 1 FROM resources r JOIN courses c ON c.id = r.course_id WHERE c.code = 'DEMO602'")).toHaveLength(0);
     const badPublished = await query(
       "SELECT 1 FROM resources WHERE is_published AND num_nonnulls(file_key, external_url) <> 1",
@@ -111,8 +112,10 @@ describe("seeders", () => {
       expect(runCli("db:seed:all", FULL_ENV).status).toBe(0);
       const first = await chapterState();
       const chapters = first.chapters as { code: string; title: string; attached: number }[];
-      expect(chapters).toHaveLength(9);
-      expect(new Set(chapters.map((c) => c.code))).toEqual(new Set(["DEMO301", "DEMO302", "DEMO501"]));
+      expect(chapters).toHaveLength(9 + 4 * 6);
+      expect(new Set(chapters.map((c) => c.code))).toEqual(
+        new Set(["DEMO301", "DEMO302", "DEMO501", ...FULL_CODES]),
+      );
       expect(chapters.some((c) => c.title === "Sample chapter 1")).toBe(true);
       expect(chapters.some((c) => c.attached > 0)).toBe(true);
       // Exercises belong to chapters too, not only lectures and notes.
@@ -143,7 +146,84 @@ describe("seeders", () => {
       const again = runCli("db:seed:all", FULL_ENV);
       expect(again.status, again.output).toBe(0);
       expect(await chapterState()).toEqual(expected);
-      expect(await count("courses")).toBe(8);
+      expect(await count("courses")).toBe(12);
+    });
+  });
+
+  describe("full demo courses", () => {
+    const codes = FULL_CODES.map((c) => `'${c}'`).join(",");
+    const query = async (sql: string) => (await getDb().sequelize.query(sql))[0] as Record<string, unknown>[];
+
+    beforeEach(() => {
+      expect(runCli("db:seed:all", FULL_ENV).status).toBe(0);
+    });
+
+    it("has six chapters per course with exactly one empty", async () => {
+      const rows = await query(
+        `SELECT c.code, count(*)::int AS chapters,
+                count(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM resources r WHERE r.chapter_id = ch.id))::int AS empty
+         FROM chapters ch JOIN courses c ON c.id = ch.course_id WHERE c.code IN (${codes}) GROUP BY c.code`,
+      );
+      expect(rows).toHaveLength(4);
+      for (const row of rows) expect([row.chapters, row.empty], String(row.code)).toEqual([6, 1]);
+    });
+
+    it("puts lectures, notes, exercises and solutions in chapters, and never exams", async () => {
+      for (const code of FULL_CODES) {
+        const types = await query(
+          `SELECT DISTINCT r.type FROM resources r JOIN courses c ON c.id = r.course_id
+           WHERE c.code = '${code}' AND r.chapter_id IS NOT NULL`,
+        );
+        expect(types.map((t) => t.type).sort(), code).toEqual(["exercise", "lecture", "notes", "solution"]);
+      }
+      expect(
+        await query("SELECT 1 FROM resources WHERE type = 'exam' AND chapter_id IS NOT NULL"),
+      ).toHaveLength(0);
+    });
+
+    it("covers several years and all sessions with exams, per course", async () => {
+      for (const code of FULL_CODES) {
+        const rows = await query(
+          `SELECT count(DISTINCT academic_year_start)::int AS years, count(DISTINCT exam_session)::int AS sessions
+           FROM resources r JOIN courses c ON c.id = r.course_id WHERE c.code = '${code}' AND r.type = 'exam'`,
+        );
+        expect(rows[0].years as number, code).toBeGreaterThanOrEqual(3);
+        expect(rows[0].sessions, code).toBe(3);
+      }
+    });
+
+    it("has a draft, an unlinked solution, a draft without source and material outside chapters", async () => {
+      for (const code of FULL_CODES) {
+        const [row] = await query(
+          `SELECT
+             count(*) FILTER (WHERE NOT is_published AND chapter_id IS NOT NULL AND external_url IS NOT NULL)::int AS draft,
+             count(*) FILTER (WHERE NOT is_published AND num_nonnulls(file_key, external_url) = 0)::int AS bare,
+             count(*) FILTER (WHERE type = 'solution' AND solution_of_id IS NULL)::int AS loose,
+             count(*) FILTER (WHERE chapter_id IS NULL AND type IN ('other', 'notes'))::int AS general
+           FROM resources r JOIN courses c ON c.id = r.course_id WHERE c.code = '${code}'`,
+        );
+        expect(row.draft, code).toBe(1);
+        expect(row.bare, code).toBe(1);
+        expect(row.loose, code).toBe(1);
+        expect(row.general as number, code).toBeGreaterThanOrEqual(3);
+      }
+    });
+
+    it("keeps every chapter link inside its own course and every published resource sourced once", async () => {
+      expect(
+        await query(
+          "SELECT 1 FROM resources r JOIN chapters ch ON ch.id = r.chapter_id WHERE ch.course_id <> r.course_id",
+        ),
+      ).toHaveLength(0);
+      expect(
+        await query("SELECT 1 FROM resources WHERE is_published AND num_nonnulls(file_key, external_url) <> 1"),
+      ).toHaveLength(0);
+    });
+
+    it("gives the same counts when seeded twice", async () => {
+      const before = { ...(await counts()), chapters: await count("chapters") };
+      expect(runCli("db:seed:all", FULL_ENV).status).toBe(0);
+      expect({ ...(await counts()), chapters: await count("chapters") }).toEqual(before);
     });
   });
 

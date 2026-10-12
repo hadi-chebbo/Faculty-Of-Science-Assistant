@@ -86,6 +86,91 @@ const CHAPTER_OF = [
   { course: 'DEMO501', title: 'Sample lecture 2', chapter: 2 },
 ];
 
+// Four "full" courses, one per semester, at about the volume of a real semester. They are generated
+// from a fixed description (no randomness, no clock), so every run produces identical rows.
+// Chapter 6 is left empty on purpose.
+const FULL_COURSES = [
+  { code: 'DEMO310', title: 'Sample Full Course A', semester: 3, years: [2022, 2023, 2024, 2025] },
+  { code: 'DEMO410', title: 'Sample Full Course B', semester: 4, years: [2022, 2023, 2024, 2025] },
+  { code: 'DEMO510', title: 'Sample Full Course C', semester: 5, years: [2022, 2023, 2024] },
+  { code: 'DEMO610', title: 'Sample Full Course D', semester: 6, years: [2022, 2023, 2024] },
+];
+const FULL_CHAPTER_TITLES = [1, 2, 3, 4, 5, 6].map((n) => `Sample chapter ${n}`);
+const SESSIONS = ['partial', 'final', 'second'];
+
+function buildFullCourse({ code, years }, c) {
+  const lower = code.toLowerCase();
+  let i = 0; // Running index that drives the language and description variation.
+  const base = (type, title, path, extra = {}) => ({
+    course: code,
+    type,
+    title,
+    path: `${lower}/${path}`,
+    ...(i % 7 === 3 ? { language: 'fr' } : {}),
+    ...(i++ % 6 === 1 ? { description: `Sample description of ${title.toLowerCase()}.` } : {}),
+    ...extra,
+  });
+  const resources = [];
+  const solutions = [];
+
+  for (let n = 1; n <= 5; n++) {
+    const lectures = 2 + ((n + c) % 2);
+    const sheets = 1 + ((n + c) % 3 === 0 ? 1 : 0);
+    for (let k = 1; k <= lectures; k++) {
+      resources.push(base('lecture', `Sample lecture ${n}.${k}`, `lecture-${n}-${k}`, { chapter: n }));
+    }
+    resources.push(base('notes', `Sample notes ${n}`, `notes-${n}`, { chapter: n }));
+    for (let k = 1; k <= sheets; k++) {
+      const title = `Sample exercise sheet ${n}.${k}`;
+      resources.push(base('exercise', title, `exercise-${n}-${k}`, { chapter: n, key: `${code} ${title}` }));
+      const unsolved = (n === 3 && k === 1) || (n * k + c) % 4 === 0;
+      if (!unsolved) {
+        solutions.push(base('solution', `${title} solution`, `exercise-${n}-${k}-solution`, { chapter: n, of: `${code} ${title}` }));
+      }
+    }
+  }
+
+  // Previous exams: every year x session except a few combinations, with about half solved.
+  let j = 0;
+  for (const year of years) {
+    for (const session of SESSIONS) {
+      if ((j + c) % 5 !== 4) {
+        const title = session === 'second' ? `Sample second session exam ${year}` : `Sample ${session} exam ${year}`;
+        resources.push(base('exam', title, `${session}-${year}`, { session, year, key: `${code} ${title}` }));
+        if (j % 2 === 0) {
+          solutions.push(base('solution', `${title} solution`, `${session}-${year}-solution`, { of: `${code} ${title}` }));
+        }
+      }
+      j++;
+    }
+  }
+
+  // Material outside chapters, an unlinked solution and two drafts.
+  resources.push(
+    base('other', 'Sample syllabus', 'syllabus'),
+    base('other', 'Sample reference sheet', 'reference'),
+    base('notes', 'Sample general notes', 'general-notes'),
+    base('solution', 'Sample extra solution', 'extra-solution'),
+    base('lecture', 'Sample draft lecture', 'draft-lecture', { chapter: 2, draft: true }),
+    base('notes', 'Sample draft with no source', 'draft', { draft: true, noSource: true }),
+  );
+  return { resources, solutions };
+}
+
+FULL_COURSES.forEach((course, c) => {
+  const { resources, solutions } = buildFullCourse(course, c);
+  COURSES.push({ code: course.code, title: course.title, semester: course.semester });
+  RESOURCES.push(...resources);
+  SOLUTIONS.push(...solutions);
+});
+
+// Chapters per course, and every resource that sits in one (the lists above plus the full courses).
+const CHAPTERS = new Map([
+  ...CHAPTER_COURSES.map((code) => [code, CHAPTER_TITLES]),
+  ...FULL_COURSES.map(({ code }) => [code, FULL_CHAPTER_TITLES]),
+]);
+const IN_CHAPTER = [...CHAPTER_OF, ...[...RESOURCES, ...SOLUTIONS].filter((r) => r.chapter)];
+
 async function deleteDemoData(queryInterface, transaction) {
   const { sequelize } = queryInterface;
   // Resources first (the course foreign key restricts deletion); this cascades bookmarks and completions.
@@ -145,10 +230,14 @@ module.exports = {
       );
 
       // Look up the ids of the resources that solutions point at.
-      const [resourceRows] = await queryInterface.sequelize.query(
-        'SELECT id, course_id, title FROM resources WHERE course_id IN (:ids)',
-        { transaction, replacements: { ids: [...courseIds.values()] } },
-      );
+      const loadResourceRows = async () =>
+        (
+          await queryInterface.sequelize.query(
+            'SELECT id, course_id, title FROM resources WHERE course_id IN (:ids)',
+            { transaction, replacements: { ids: [...courseIds.values()] } },
+          )
+        )[0];
+      let resourceRows = await loadResourceRows();
       const idFor = (courseCode, title) => {
         const row = resourceRows.find(
           (x) => x.course_id === courseIds.get(courseCode) && x.title === title,
@@ -169,12 +258,14 @@ module.exports = {
         { transaction },
       );
 
+      resourceRows = await loadResourceRows(); // Now including the solutions.
+
       // Chapters. The demo data is deleted and re-created above, so this is safe to run again
       // on a database that already has the demo courses and resources.
       await queryInterface.bulkInsert(
         'chapters',
-        CHAPTER_COURSES.flatMap((code) =>
-          CHAPTER_TITLES.map((title, i) => ({
+        [...CHAPTERS].flatMap(([code, titles]) =>
+          titles.map((title, i) => ({
             course_id: courseIds.get(code),
             position: i + 1,
             title,
@@ -185,7 +276,7 @@ module.exports = {
         { transaction },
       );
 
-      for (const { course, title, chapter } of CHAPTER_OF) {
+      for (const { course, title, chapter } of IN_CHAPTER) {
         await queryInterface.sequelize.query(
           'UPDATE resources SET chapter_id = (SELECT id FROM chapters WHERE course_id = :courseId AND position = :position) WHERE id = :resourceId',
           {
