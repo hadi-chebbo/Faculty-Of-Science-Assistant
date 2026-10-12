@@ -20,7 +20,7 @@ pages and route handlers  ->  services  ->  Sequelize models
 
 There is no repository layer. Sequelize models already are the data-access layer, and with six tables a repository would only re-export `findAll` under another name. The exception: when a query is reused or grows past a few lines (search will likely be the first), move it into a named query function beside the model.
 
-The `services` and `models` folders are planned and not built yet.
+Models live in `src/db/models` and services in `src/services` (one folder per entity, with `schemas.ts`, `types.ts`, the service file and its tests; shared `viewer.ts`, `errors.ts` and `visibility.ts` at the top).
 
 ## Rules for services
 
