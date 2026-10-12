@@ -154,3 +154,104 @@ describe("getCourseByCode", () => {
     await expect(getCourseByCode(null, "NOPE999")).rejects.toBeInstanceOf(NotFoundError);
   });
 });
+
+describe("getCourseByCode outline", () => {
+  async function seedChapters() {
+    const { Course, Chapter, Resource } = getDb();
+    const course = await Course.create({ code: "OUT301", title: "Outline course", semester: 3 });
+    const other = await Course.create({ code: "OUT302", title: "Other course", semester: 3 });
+    // Created out of order on purpose.
+    await Chapter.create({ courseId: course.id, position: 2, title: "Second" });
+    const one = await Chapter.create({ courseId: course.id, position: 1, title: "First" });
+    await Chapter.create({ courseId: course.id, position: 3, title: "Empty" });
+    const foreign = await Chapter.create({ courseId: other.id, position: 1, title: "Foreign" });
+    const make = (title: string, type: string, extra: Record<string, unknown> = {}) =>
+      Resource.create({ courseId: course.id, type, title, isPublished: true, externalUrl: SAMPLE_URL, ...extra } as never);
+    return { one, foreign, make };
+  }
+  const titles = (groups: { resources: { title: string }[] }[]) => groups.map((g) => g.resources.map((r) => r.title));
+
+  it("returns every chapter in position order, empty ones included", async () => {
+    const { one, make } = await seedChapters();
+    await make("Lecture", "lecture", { chapterId: one.id });
+    const { chapters } = (await getCourseByCode(null, "OUT301")).outline;
+    expect(chapters.map((c) => [c.position, c.title, c.itemCount])).toEqual([[1, "First", 1], [2, "Second", 0], [3, "Empty", 0]]);
+    expect(chapters[2].groups).toEqual([]);
+  });
+
+  it("groups a chapter by type in study order, only types that have rows", async () => {
+    const { one, make } = await seedChapters();
+    await make("An other", "other", { chapterId: one.id });
+    await make("An exercise", "exercise", { chapterId: one.id });
+    await make("A note", "notes", { chapterId: one.id });
+    await make("A lecture", "lecture", { chapterId: one.id });
+    const [chapter] = (await getCourseByCode(null, "OUT301")).outline.chapters;
+    expect(chapter.groups.map((g) => g.type)).toEqual(["lecture", "notes", "exercise", "other"]);
+    expect(chapter.itemCount).toBe(4);
+  });
+
+  it("does not list a linked solution on its own, but lists an unlinked one in its chapter or General", async () => {
+    const { one, make } = await seedChapters();
+    const exercise = await make("Exercise", "exercise", { chapterId: one.id });
+    await make("Linked solution", "solution", { solutionOfId: exercise.id, chapterId: one.id });
+    await make("Loose solution", "solution", { chapterId: one.id });
+    await make("General loose solution", "solution");
+    const { outline } = await getCourseByCode(null, "OUT301");
+    expect(titles(outline.chapters[0].groups)).toEqual([["Exercise"], ["Loose solution"]]);
+    expect(outline.chapters[0].itemCount).toBe(2);
+    expect(outline.chapters[0].groups[0].resources[0].solutions.map((s) => s.title)).toEqual(["Linked solution"]);
+    expect(titles(outline.general)).toEqual([["General loose solution"]]);
+  });
+
+  it("lists a solution whose target the viewer cannot see", async () => {
+    const { make } = await seedChapters();
+    const draft = await make("Draft exercise", "exercise", { isPublished: false });
+    await make("Solution of a draft", "solution", { solutionOfId: draft.id });
+    expect(titles((await getCourseByCode(null, "OUT301")).outline.general)).toEqual([["Solution of a draft"]]);
+    // The admin sees the target, so the solution is a link on its row instead.
+    expect(titles((await getCourseByCode(admin, "OUT301")).outline.general)).toEqual([["Draft exercise"]]);
+  });
+
+  it("hides drafts from anonymous visitors and shows them to an admin", async () => {
+    const { one, make } = await seedChapters();
+    await make("Draft lecture", "lecture", { chapterId: one.id, isPublished: false });
+    await make("Draft general", "notes", { isPublished: false });
+    await make("Draft exam", "exam", { isPublished: false, academicYearStart: 2024, examSession: "final" });
+    const anonymous = (await getCourseByCode(null, "OUT301")).outline;
+    expect(anonymous.chapters[0].itemCount).toBe(0);
+    expect(anonymous.general).toEqual([]);
+    expect(anonymous.exams).toEqual([]);
+    const asAdmin = (await getCourseByCode(admin, "OUT301")).outline;
+    expect(asAdmin.chapters[0].itemCount).toBe(1);
+    expect(titles(asAdmin.general)).toEqual([["Draft general"]]);
+    expect(asAdmin.exams.map((e) => e.title)).toEqual(["Draft exam"]);
+  });
+
+  it("keeps exams only in outline.exams, newest year first", async () => {
+    const { make } = await seedChapters();
+    // The database does not allow an exam in a chapter.
+    await make("Old exam", "exam", { academicYearStart: 2022, examSession: "final" });
+    await make("New exam", "exam", { academicYearStart: 2024, examSession: "partial" });
+    const { outline } = await getCourseByCode(null, "OUT301");
+    expect(outline.exams.map((e) => e.title)).toEqual(["New exam", "Old exam"]);
+    expect(outline.chapters.every((c) => c.itemCount === 0)).toBe(true);
+    expect(outline.general).toEqual([]);
+  });
+
+  it("treats a resource in a chapter of another course as General", async () => {
+    const { foreign, make } = await seedChapters();
+    await make("Misfiled", "lecture", { chapterId: foreign.id });
+    const { outline } = await getCourseByCode(null, "OUT301");
+    expect(titles(outline.general)).toEqual([["Misfiled"]]);
+    expect(outline.chapters.every((c) => c.itemCount === 0)).toBe(true);
+  });
+
+  it("gives a course without chapters no chapters and everything non-exam in General", async () => {
+    await seed();
+    const { outline, groups } = await getCourseByCode(null, "TEST301");
+    expect(outline.chapters).toEqual([]);
+    expect(titles(outline.general)).toEqual([["Published lecture"]]);
+    expect(outline.exams.map((e) => e.title)).toEqual(["Published exam"]);
+    expect(groups.map((g) => g.type)).toEqual(["lecture", "exam"]);
+  });
+});

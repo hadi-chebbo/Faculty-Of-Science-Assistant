@@ -7,7 +7,8 @@ import { parseInput } from "../validation";
 import { visibleResources } from "../visibility";
 import type { Viewer } from "../viewer";
 import { courseCodeSchema, semesterSchema } from "./schemas";
-import type { CourseDetail, CourseOption, CourseSummary } from "./types";
+import type { ResourceListItem } from "../resources/types";
+import type { CourseDetail, CourseOption, CourseOutline, CourseSummary, ResourceGroup } from "./types";
 
 export async function listCoursesBySemester(viewer: Viewer, semester: number): Promise<CourseSummary[]> {
   const parsedSemester = parseInput(semesterSchema, semester);
@@ -47,7 +48,7 @@ export async function getCourseByCode(viewer: Viewer, code: string): Promise<Cou
   const parsedCode = courseCodeSchema.safeParse(code);
   if (!parsedCode.success) throw new NotFoundError("Course not found");
 
-  const { Course, Resource, sequelize } = getDb();
+  const { Course, Chapter, Resource, sequelize } = getDb();
 
   // Course codes are unique regardless of letter case.
   const course = await Course.findOne({
@@ -69,5 +70,47 @@ export async function getCourseByCode(viewer: Viewer, code: string): Promise<Cou
       .map((r) => toResourceListItem(r, course.code, solutions.get(r.id) ?? [])),
   })).filter((g) => g.resources.length > 0);
 
-  return { code: course.code, title: course.title, semester: course.semester, groups };
+  // The by-chapter outline. Chapters come in one query; the resources are the ones already loaded.
+  const chapters = await Chapter.findAll({ where: { courseId: course.id }, order: [["position", "ASC"], ["id", "ASC"]] });
+  const chapterIds = new Set(chapters.map((c) => c.id));
+  const visibleIds = new Set(resources.map((r) => r.id));
+
+  const inChapter = new Map<string, ResourceListItem[]>();
+  const general: ResourceListItem[] = [];
+  const exams: ResourceListItem[] = [];
+  for (const r of resources) {
+    const item = toResourceListItem(r, course.code, solutions.get(r.id) ?? []);
+    if (r.type === "exam") {
+      exams.push(item);
+      continue;
+    }
+    // A solution linked to a visible resource already shows as a link on that resource's row.
+    if (r.type === "solution" && r.solutionOfId && visibleIds.has(r.solutionOfId)) continue;
+    // A chapter of another course (should never happen) counts as no chapter.
+    if (r.chapterId && chapterIds.has(r.chapterId)) {
+      const list = inChapter.get(r.chapterId) ?? [];
+      list.push(item);
+      inChapter.set(r.chapterId, list);
+    } else {
+      general.push(item);
+    }
+  }
+
+  const outline: CourseOutline = {
+    chapters: chapters.map((c) => {
+      const items = inChapter.get(c.id) ?? [];
+      return { id: c.id, position: c.position, title: c.title, itemCount: items.length, groups: groupByType(items) };
+    }),
+    general: groupByType(general),
+    exams,
+  };
+
+  return { code: course.code, title: course.title, semester: course.semester, groups, outline };
+}
+
+// Study order (RESOURCE_TYPES); only types that have rows.
+function groupByType(items: ResourceListItem[]): ResourceGroup[] {
+  return RESOURCE_TYPES.map((type) => ({ type, resources: items.filter((i) => i.type === type) })).filter(
+    (g) => g.resources.length > 0,
+  );
 }
