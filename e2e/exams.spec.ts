@@ -80,6 +80,24 @@ test("filters by course and session, and the URL carries them", async ({ page })
   await expectTitles(page, ["Sample final exam 2022"]);
 });
 
+// The full list no longer fits one page, so the complete order is checked on one full course:
+// newest academic year first, then partial, final, second session.
+test("a course's exams are ordered by year, then by session", async ({ page }) => {
+  await page.goto("/exams?course=DEMO310");
+  await expectTitles(page, [
+    "Sample final exam 2025",
+    "Sample second session exam 2025",
+    "Sample partial exam 2024",
+    "Sample final exam 2024",
+    "Sample second session exam 2024",
+    "Sample partial exam 2023",
+    "Sample second session exam 2023",
+    "Sample partial exam 2022",
+    "Sample final exam 2022",
+    "Sample second session exam 2022",
+  ]);
+});
+
 test("filters by semester and academic year", async ({ page }) => {
   await page.goto("/exams?semester=4");
   await expect(rows(page)).toHaveCount(13);
