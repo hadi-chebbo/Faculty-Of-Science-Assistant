@@ -3,7 +3,7 @@ import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { NotFoundError, ValidationError } from "../errors";
 import type { Viewer } from "../viewer";
-import { getCourseByCode, listCourses, listCoursesBySemester } from "./courses";
+import { getChapterPage, getCourseByCode, listCourses, listCoursesBySemester } from "./courses";
 
 const SAMPLE_URL = "https://example.com/sample";
 const admin: Viewer = { id: "11111111-1111-4111-8111-111111111111", role: "admin" };
@@ -253,5 +253,72 @@ describe("getCourseByCode outline", () => {
     expect(titles(outline.general)).toEqual([["Published lecture"]]);
     expect(outline.exams.map((e) => e.title)).toEqual(["Published exam"]);
     expect(groups.map((g) => g.type)).toEqual(["lecture", "exam"]);
+  });
+});
+
+describe("getChapterPage", () => {
+  async function seedPages() {
+    const { Course, Chapter, Resource } = getDb();
+    const course = await Course.create({ code: "CHP301", title: "Chapter course", semester: 3 });
+    const other = await Course.create({ code: "CHP302", title: "Other", semester: 3 });
+    await Chapter.create({ courseId: other.id, position: 1, title: "Foreign" });
+    const [one, , three, four] = await Promise.all(
+      [1, 2, 3, 4].map((position) => Chapter.create({ courseId: course.id, position, title: `Chapter title ${position}` })),
+    );
+    const make = (chapterId: string, title: string, type: string, extra: Record<string, unknown> = {}) =>
+      Resource.create({ courseId: course.id, chapterId, type, title, isPublished: true, externalUrl: SAMPLE_URL, ...extra } as never);
+    // Chapter 2 is empty and chapter 3 only has a draft.
+    await make(one.id, "Exercise A", "exercise");
+    await make(one.id, "Lecture A", "lecture");
+    await make(one.id, "Note A", "notes");
+    await make(three.id, "Draft", "lecture", { isPublished: false });
+    await make(four.id, "Lecture D", "lecture");
+  }
+
+  it("returns the chapter with its groups in study order", async () => {
+    await seedPages();
+    const page = await getChapterPage(null, "CHP301", "1");
+    expect(page.course).toEqual({ code: "CHP301", title: "Chapter course", semester: 3 });
+    expect(page.chapter.title).toBe("Chapter title 1");
+    expect(page.chapter.groups.map((g) => [g.type, g.resources.map((r) => r.title)])).toEqual([
+      ["lecture", ["Lecture A"]],
+      ["notes", ["Note A"]],
+      ["exercise", ["Exercise A"]],
+    ]);
+  });
+
+  it("skips empty chapters for previous and next, and has null at the ends", async () => {
+    await seedPages();
+    const first = await getChapterPage(null, "CHP301", 1);
+    expect(first.previous).toBeNull();
+    expect(first.next).toEqual({ position: 4, title: "Chapter title 4" });
+    const last = await getChapterPage(null, "CHP301", "4");
+    expect(last.previous).toEqual({ position: 1, title: "Chapter title 1" });
+    expect(last.next).toBeNull();
+  });
+
+  it("returns an empty chapter with no groups", async () => {
+    await seedPages();
+    const page = await getChapterPage(null, "CHP301", "2");
+    expect(page.chapter.groups).toEqual([]);
+    expect(page.previous?.position).toBe(1);
+    expect(page.next?.position).toBe(4);
+  });
+
+  it("hides drafts from anonymous visitors but not from an admin", async () => {
+    await seedPages();
+    expect((await getChapterPage(null, "CHP301", "3")).chapter.groups).toEqual([]);
+    const asAdmin = await getChapterPage(admin, "CHP301", "3");
+    expect(asAdmin.chapter.groups[0].resources.map((r) => r.title)).toEqual(["Draft"]);
+    expect((await getChapterPage(admin, "CHP301", "2")).next?.position).toBe(3);
+  });
+
+  it("throws NotFoundError for an unknown course, an unknown position or a bad position", async () => {
+    await seedPages();
+    await expect(getChapterPage(null, "NOPE999", "1")).rejects.toBeInstanceOf(NotFoundError);
+    for (const position of ["99", "1.5", "abc", "-1", "0", ""]) {
+      await expect(getChapterPage(null, "CHP301", position)).rejects.toBeInstanceOf(NotFoundError);
+    }
+    await expect(getChapterPage(null, "CHP302", "2")).rejects.toBeInstanceOf(NotFoundError);
   });
 });

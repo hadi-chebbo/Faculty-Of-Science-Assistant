@@ -41,6 +41,20 @@ export interface CourseOutline {
   exams: ResourceListItem[];
 }
 
+export interface ChapterLink {
+  position: number;
+  title: string;
+}
+
+// One chapter as a page of its own.
+export interface ChapterPage {
+  course: { code: string; title: string; semester: number };
+  chapter: { position: number; title: string; groups: ResourceGroup[] };
+  // The nearest chapters before and after that have at least one item (empty ones are skipped).
+  previous: ChapterLink | null;
+  next: ChapterLink | null;
+}
+
 export interface CourseDetail {
   code: string;
   title: string;

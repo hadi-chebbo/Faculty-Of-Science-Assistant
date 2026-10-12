@@ -8,7 +8,7 @@ import { visibleResources } from "../visibility";
 import type { Viewer } from "../viewer";
 import { courseCodeSchema, semesterSchema } from "./schemas";
 import type { ResourceListItem } from "../resources/types";
-import type { CourseDetail, CourseOption, CourseOutline, CourseSummary, ResourceGroup } from "./types";
+import type { ChapterPage, CourseDetail, CourseOption, CourseOutline, CourseSummary, ResourceGroup } from "./types";
 
 export async function listCoursesBySemester(viewer: Viewer, semester: number): Promise<CourseSummary[]> {
   const parsedSemester = parseInput(semesterSchema, semester);
@@ -106,6 +106,24 @@ export async function getCourseByCode(viewer: Viewer, code: string): Promise<Cou
   };
 
   return { code: course.code, title: course.title, semester: course.semester, groups, outline };
+}
+
+// The position is the chapter number from the URL; anything that is not a whole number is not found.
+export async function getChapterPage(viewer: Viewer, code: string, position: number | string): Promise<ChapterPage> {
+  const course = await getCourseByCode(viewer, code);
+  const wanted = typeof position === "string" ? (/^\d+$/.test(position) ? Number(position) : NaN) : position;
+  const chapters = course.outline.chapters;
+  const index = chapters.findIndex((c) => c.position === wanted);
+  if (index === -1) throw new NotFoundError("Chapter not found");
+
+  const chapter = chapters[index];
+  const link = (c: { position: number; title: string } | undefined) => (c ? { position: c.position, title: c.title } : null);
+  return {
+    course: { code: course.code, title: course.title, semester: course.semester },
+    chapter: { position: chapter.position, title: chapter.title, groups: chapter.groups },
+    previous: link(chapters.slice(0, index).reverse().find((c) => c.itemCount > 0)),
+    next: link(chapters.slice(index + 1).find((c) => c.itemCount > 0)),
+  };
 }
 
 // Study order (RESOURCE_TYPES); only types that have rows.
