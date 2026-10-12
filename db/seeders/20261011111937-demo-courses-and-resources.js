@@ -80,6 +80,8 @@ const CHAPTER_OF = [
   { course: 'DEMO301', title: 'Sample lecture 2', chapter: 2 },
   { course: 'DEMO301', title: 'Sample notes', chapter: 3 },
   { course: 'DEMO302', title: 'Sample lecture 1', chapter: 1 },
+  // An exercise sheet in a chapter, beside the lecture; its solution stays a link on its row.
+  { course: 'DEMO302', title: 'Sample exercise sheet 1', chapter: 1 },
   { course: 'DEMO501', title: 'Sample lecture 1', chapter: 1 },
   { course: 'DEMO501', title: 'Sample lecture 2', chapter: 2 },
 ];
