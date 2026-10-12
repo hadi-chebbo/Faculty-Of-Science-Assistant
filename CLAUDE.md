@@ -50,6 +50,12 @@ mock exam generation, personalization.
   titles and resources. The real course list and files are loaded in a
   separate data-gathering phase; do not ask for them or invent real-looking
   ones before then.
+- Files are meant to be read inside the platform, on a page of our own, not by
+  sending the student away to the file's link: the AI assistant planned for
+  after launch should be able to help while they read. The current open route,
+  which redirects to the material, is a stopgap. Design file storage and the
+  open flow so a file can be shown inside our own page. When the reader page is
+  built is not yet decided.
 - When a requirement is ambiguous, ask; do not invent product behaviour.
 
 ## Domain model (proposed)
