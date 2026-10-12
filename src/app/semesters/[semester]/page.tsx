@@ -1,3 +1,4 @@
+import { BookOpen, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -5,7 +6,7 @@ import { Suspense } from "react";
 import { Crumbs } from "@/components/site/crumbs";
 import { PageTitle } from "@/components/site/page-title";
 import { CourseListSkeleton, SemesterSkeleton } from "@/components/site/skeletons";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StateBlock } from "@/components/site/state-block";
 import { SEMESTER_MAX, SEMESTER_MIN } from "@/db/constants";
 import { readForPage } from "@/lib/page-errors";
 import { listCoursesBySemester } from "@/services/courses/courses";
@@ -62,7 +63,7 @@ function SemesterContent({ semester: param }: { semester: string }) {
 async function CourseList({ semester }: { semester: number }) {
   const courses = await readForPage(() => listCoursesBySemester(null, semester));
 
-  if (courses.length === 0) return <p>No courses yet for this semester.</p>;
+  if (courses.length === 0) return <StateBlock icon={BookOpen}>No courses yet for this semester.</StateBlock>;
 
   return (
     <ul className="grid gap-3 sm:grid-cols-2">
@@ -70,17 +71,21 @@ async function CourseList({ semester }: { semester: number }) {
         <li key={course.code}>
           <Link
             href={`/courses/${course.code}`}
-            className="block rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="group flex h-full min-h-20 items-center justify-between gap-3 rounded-xl border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/60 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
-            <Card className="h-full transition-colors hover:border-primary">
-              <CardHeader>
-                <p className="font-mono text-xs font-medium text-link">{course.code}</p>
-                <CardTitle className="text-base text-heading">{course.title}</CardTitle>
-                <CardDescription>
-                  {course.resourceCount} {course.resourceCount === 1 ? "resource" : "resources"}
-                </CardDescription>
-              </CardHeader>
-            </Card>
+            <span className="min-w-0">
+              <span className="inline-block rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs font-medium text-link">
+                {course.code}
+              </span>
+              <span className="mt-1.5 block text-base font-medium text-heading">{course.title}</span>
+              <span className="mt-0.5 block text-sm text-muted-foreground">
+                {course.resourceCount} {course.resourceCount === 1 ? "resource" : "resources"}
+              </span>
+            </span>
+            <ChevronRight
+              aria-hidden
+              className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-link"
+            />
           </Link>
         </li>
       ))}
