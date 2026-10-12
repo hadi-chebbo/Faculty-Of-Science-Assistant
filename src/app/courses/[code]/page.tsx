@@ -5,7 +5,7 @@ import { PageTitle } from "@/components/site/page-title";
 import { CourseSkeleton } from "@/components/site/skeletons";
 import { readForPage } from "@/lib/page-errors";
 import { getCourseByCode } from "@/services/courses/courses";
-import { CourseOutlineView, ViewSwitch, parseView, type CourseView } from "./course-outline";
+import { AreaSwitch, ChapterCards, ExamsArea, OtherArea, parseArea } from "./course-areas";
 import { ResourceTabs } from "./resource-tabs";
 
 export const metadata: Metadata = { title: "Course" };
@@ -17,7 +17,7 @@ export default function CoursePage({ params, searchParams }: PageProps<"/courses
     <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
       <Suspense fallback={<CourseSkeleton />}>
         {Promise.all([params, searchParams]).then(([{ code }, query]) => (
-          <CourseContent code={code} view={parseView(query.view)} />
+          <CourseContent code={code} tab={query.tab} />
         ))}
       </Suspense>
     </main>
@@ -25,9 +25,12 @@ export default function CoursePage({ params, searchParams }: PageProps<"/courses
 }
 
 // Viewer is always null for now: browsing needs no account.
-async function CourseContent({ code, view }: { code: string; view: CourseView }) {
+async function CourseContent({ code, tab }: { code: string; tab: string | string[] | undefined }) {
   const course = await readForPage(() => getCourseByCode(null, code));
-  const hasChapters = course.outline.chapters.length > 0;
+  const { outline } = course;
+  const hasChapters = outline.chapters.length > 0;
+  const hasOther = outline.general.length > 0;
+  const area = parseArea(tab, hasOther);
 
   return (
     <>
@@ -47,12 +50,10 @@ async function CourseContent({ code, view }: { code: string; view: CourseView })
         <ResourceTabs groups={course.groups} />
       ) : (
         <>
-          <ViewSwitch view={view} />
-          {view === "type" ? (
-            <ResourceTabs groups={course.groups} />
-          ) : (
-            <CourseOutlineView code={course.code} outline={course.outline} />
-          )}
+          <AreaSwitch area={area} hasOther={hasOther} />
+          {area === "chapters" && <ChapterCards code={course.code} chapters={outline.chapters} />}
+          {area === "exams" && <ExamsArea code={course.code} exams={outline.exams} />}
+          {area === "other" && <OtherArea groups={outline.general} />}
         </>
       )}
     </>
