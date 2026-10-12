@@ -1,5 +1,6 @@
 import { Op, Sequelize, type Order, type WhereOptions } from "sequelize";
 import { EXAM_SESSIONS } from "@/db/constants";
+import type { ExamSession } from "@/db/constants";
 import { getDb } from "@/db/models";
 import type { Resource } from "@/db/models";
 import { NotFoundError, UnavailableError } from "../errors";
@@ -8,7 +9,7 @@ import { parseInput } from "../validation";
 import { visibleResources } from "../visibility";
 import { isAdmin, type Viewer } from "../viewer";
 import { idSchema, resourceFiltersSchema, type ResourceFilters } from "./schemas";
-import type { ResourceDetail, ResourceLink, ResourceListItem, ResourceRef } from "./types";
+import type { ExamFilterOptions, ResourceDetail, ResourceLink, ResourceListItem, ResourceRef } from "./types";
 
 // Newest academic year first, then sessions in the order of EXAM_SESSIONS (partial, final,
 // second), then title. The id is only a tie-breaker so paging is stable when titles repeat.
@@ -64,7 +65,7 @@ export async function visibleSolutionsOf(viewer: Viewer, ids: string[]): Promise
 }
 
 export async function listResources(viewer: Viewer, filters: ResourceFilters = {}): Promise<Page<ResourceListItem>> {
-  const { courseCode, type, academicYearStart, examSession, language, page, pageSize } = parseInput(
+  const { courseCode, semester, type, academicYearStart, examSession, language, page, pageSize } = parseInput(
     resourceFiltersSchema,
     filters,
   );
@@ -76,6 +77,13 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
   if (examSession) where.push({ examSession });
   if (language) where.push({ language });
 
+  const courseWhere: WhereOptions[] = [];
+  // Course codes are unique regardless of letter case, so match the same way.
+  if (courseCode) {
+    courseWhere.push(sequelize.where(sequelize.fn("lower", sequelize.col("course.code")), courseCode.toLowerCase()));
+  }
+  if (semester !== undefined) courseWhere.push({ semester });
+
   const { rows, count } = await Resource.findAndCountAll({
     where: { [Op.and]: where },
     include: [
@@ -84,10 +92,7 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
         as: "course",
         attributes: ["code"],
         required: true,
-        // Course codes are unique regardless of letter case, so match the same way.
-        where: courseCode
-          ? sequelize.where(sequelize.fn("lower", sequelize.col("course.code")), courseCode.toLowerCase())
-          : undefined,
+        where: courseWhere.length > 0 ? { [Op.and]: courseWhere } : undefined,
       },
     ],
     order: resourceOrder(),
@@ -141,4 +146,38 @@ export async function getResourceLink(viewer: Viewer, id: string): Promise<Resou
   if (row.externalUrl) return { url: row.externalUrl };
   // Stored files need object storage, which does not exist yet; a draft may have no source at all.
   throw new UnavailableError("This resource is not available yet");
+}
+
+// What the exam filters may offer: only values that at least one exam visible to the viewer has.
+// Two queries however many exams there are: the distinct (course, year, session) combinations,
+// then the courses they belong to.
+export async function listExamFilterOptions(viewer: Viewer): Promise<ExamFilterOptions> {
+  const { Resource, Course } = getDb();
+
+  const combos = (await Resource.findAll({
+    attributes: ["courseId", "academicYearStart", "examSession"],
+    where: { type: "exam", ...visibleResources(viewer) },
+    group: ["courseId", "academicYearStart", "examSession"],
+    raw: true,
+  })) as unknown as { courseId: string; academicYearStart: number | null; examSession: ExamSession | null }[];
+  if (combos.length === 0) return { semesters: [], courses: [], years: [], sessions: [] };
+
+  const courses = await Course.findAll({
+    where: { id: [...new Set(combos.map((c) => c.courseId))] },
+    attributes: ["code", "title", "semester"],
+    order: [["code", "ASC"]],
+  });
+  const years = new Set<number>();
+  const sessions = new Set<ExamSession>();
+  for (const combo of combos) {
+    if (combo.academicYearStart !== null) years.add(combo.academicYearStart);
+    if (combo.examSession !== null) sessions.add(combo.examSession);
+  }
+
+  return {
+    semesters: [...new Set(courses.map((c) => c.semester))].sort((a, b) => a - b),
+    courses: courses.map((c) => ({ code: c.code, title: c.title, semester: c.semester })),
+    years: [...years].sort((a, b) => b - a),
+    sessions: EXAM_SESSIONS.filter((session) => sessions.has(session)),
+  };
 }
