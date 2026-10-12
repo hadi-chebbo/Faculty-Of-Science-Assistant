@@ -80,6 +80,7 @@ mock exam generation, personalization.
 - Tailwind CSS with shadcn/ui (confirmed). Build UI from shadcn/ui components;
   add each one through its CLI as it is needed, and do not hand-roll a
   component that shadcn/ui already provides or add another component library.
+- `next-themes` for the light/dark theme toggle (no flash of the wrong theme on load).
 - Zod for validating all external input.
 - Vitest for unit/integration tests, Playwright for the core user journeys.
 - Hosting: Vercel (app), Neon (Postgres), Cloudflare R2 (files).
@@ -95,6 +96,30 @@ mock exam generation, personalization.
   checks that need a function or compare columns; `up` in a transaction;
   timestamps default with `Sequelize.fn('now')`, never `Sequelize.NOW`.
 - Error tracking: not yet decided.
+
+## Design (confirmed)
+
+- Style: clean and minimal. White space, neutral surfaces, one primary color.
+- Palette is modelled on the Lebanese University website and lives in the shadcn CSS
+  variables in `src/app/globals.css`:
+  - Light primary: deep blue `#3E4EB8` (white text on it). Links and active states use it.
+  - Bright blue `#5473FF`: fails WCAG AA for small text on white, so it is the primary
+    in the dark theme and is used for large or decorative elements only.
+  - Yellow `#FDB91F`: decorative only (a short 4px bar under page titles). Never text.
+  - Light theme: headings `#41454F`, body text `#575757`, page `#F5F5F5`, muted `#F8F8F8`,
+    cards white. The dark theme uses dark neutral surfaces with light text.
+  - Text contrast is at least 4.5:1 in both themes.
+- Theme: light and dark, defaults to the device setting, toggle in the top bar.
+- UI language: English only.
+- Navigation adapts to the device. Phone: slim top bar plus a fixed bottom tab bar
+  (Browse, Exams, Search). Desktop (md and up): the same items inline in the top bar and a
+  breadcrumb trail on inner pages. Items without a page yet are shown disabled.
+- Home is a landing page: headline, short description, "Browse courses" button, three
+  benefit points, then the semester cards. No claims about features that do not exist.
+- Course page: one tab per resource type that has resources, with its count.
+- Branding is the plain text "University Assistant". No university logo, crest or name as
+  branding. The footer says: "Independent student project. Not an official Lebanese
+  University website."
 
 ## Engineering rules
 
