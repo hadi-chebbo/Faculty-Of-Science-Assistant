@@ -6,6 +6,8 @@ import {
   EXAM_SESSIONS,
   LANGUAGES,
   RESOURCE_TYPES,
+  SEMESTER_MAX,
+  SEMESTER_MIN,
 } from "@/db/constants";
 import type { ExamSession, Language, ResourceType } from "@/db/constants";
 import { blankToUndefined } from "../validation";
@@ -21,6 +23,7 @@ const optional = <T extends z.ZodType>(schema: T) => z.preprocess(blankToUndefin
 // string means "no filter".
 export const resourceFiltersSchema = z.object({
   courseCode: optional(z.string().trim().max(COURSE_CODE_MAX_LENGTH)),
+  semester: optional(z.coerce.number().int().min(SEMESTER_MIN).max(SEMESTER_MAX)),
   type: optional(z.enum(RESOURCE_TYPES)),
   academicYearStart: optional(z.coerce.number().int().min(ACADEMIC_YEAR_MIN).max(ACADEMIC_YEAR_MAX)),
   examSession: optional(z.enum(EXAM_SESSIONS)),
@@ -35,6 +38,8 @@ export const resourceFiltersSchema = z.object({
 // What a typed caller passes. Everything is optional; the schema fills in the paging defaults.
 export interface ResourceFilters {
   courseCode?: string;
+  // The semester of the resource's course.
+  semester?: number;
   type?: ResourceType;
   academicYearStart?: number;
   examSession?: ExamSession;

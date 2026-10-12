@@ -4,7 +4,7 @@ import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { ForbiddenError, NotFoundError, UnavailableError, ValidationError } from "../errors";
 import { requireAdmin, type Viewer } from "../viewer";
-import { getResource, getResourceLink, listResources } from "./resources";
+import { getResource, getResourceLink, listExamFilterOptions, listResources } from "./resources";
 import { RESOURCE_PAGE_SIZE_DEFAULT, RESOURCE_PAGE_SIZE_MAX } from "./schemas";
 
 const SAMPLE_URL = "https://example.com/sample";
@@ -122,6 +122,108 @@ describe("listResources", () => {
   it("uses the default page size when none is given", async () => {
     await seed();
     expect(await listResources(null)).toMatchObject({ page: 1, pageSize: RESOURCE_PAGE_SIZE_DEFAULT, total: 5 });
+  });
+});
+
+describe("listResources by semester", () => {
+  async function seedSemesters() {
+    const data = await seed();
+    const { Course, Resource } = getDb();
+    const s5 = await Course.create({ code: "TEST501", title: "Course E", semester: 5 });
+    const s5exam = await Resource.create({
+      courseId: s5.id, type: "exam", title: "S5 final 2024", academicYearStart: 2024, examSession: "final", isPublished: true, externalUrl: SAMPLE_URL,
+    });
+    await Resource.create({ courseId: s5.id, type: "exam", title: "S5 draft exam", academicYearStart: 2024, examSession: "final", externalUrl: SAMPLE_URL });
+    return { ...data, s5, s5exam };
+  }
+
+  it("filters by the semester of the course, with a correct total", async () => {
+    await seedSemesters();
+    const s3 = await listResources(null, { semester: 3 });
+    expect(s3.total).toBe(5);
+    expect(s3.items.every((r) => r.courseCode.startsWith("TEST30"))).toBe(true);
+    const s5 = await listResources(null, { semester: 5 });
+    expect(s5.items.map((r) => r.title)).toEqual(["S5 final 2024"]);
+    expect(s5.total).toBe(1);
+    expect((await listResources(null, { semester: 4 })).total).toBe(0);
+    expect((await listResources(admin, { semester: 5 })).total).toBe(2);
+  });
+
+  it("combines with the other filters and with paging", async () => {
+    await seedSemesters();
+    const exams = await listResources(null, { semester: 3, type: "exam" });
+    expect(exams.total).toBe(3);
+    expect((await listResources(null, { semester: 3, type: "exam", academicYearStart: 2024, examSession: "final" })).items.map((r) => r.title)).toEqual(["Final 2024"]);
+    expect((await listResources(null, { semester: 5, courseCode: "TEST301" })).total).toBe(0);
+    expect((await listResources(null, { semester: 3, courseCode: "test301", type: "exam" })).total).toBe(3);
+    const paged = await listResources(null, { semester: 3, type: "exam", pageSize: 2, page: 2 });
+    expect(paged).toMatchObject({ total: 3 });
+    expect(paged.items).toHaveLength(1);
+  });
+
+  it("treats a blank semester as no filter and rejects one out of range", async () => {
+    await seedSemesters();
+    expect((await listResources(null, { semester: "" } as never)).total).toBe(6);
+    expect((await listResources(null, { semester: "5" } as never)).total).toBe(1);
+    await expect(listResources(null, { semester: 2 })).rejects.toMatchObject({ name: "ValidationError", fields: ["semester"] });
+    await expect(listResources(null, { semester: 7 })).rejects.toBeInstanceOf(ValidationError);
+  });
+});
+
+describe("listExamFilterOptions", () => {
+  it("is empty when there are no exams", async () => {
+    expect(await listExamFilterOptions(null)).toEqual({ semesters: [], courses: [], years: [], sessions: [] });
+  });
+
+  it("offers only values of visible exams, years newest first, courses by code", async () => {
+    const { b } = await seed();
+    const { Course, Resource } = getDb();
+    const s5 = await Course.create({ code: "TEST501", title: "Course E", semester: 5 });
+    const s4 = await Course.create({ code: "TEST401", title: "Course D", semester: 4 });
+    await Resource.create({
+      courseId: s5.id, type: "exam", title: "S5 second 2023", academicYearStart: 2023, examSession: "second", isPublished: true, externalUrl: SAMPLE_URL,
+    });
+    // Only drafts, and only non-exam resources: nothing of these may be offered to the public.
+    await Resource.create({
+      courseId: s4.id, type: "exam", title: "S4 draft 2025", academicYearStart: 2025, examSession: "partial", externalUrl: SAMPLE_URL,
+    });
+    await Resource.create({ courseId: b.id, type: "notes", title: "Notes", academicYearStart: 2019, isPublished: true, externalUrl: SAMPLE_URL });
+
+    const expected = {
+      semesters: [3, 5],
+      courses: [
+        { code: "TEST301", title: "Course A", semester: 3 },
+        { code: "TEST501", title: "Course E", semester: 5 },
+      ],
+      years: [2024, 2023, 2022],
+      sessions: ["partial", "final", "second"],
+    };
+    expect(await listExamFilterOptions(null)).toEqual(expected);
+    expect(await listExamFilterOptions(student)).toEqual(expected);
+  });
+
+  it("includes values that only have drafts for an admin", async () => {
+    await seed();
+    const { Course, Resource } = getDb();
+    const s4 = await Course.create({ code: "TEST401", title: "Course D", semester: 4 });
+    await Resource.create({
+      courseId: s4.id, type: "exam", title: "S4 draft 2025", academicYearStart: 2025, examSession: "partial", externalUrl: SAMPLE_URL,
+    });
+    const options = await listExamFilterOptions(admin);
+    expect(options.semesters).toEqual([3, 4]);
+    expect(options.courses.map((c) => c.code)).toEqual(["TEST301", "TEST401"]);
+    expect(options.years).toEqual([2025, 2024, 2022]);
+    expect((await listExamFilterOptions(null)).semesters).toEqual([3]);
+  });
+
+  it("skips an exam without an academic year when listing years", async () => {
+    const { b } = await seed();
+    const { Resource } = getDb();
+    await Resource.create({ courseId: b.id, type: "exam", title: "Undated exam", examSession: "second", isPublished: true, externalUrl: SAMPLE_URL });
+    const options = await listExamFilterOptions(null);
+    expect(options.courses.map((c) => c.code)).toEqual(["TEST301", "TEST302"]);
+    expect(options.years).toEqual([2024, 2022]);
+    expect(options.sessions).toEqual(["partial", "final", "second"]);
   });
 });
 

@@ -51,6 +51,46 @@ test.describe("GET /api/v1/resources/[id]/open", () => {
   });
 });
 
+test.describe("GET /api/v1/resources/[id]/open for a browser", () => {
+  const HTML = { Accept: "text/html,application/xhtml+xml,*/*;q=0.8" };
+
+  test("redirects every failure to the friendly page, uncached", async ({ request }) => {
+    const draft = await resourceId("DEMO501", "Sample draft lecture");
+    for (const id of [UNKNOWN_ID, "not-a-uuid", draft.id]) {
+      const response = await request.get(`/api/v1/resources/${id}/open`, { maxRedirects: 0, headers: HTML });
+      expect(response.status(), id).toBe(307);
+      expect(response.headers()["location"]).toBe("/resource-unavailable");
+      expect(response.headers()["cache-control"]).toBe("no-store");
+    }
+  });
+
+  test("still redirects a working resource to its link", async ({ request }) => {
+    const { id, externalUrl } = await resourceId("DEMO301", "Sample lecture 1");
+    const response = await request.get(`/api/v1/resources/${id}/open`, { maxRedirects: 0, headers: HTML });
+    expect(response.status()).toBe(307);
+    expect(response.headers()["location"]).toBe(externalUrl);
+  });
+
+  test("keeps the JSON answer for clients that do not accept HTML", async ({ request }) => {
+    const response = await request.get(`/api/v1/resources/${UNKNOWN_ID}/open`, {
+      maxRedirects: 0,
+      headers: { Accept: "application/json" },
+    });
+    expect(response.status()).toBe(404);
+    expect(await response.json()).toEqual({ error: "Resource not found" });
+  });
+
+  test("a browser that opens an unknown resource ends on the friendly page", async ({ page }) => {
+    await page.goto(`/api/v1/resources/${UNKNOWN_ID}/open`);
+    await expect(page).toHaveURL(/\/resource-unavailable$/);
+    await expect(page.getByRole("heading", { name: "Resource unavailable" })).toBeVisible();
+    await expect(page.getByText(/may have been removed, or it is not available yet/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "Back to home" })).toHaveAttribute("href", "/");
+    await expect(page.getByRole("link", { name: "Browse exams" })).toHaveAttribute("href", "/exams");
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  });
+});
+
 test("resource rows on a course page open in a new tab through the API route", async ({ page }) => {
   await page.goto("/courses/DEMO301");
   const row = page.getByRole("link", { name: /Sample lecture 1/ });

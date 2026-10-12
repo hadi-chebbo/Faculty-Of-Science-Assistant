@@ -117,6 +117,11 @@ mock exam generation, personalization.
 - Home is a landing page: headline, short description, "Browse courses" button, three
   benefit points, then the semester cards. No claims about features that do not exist.
 - Course page: one tab per resource type that has resources, with its count.
+- Exams page (`/exams`): filters (semester, course, academic year, session) live in the URL, so
+  views are shareable and Back works. A plain GET form with an Apply button works without
+  JavaScript; with JavaScript a dropdown change submits automatically. Unusable URL values are
+  ignored, not errors. Results are one flat list (newest year first), 20 per page, reusing the
+  course-page resource row. Dropdowns only offer values that have a visible exam.
 - Branding is the plain text "University Assistant". No university logo, crest or name as
   branding. The footer says: "Independent student project. Not an official Lebanese
   University website."

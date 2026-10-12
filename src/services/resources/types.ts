@@ -30,3 +30,13 @@ export interface ResourceDetail extends ResourceListItem {
 export interface ResourceLink {
   url: string;
 }
+
+// The values the exam filters can offer, each with at least one visible exam behind it.
+export interface ExamFilterOptions {
+  semesters: number[];
+  // Ordered by code.
+  courses: { code: string; title: string; semester: number }[];
+  // Start years, newest first.
+  years: number[];
+  sessions: ExamSession[];
+}
