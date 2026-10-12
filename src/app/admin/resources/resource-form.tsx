@@ -13,13 +13,8 @@ import { EXAM_SESSIONS, LANGUAGES, RESOURCE_TITLE_MAX_LENGTH, RESOURCE_TYPES } f
 import type { ExamSession, Language, ResourceType } from "@/db/constants";
 import { adminFetch } from "@/lib/admin-fetch";
 import { EXAM_SESSION_LABELS, LANGUAGE_LABELS, RESOURCE_TYPE_LABELS } from "@/lib/labels";
+import type { CourseOption } from "@/services/courses/types";
 import type { ResourceForEdit } from "@/services/resources/types";
-
-export interface CourseOption {
-  id: string;
-  code: string;
-  title: string;
-}
 
 const FIELD_MESSAGES: Record<string, string> = {
   isPublished: "Add a link before publishing.",

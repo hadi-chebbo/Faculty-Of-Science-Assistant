@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { PageTitle } from "@/components/site/page-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readForPage } from "@/lib/page-errors";
-import { listCourseOptions } from "@/services/courses/courses";
+import { listCourses } from "@/services/courses/courses";
 import { getResourceForEdit } from "@/services/resources/write";
 import { requireAdminPage } from "../../../guard";
 import { ResourceForm } from "../../resource-form";
@@ -26,7 +26,7 @@ export default function EditResourcePage({ params }: PageProps<"/admin/resources
 async function EditResourceContent({ id }: { id: string }) {
   const { admin } = await requireAdminPage(`/admin/resources/${encodeURIComponent(id)}/edit`);
   const [courses, resource] = await Promise.all([
-    readForPage(() => listCourseOptions(admin)),
+    readForPage(() => listCourses(admin)),
     readForPage(() => getResourceForEdit(admin, id)),
   ]);
   return <ResourceForm courses={courses} resource={resource} />;

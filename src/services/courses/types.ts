@@ -8,6 +8,14 @@ export interface CourseSummary {
   resourceCount: number;
 }
 
+// A course to choose from in the admin area.
+export interface CourseOption {
+  id: string;
+  code: string;
+  title: string;
+  semester: number;
+}
+
 export interface ResourceGroup {
   type: ResourceType;
   resources: ResourceListItem[];

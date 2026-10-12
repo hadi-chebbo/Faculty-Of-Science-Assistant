@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { PageTitle } from "@/components/site/page-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readForPage } from "@/lib/page-errors";
-import { listCourseOptions } from "@/services/courses/courses";
+import { listCourses } from "@/services/courses/courses";
 import { requireAdminPage } from "../../guard";
 import { ResourceForm } from "../resource-form";
 
@@ -22,6 +22,6 @@ export default function NewResourcePage() {
 
 async function NewResourceContent() {
   const { admin } = await requireAdminPage("/admin/resources/new");
-  const courses = await readForPage(() => listCourseOptions(admin));
+  const courses = await readForPage(() => listCourses(admin));
   return <ResourceForm courses={courses} />;
 }
