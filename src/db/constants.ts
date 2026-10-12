@@ -16,3 +16,6 @@ export const ACADEMIC_YEAR_MIN = 1990;
 export const ACADEMIC_YEAR_MAX = 2100;
 export const COURSE_CODE_MAX_LENGTH = 20;
 export const RESOURCE_TITLE_MAX_LENGTH = 200;
+export const CHAPTER_POSITION_MIN = 1;
+export const CHAPTER_POSITION_MAX = 200;
+export const CHAPTER_TITLE_MAX_LENGTH = 200;

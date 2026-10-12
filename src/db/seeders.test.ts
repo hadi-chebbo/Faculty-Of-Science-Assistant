@@ -90,6 +90,58 @@ describe("seeders", () => {
     expect(await counts()).toEqual(afterFirst);
   });
 
+  describe("demo chapters", () => {
+    async function chapterState() {
+      const { sequelize } = getDb();
+      const [chapters] = await sequelize.query(
+        `SELECT c.code, ch.position, ch.title,
+                (SELECT count(*)::int FROM resources r WHERE r.chapter_id = ch.id) AS attached
+         FROM chapters ch JOIN courses c ON c.id = ch.course_id
+         ORDER BY c.code, ch.position`,
+      );
+      const [unattached] = await sequelize.query(
+        `SELECT c.code, count(*)::int AS n FROM resources r JOIN courses c ON c.id = r.course_id
+         WHERE c.code LIKE 'DEMO%' AND r.type <> 'exam' AND r.chapter_id IS NULL
+         GROUP BY c.code ORDER BY c.code`,
+      );
+      return { chapters, unattached };
+    }
+
+    it("creates chapters with attached and unattached resources, without duplicates on a second run", async () => {
+      expect(runCli("db:seed:all", FULL_ENV).status).toBe(0);
+      const first = await chapterState();
+      const chapters = first.chapters as { code: string; title: string; attached: number }[];
+      expect(chapters).toHaveLength(9);
+      expect(new Set(chapters.map((c) => c.code))).toEqual(new Set(["DEMO301", "DEMO302", "DEMO501"]));
+      expect(chapters.some((c) => c.title === "Sample chapter 1")).toBe(true);
+      expect(chapters.some((c) => c.attached > 0)).toBe(true);
+      const unattached = first.unattached as { code: string }[];
+      for (const code of ["DEMO301", "DEMO302", "DEMO501"]) {
+        expect(
+          unattached.some((u) => u.code === code),
+          code,
+        ).toBe(true);
+      }
+
+      expect(runCli("db:seed:all", FULL_ENV).status).toBe(0);
+      expect(await chapterState()).toEqual(first);
+    });
+
+    it("adds the chapters to demo data that was seeded before chapters existed", async () => {
+      expect(runCli("db:seed:all", FULL_ENV).status).toBe(0);
+      const expected = await chapterState();
+      const { sequelize } = getDb();
+      // The foreign key clears the resources' chapter when the chapters go.
+      await sequelize.query("DELETE FROM chapters");
+      expect((await chapterState()).chapters).toHaveLength(0);
+
+      const again = runCli("db:seed:all", FULL_ENV);
+      expect(again.status, again.output).toBe(0);
+      expect(await chapterState()).toEqual(expected);
+      expect(await count("courses")).toBe(8);
+    });
+  });
+
   it("inserts nothing without the flags", () => {
     const run = runCli("db:seed:all");
     expect(run.status, run.output).toBe(0);

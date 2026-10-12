@@ -71,6 +71,19 @@ const SOLUTIONS = [
   { course: 'DEMO501', of: 'exam501', title: 'Sample final exam 2025 solution', path: 'demo501/final-2025-solution', draft: true },
 ];
 
+// Chapters for three courses, and which non-exam resources sit in them. Everything else (including
+// exams, solutions and the rest of each course) stays under "General".
+const CHAPTER_COURSES = ['DEMO301', 'DEMO302', 'DEMO501'];
+const CHAPTER_TITLES = ['Sample chapter 1', 'Sample chapter 2', 'Sample chapter 3'];
+const CHAPTER_OF = [
+  { course: 'DEMO301', title: 'Sample lecture 1', chapter: 1 },
+  { course: 'DEMO301', title: 'Sample lecture 2', chapter: 2 },
+  { course: 'DEMO301', title: 'Sample notes', chapter: 3 },
+  { course: 'DEMO302', title: 'Sample lecture 1', chapter: 1 },
+  { course: 'DEMO501', title: 'Sample lecture 1', chapter: 1 },
+  { course: 'DEMO501', title: 'Sample lecture 2', chapter: 2 },
+];
+
 async function deleteDemoData(queryInterface, transaction) {
   const { sequelize } = queryInterface;
   // Resources first (the course foreign key restricts deletion); this cascades bookmarks and completions.
@@ -153,6 +166,36 @@ module.exports = {
         }),
         { transaction },
       );
+
+      // Chapters. The demo data is deleted and re-created above, so this is safe to run again
+      // on a database that already has the demo courses and resources.
+      await queryInterface.bulkInsert(
+        'chapters',
+        CHAPTER_COURSES.flatMap((code) =>
+          CHAPTER_TITLES.map((title, i) => ({
+            course_id: courseIds.get(code),
+            position: i + 1,
+            title,
+            created_at: now,
+            updated_at: now,
+          })),
+        ),
+        { transaction },
+      );
+
+      for (const { course, title, chapter } of CHAPTER_OF) {
+        await queryInterface.sequelize.query(
+          'UPDATE resources SET chapter_id = (SELECT id FROM chapters WHERE course_id = :courseId AND position = :position) WHERE id = :resourceId',
+          {
+            transaction,
+            replacements: {
+              courseId: courseIds.get(course),
+              position: chapter,
+              resourceId: idFor(course, title),
+            },
+          },
+        );
+      }
     });
   },
 

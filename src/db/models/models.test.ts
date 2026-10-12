@@ -274,3 +274,91 @@ describe("schema agreement", () => {
     }
   });
 });
+
+describe("chapters", () => {
+  async function courseWithChapter() {
+    const { Course, Chapter } = getDb();
+    const course = await Course.create({ code: "TEST101", title: "Test Course", semester: 3 });
+    const chapter = await Chapter.create({ courseId: course.id, position: 1, title: "Test chapter" });
+    return { course, chapter };
+  }
+
+  it("a chapter can be created and read back", async () => {
+    const { Chapter } = getDb();
+    const { course, chapter } = await courseWithChapter();
+    const found = await Chapter.findByPk(chapter.id, { include: "course" });
+    expect(found?.title).toBe("Test chapter");
+    expect(found?.position).toBe(1);
+    expect(found?.course?.id).toBe(course.id);
+  });
+
+  it("rejects a duplicate position within a course but allows it in another course", async () => {
+    const { Course, Chapter } = getDb();
+    const { course } = await courseWithChapter();
+    await expect(Chapter.create({ courseId: course.id, position: 1, title: "Again" })).rejects.toThrow();
+    const other = await Course.create({ code: "TEST102", title: "Other", semester: 3 });
+    await expect(Chapter.create({ courseId: other.id, position: 1, title: "Fine" })).resolves.toBeDefined();
+  });
+
+  it("rejects a blank title and a position outside the range", async () => {
+    const { Chapter } = getDb();
+    const { course } = await courseWithChapter();
+    await expect(Chapter.create({ courseId: course.id, position: 2, title: "   " })).rejects.toThrow();
+    await expect(Chapter.create({ courseId: course.id, position: 0, title: "Zero" })).rejects.toThrow();
+    await expect(Chapter.create({ courseId: course.id, position: 201, title: "Too high" })).rejects.toThrow();
+  });
+
+  it("a resource can reference a chapter", async () => {
+    const { Resource } = getDb();
+    const { course, chapter } = await courseWithChapter();
+    const lecture = await Resource.create({
+      courseId: course.id,
+      type: "lecture",
+      title: "Test lecture",
+      chapterId: chapter.id,
+    });
+    const found = await Resource.findByPk(lecture.id, { include: "chapter" });
+    expect(found?.chapterId).toBe(chapter.id);
+    expect(found?.chapter?.title).toBe("Test chapter");
+  });
+
+  it("the database rejects an exam with a chapter", async () => {
+    const { Resource } = getDb();
+    const { course, chapter } = await courseWithChapter();
+    await expect(
+      Resource.create({
+        courseId: course.id,
+        type: "exam",
+        title: "Test exam",
+        examSession: "final",
+        academicYearStart: 2024,
+        chapterId: chapter.id,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("deleting a chapter keeps its resources and clears their chapterId", async () => {
+    const { Resource, Chapter } = getDb();
+    const { course, chapter } = await courseWithChapter();
+    const lecture = await Resource.create({
+      courseId: course.id,
+      type: "lecture",
+      title: "Test lecture",
+      chapterId: chapter.id,
+    });
+    await Chapter.destroy({ where: { courseId: course.id } });
+    const found = await Resource.findByPk(lecture.id);
+    expect(found).not.toBeNull();
+    expect(found?.chapterId).toBeNull();
+  });
+
+  it("the chapters model has exactly the columns of its table", async () => {
+    const { sequelize, Chapter } = getDb();
+    const [rows] = await sequelize.query(
+      "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'chapters'",
+    );
+    const dbColumns = new Set((rows as { column_name: string }[]).map((r) => r.column_name));
+    const modelColumns = new Set(Object.values(Chapter.getAttributes()).map((a) => a.field));
+    expect(modelColumns).toEqual(dbColumns);
+  });
+});

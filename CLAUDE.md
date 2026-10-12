@@ -66,7 +66,10 @@ mock exam generation, personalization.
 - Resource: belongs to one course. Type (lecture, notes, exercise, exam,
   solution, other), title, description, academic year, exam session
   (partial, final, second — exams only), language (en, fr), file reference,
-  optional link to the resource it is a solution of, published flag.
+  optional link to the resource it is a solution of, optional chapter of the
+  same course (never on exams; a resource with no chapter is listed under
+  General), published flag.
+- Chapter: belongs to one course; position unique within the course; title.
 - User: email (stored lowercase), optional name, password hash, role
   (student or admin).
 - RefreshToken: belongs to a user; token hash, family id, expiry, revoked-at.

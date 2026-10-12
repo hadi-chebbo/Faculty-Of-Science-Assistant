@@ -1,6 +1,7 @@
 import type { Sequelize } from "sequelize";
 import { getSequelize } from "../sequelize";
 import { Bookmark, initBookmark } from "./bookmark";
+import { Chapter, initChapter } from "./chapter";
 import { Completion, initCompletion } from "./completion";
 import { Course, initCourse } from "./course";
 import { FailedSignIn, initFailedSignIn } from "./failed-sign-in";
@@ -8,11 +9,12 @@ import { RefreshToken, initRefreshToken } from "./refresh-token";
 import { Resource, initResource } from "./resource";
 import { User, initUser } from "./user";
 
-export { Bookmark, Completion, Course, FailedSignIn, RefreshToken, Resource, User };
+export { Bookmark, Chapter, Completion, Course, FailedSignIn, RefreshToken, Resource, User };
 
 export interface Db {
   sequelize: Sequelize;
   Course: typeof Course;
+  Chapter: typeof Chapter;
   Resource: typeof Resource;
   User: typeof User;
   RefreshToken: typeof RefreshToken;
@@ -30,6 +32,7 @@ export function getDb(): Db {
 
   const sequelize = getSequelize();
   initCourse(sequelize);
+  initChapter(sequelize);
   initResource(sequelize);
   initUser(sequelize);
   initRefreshToken(sequelize);
@@ -39,6 +42,11 @@ export function getDb(): Db {
 
   Course.hasMany(Resource, { foreignKey: "courseId", as: "resources" });
   Resource.belongsTo(Course, { foreignKey: "courseId", as: "course" });
+
+  Course.hasMany(Chapter, { foreignKey: "courseId", as: "chapters" });
+  Chapter.belongsTo(Course, { foreignKey: "courseId", as: "course" });
+  Chapter.hasMany(Resource, { foreignKey: "chapterId", as: "resources" });
+  Resource.belongsTo(Chapter, { foreignKey: "chapterId", as: "chapter" });
 
   Resource.belongsTo(Resource, { foreignKey: "solutionOfId", as: "solutionOf" });
   Resource.hasMany(Resource, { foreignKey: "solutionOfId", as: "solutions" });
@@ -55,6 +63,6 @@ export function getDb(): Db {
   Resource.hasMany(Bookmark, { foreignKey: "resourceId", as: "bookmarks" });
   Resource.hasMany(Completion, { foreignKey: "resourceId", as: "completions" });
 
-  globalForDb.__db = { sequelize, Course, Resource, User, RefreshToken, Bookmark, Completion, FailedSignIn };
+  globalForDb.__db = { sequelize, Course, Chapter, Resource, User, RefreshToken, Bookmark, Completion, FailedSignIn };
   return globalForDb.__db;
 }
