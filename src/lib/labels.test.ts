@@ -4,8 +4,26 @@ import {
   EXAM_SESSION_LABELS,
   LANGUAGE_LABELS,
   RESOURCE_TYPE_LABELS,
+  describeGroups,
   formatAcademicYear,
 } from "./labels";
+
+describe("describeGroups", () => {
+  it("counts each type with the right singular or plural", () => {
+    expect(
+      describeGroups([
+        { type: "lecture", resources: [1, 2, 3] },
+        { type: "notes", resources: [1] },
+        { type: "exercise", resources: [1, 2] },
+      ]),
+    ).toBe("3 lectures · 1 note · 2 exercises");
+  });
+
+  it("is empty when nothing is inside", () => {
+    expect(describeGroups([])).toBe("");
+    expect(describeGroups([{ type: "lecture", resources: [] }])).toBe("");
+  });
+});
 
 describe("formatAcademicYear", () => {
   it("shows the start year and the next one", () => {

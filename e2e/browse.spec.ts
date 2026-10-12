@@ -9,17 +9,21 @@ test("a visitor browses from home to a semester to a course", async ({ page }) =
   await page.getByRole("link", { name: /DEMO301/ }).click();
   await expect(page.getByRole("heading", { name: "Sample Course A" })).toBeVisible();
 
-  // The course page opens by chapter; the tabs are behind "By type".
-  await page.getByRole("link", { name: "By type" }).click();
-  await expect(page).toHaveURL(/\?view=type$/);
+  // DEMO301 has chapters: its exams are in the "Previous exams" area.
+  await page.getByRole("link", { name: "Previous exams" }).click();
+  await expect(page).toHaveURL(/\?tab=exams$/);
+  await expect(page.getByText("Sample partial exam 2023")).toBeVisible();
+  await expect(page.getByText("2023-2024")).toBeVisible();
 
-  // The first tab is selected and lists its resources.
+  // A course without chapters (DEMO401) shows one tab per resource type. The first tab is
+  // selected and lists its resources.
+  await page.goto("/courses/DEMO401");
   await expect(page.getByRole("tab", { name: /Lectures/ })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("Sample lecture 1")).toBeVisible();
 
   await page.getByRole("tab", { name: /Exams/ }).click();
-  await expect(page.getByText("Sample partial exam 2023")).toBeVisible();
-  await expect(page.getByText("2023-2024")).toBeVisible();
+  await expect(page.getByText("Sample final exam 2024")).toBeVisible();
+  await expect(page.getByText("2024-2025")).toBeVisible();
 });
 
 // Next.js decides the HTTP status before streaming starts. For a value that was not prerendered

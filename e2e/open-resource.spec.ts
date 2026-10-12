@@ -92,14 +92,13 @@ test.describe("GET /api/v1/resources/[id]/open for a browser", () => {
 });
 
 test("resource rows on a course page open in a new tab through the API route", async ({ page }) => {
-  await page.goto("/courses/DEMO301");
+  // DEMO401 has no chapters, so its rows are on the by-type tabs.
+  await page.goto("/courses/DEMO401");
   const row = page.getByRole("link", { name: /Sample lecture 1/ });
   await expect(row).toHaveAttribute("target", "_blank");
   await expect(row).toHaveAttribute("rel", /noopener/);
   await expect(row).toHaveAttribute("href", /^\/api\/v1\/resources\/[0-9a-f-]{36}\/open$/);
 
-  // The course page opens by chapter; the tabs are behind "By type".
-  await page.getByRole("link", { name: "By type" }).click();
   await page.getByRole("tab", { name: /Exams/ }).click();
   const solution = page.getByRole("link", { name: /^Solution/ });
   await expect(solution).toHaveCount(1);
