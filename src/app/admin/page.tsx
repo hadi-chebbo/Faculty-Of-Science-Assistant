@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { AdminBar } from "@/components/admin/admin-bar";
 import { PageTitle } from "@/components/site/page-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireAdminPage } from "./guard";
 import { ResourceList } from "./resource-list";
-import { SignOutButton } from "./sign-out-button";
 
 export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
 
@@ -27,12 +27,9 @@ async function AdminContent({ raw }: { raw: Record<string, string | string[] | u
   const { account, admin } = await requireAdminPage("/admin");
 
   return (
-    <div className="space-y-4">
-      <p>
-        Signed in as <strong>{account.email}</strong>
-      </p>
-      <SignOutButton />
+    <>
+      <AdminBar email={account.email} />
       <ResourceList viewer={admin} raw={raw} />
-    </div>
+    </>
   );
 }
