@@ -10,6 +10,8 @@ export interface ResourceListItem {
   examSession: ExamSession | null;
   language: Language;
   isPublished: boolean;
+  // Whether opening it can lead anywhere (a link or a stored file). Neither value is exposed.
+  hasSource: boolean;
   // Solutions of this resource that the viewer may see.
   solutions: ResourceRef[];
 }

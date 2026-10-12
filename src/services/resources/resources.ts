@@ -37,6 +37,7 @@ export function toResourceListItem(resource: Resource, courseCode: string, solut
     examSession: resource.examSession ?? null,
     language: resource.language,
     isPublished: resource.isPublished,
+    hasSource: Boolean(resource.externalUrl || resource.fileKey),
     solutions,
   };
 }

@@ -77,6 +77,16 @@ describe("listResources", () => {
     expect(first).not.toHaveProperty("externalUrl");
   });
 
+  it("reports whether a row has a link or a stored file as hasSource", async () => {
+    const { a } = await seed();
+    const { Resource } = getDb();
+    await Resource.create({ courseId: a.id, type: "notes", title: "Stored file", fileKey: "resources/generated-key.pdf", isPublished: true });
+    const bySource = new Map((await listResources(admin, { courseCode: "TEST301" })).items.map((r) => [r.title, r.hasSource]));
+    expect(bySource.get("Final 2024")).toBe(true);
+    expect(bySource.get("Stored file")).toBe(true);
+    expect(bySource.get("Draft lecture")).toBe(false);
+  });
+
   it("treats blank filter values as no filter, and accepts numbers as strings", async () => {
     await seed();
     const blank = { courseCode: " ", type: "", academicYearStart: "", examSession: "", language: "", page: "", pageSize: "" };

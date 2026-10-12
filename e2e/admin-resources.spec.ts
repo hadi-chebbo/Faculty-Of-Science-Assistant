@@ -78,3 +78,49 @@ test("Next goes to page 2 and Previous comes back", async ({ page }) => {
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByText(/page 1 of \d+/)).toBeVisible();
 });
+
+test("the admin can open a draft from the list; others get 404", async ({ page, playwright, baseURL }) => {
+  await signInAsAdmin(page);
+  await page.goto("/admin?course=DEMO501");
+  const row = page.getByRole("listitem").filter({ hasText: "Sample draft lecture" });
+  const href = await row.getByRole("link", { name: "Open Sample draft lecture" }).getAttribute("href");
+  expect(href).toMatch(/^\/api\/v1\/resources\/[0-9a-f-]+\/open$/);
+
+  const asAdmin = await page.request.get(href!, { maxRedirects: 0 });
+  expect(asAdmin.status()).toBe(307);
+  expect(asAdmin.headers()["location"]).toBeTruthy();
+
+  const anonymous = await playwright.request.newContext({ baseURL });
+  const asVisitor = await anonymous.get(href!, { maxRedirects: 0, headers: { accept: "application/json" } });
+  expect(asVisitor.status()).toBe(404);
+  await anonymous.dispose();
+});
+
+test("a signed-in student cannot open a draft", async ({ page }) => {
+  await signInAsAdmin(page);
+  await page.goto("/admin?course=DEMO501");
+  const href = await page
+    .getByRole("listitem")
+    .filter({ hasText: "Sample draft lecture" })
+    .getByRole("link", { name: "Open Sample draft lecture" })
+    .getAttribute("href");
+  await page.context().clearCookies();
+
+  await ownAddress(page);
+  await page.goto("/sign-in");
+  await page.getByLabel("Email").fill("demo.student@example.com");
+  await page.getByLabel("Password").fill("demo-student-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"));
+
+  const response = await page.request.get(href!, { maxRedirects: 0, headers: { accept: "application/json" } });
+  expect(response.status()).toBe(404);
+});
+
+test("a row with no file or link shows a hint instead of Open", async ({ page }) => {
+  await signInAsAdmin(page);
+  await page.goto("/admin?course=DEMO601");
+  const row = page.getByRole("listitem").filter({ hasText: "Sample draft notes with no source" });
+  await expect(row.getByText("No file or link yet")).toBeVisible();
+  await expect(row.getByRole("link", { name: /^Open/ })).toHaveCount(0);
+});

@@ -67,13 +67,30 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
                   {r.academicYearStart !== null && ` - ${formatAcademicYear(r.academicYearStart)}`}
                   {r.examSession !== null && ` - ${EXAM_SESSION_LABELS[r.examSession]}`}
                 </p>
-                <Link
-                  href={`/admin/resources/${r.id}/edit`}
-                  aria-label={`Edit ${r.title}`}
-                  className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-4 md:min-h-0"
-                >
-                  Edit
-                </Link>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4">
+                  <Link
+                    href={`/admin/resources/${r.id}/edit`}
+                    aria-label={`Edit ${r.title}`}
+                    className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-4 md:min-h-0"
+                  >
+                    Edit
+                  </Link>
+                  {r.hasSource ? (
+                    // A plain <a>, like the public row: the target is a route that redirects, not a page.
+                    <a
+                      href={`/api/v1/resources/${r.id}/open`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`Open ${r.title}`}
+                      className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-4 md:min-h-0"
+                    >
+                      Open
+                      <span className="sr-only">(opens in a new tab)</span>
+                    </a>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">No file or link yet</span>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
