@@ -51,6 +51,10 @@ Pages call services directly, so the website needs no read endpoints. Unused end
 
 Endpoints the website itself needs are written now: sign-in, token refresh, sign-out, bookmarking, marking done, uploads, and requesting a signed download link. Public API routes go under `/api/v1/`.
 
+Built so far: `POST /api/v1/auth/sign-in`, `/refresh` and `/sign-out`, plus `GET /api/v1/auth/restore`, which `/admin` redirects to when the access token has expired (it rotates the refresh cookie, then redirects to a validated same-site path). All are `no-store`, take tokens only from cookies, and reject requests whose `Origin` (or `Referer`) is not the app's own host. The auth services live in `src/services/auth/` and know nothing about cookies; cookie handling, the client IP and the origin check are in `src/lib/auth/`.
+
+`getViewer()` (`src/lib/auth/viewer.ts`) reads the access cookie and returns the `Viewer`. Only `/admin` calls it. Public pages keep passing `null`, so they carry no per-user data and drafts are never rendered outside the admin area. The refresh cookie is scoped to `/api/v1/auth`, so ordinary page requests never carry it.
+
 Server pages must not call the app's own API over HTTP. If an endpoint must be proven to work, it gets an automated test that calls it over HTTP instead.
 
 ## Alternatives considered

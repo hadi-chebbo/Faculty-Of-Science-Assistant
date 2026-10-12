@@ -64,6 +64,8 @@ mock exam generation, personalization.
 - User: email (stored lowercase), optional name, password hash, role
   (student or admin).
 - RefreshToken: belongs to a user; token hash, family id, expiry, revoked-at.
+- FailedSignIn (`failed_sign_ins`): normalised email, IP, time. Only failures are
+  stored; no link to users, so unknown emails are counted too. Old rows are pruned.
 - Bookmark and Completion: each one row per (user, resource). A completion
   means the student explicitly marked the resource done; un-marking deletes it.
 
@@ -89,6 +91,13 @@ mock exam generation, personalization.
   as SHA-256 hashes in `refresh_tokens`, rotated on every use, and grouped by
   `family_id` so a reused token revokes its whole chain. Our own tables and
   code; no auth framework.
+- Access tokens are HS256 JWTs signed with `jose` (the one auth dependency),
+  secret in `AUTH_SECRET` (32+ characters, read lazily so the build and public
+  pages work without it). Lifetimes: access 15 minutes, refresh 30 days. Both
+  live in httpOnly, SameSite=Lax cookies; tokens are never in response bodies.
+- Sign-in is rate-limited in the database (`failed_sign_ins`): 5 failures per
+  email or 20 per IP in 15 minutes refuse further attempts before the password
+  is checked. Public pages never read the session; only `/admin` does.
 - The single admin account is created by a seed script; there is no public
   sign-up for admins.
 - Migration style: one table per file; Sequelize API (`createTable`,
