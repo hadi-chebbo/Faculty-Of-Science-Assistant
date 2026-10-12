@@ -17,7 +17,7 @@ export interface Crumb {
 // Desktop only: phones have the bottom bar and short pages.
 export function Crumbs({ items }: { items: Crumb[] }) {
   return (
-    <Breadcrumb className="mb-4 hidden md:block">
+    <Breadcrumb className="mb-3 hidden md:block">
       <BreadcrumbList>
         {items.map((item, i) => (
           <Fragment key={item.label}>
