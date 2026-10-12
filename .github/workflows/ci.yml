@@ -28,6 +28,10 @@ jobs:
     env:
       DATABASE_URL: postgres://app:app@localhost:5432/university_assistant
       TEST_DATABASE_URL: postgres://app:app@localhost:5432/university_assistant_test
+      # Throwaway values for CI only, not secrets: the database is created and discarded per run.
+      AUTH_SECRET: ci-only-auth-secret-not-used-anywhere-else-0123456789
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: ci-only-admin-password-0123
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

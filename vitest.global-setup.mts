@@ -20,4 +20,6 @@ export default async function setup() {
   // Tests (and the app code they import) connect to the test database only.
   process.env.DATABASE_URL = testUrl;
   process.env.DATABASE_SSL = "false";
+  // A fixed throwaway secret, so tests never depend on (or use) a real one from .env.
+  process.env.AUTH_SECRET = "vitest-only-secret-not-used-anywhere-else-0123456789";
 }
