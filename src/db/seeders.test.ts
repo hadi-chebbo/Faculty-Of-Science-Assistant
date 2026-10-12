@@ -115,6 +115,11 @@ describe("seeders", () => {
       expect(new Set(chapters.map((c) => c.code))).toEqual(new Set(["DEMO301", "DEMO302", "DEMO501"]));
       expect(chapters.some((c) => c.title === "Sample chapter 1")).toBe(true);
       expect(chapters.some((c) => c.attached > 0)).toBe(true);
+      // Exercises belong to chapters too, not only lectures and notes.
+      const [exercises] = await getDb().sequelize.query(
+        "SELECT count(*)::int AS n FROM resources WHERE type = 'exercise' AND chapter_id IS NOT NULL",
+      );
+      expect((exercises[0] as { n: number }).n).toBeGreaterThan(0);
       const unattached = first.unattached as { code: string }[];
       for (const code of ["DEMO301", "DEMO302", "DEMO501"]) {
         expect(

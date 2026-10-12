@@ -23,6 +23,26 @@ test("a middle chapter has both Previous and Next", async ({ page }) => {
   await expect(nav.getByRole("link", { name: /Next/ })).toContainText("Sample chapter 3");
 });
 
+test("a chapter holds exercises beside its lectures, with jump links and the solution", async ({ page }) => {
+  await page.goto("/courses/DEMO302");
+  const card = page.getByRole("link", { name: /Sample chapter 1/ });
+  await expect(card).toContainText("1 lecture · 1 exercise");
+  await card.click();
+  await expect(page).toHaveURL(/\/courses\/DEMO302\/chapters\/1$/);
+
+  await expect(page.getByRole("heading", { name: "Lectures", level: 2 })).toBeVisible();
+  const exercises = page.locator("section#exercise");
+  await expect(exercises.getByRole("heading", { name: "Exercises", level: 2 })).toBeVisible();
+  await expect(exercises.getByText("Sample exercise sheet 1", { exact: true })).toBeVisible();
+  await expect(exercises.getByRole("link", { name: /^Solution/ })).toHaveCount(1);
+
+  // Two kinds of material, so the jump links show.
+  const jump = page.getByRole("navigation", { name: "In this chapter" });
+  await expect(jump.getByRole("link", { name: "Lectures 1" })).toBeVisible();
+  await jump.getByRole("link", { name: "Exercises 1" }).click();
+  await expect(page).toHaveURL(/#exercise$/);
+});
+
 test("All chapters goes back to the course", async ({ page }) => {
   await page.goto("/courses/DEMO301/chapters/1");
   await page.getByRole("link", { name: "All chapters" }).click();
