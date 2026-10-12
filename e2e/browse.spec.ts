@@ -9,6 +9,10 @@ test("a visitor browses from home to a semester to a course", async ({ page }) =
   await page.getByRole("link", { name: /DEMO301/ }).click();
   await expect(page.getByRole("heading", { name: "Sample Course A" })).toBeVisible();
 
+  // The course page opens by chapter; the tabs are behind "By type".
+  await page.getByRole("link", { name: "By type" }).click();
+  await expect(page).toHaveURL(/\?view=type$/);
+
   // The first tab is selected and lists its resources.
   await expect(page.getByRole("tab", { name: /Lectures/ })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("Sample lecture 1")).toBeVisible();
