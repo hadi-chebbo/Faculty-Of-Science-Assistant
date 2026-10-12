@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { EXAM_SESSION_LABELS, formatAcademicYear, RESOURCE_TYPE_LABELS } from "@/lib/labels";
@@ -42,6 +43,9 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
         </div>
         <Button type="submit" className="h-11 px-4 md:h-9 md:px-3">Apply</Button>
       </form>
+      <Link href="/admin/resources/new" className={buttonVariants({ className: "h-11 px-4 md:h-9 md:px-3" })}>
+        New resource
+      </Link>
 
       {result.items.length === 0 ? (
         <p className="rounded-lg border bg-card p-4">No resources match.</p>
@@ -63,6 +67,13 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
                   {r.academicYearStart !== null && ` - ${formatAcademicYear(r.academicYearStart)}`}
                   {r.examSession !== null && ` - ${EXAM_SESSION_LABELS[r.examSession]}`}
                 </p>
+                <Link
+                  href={`/admin/resources/${r.id}/edit`}
+                  aria-label={`Edit ${r.title}`}
+                  className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-4 md:min-h-0"
+                >
+                  Edit
+                </Link>
               </li>
             ))}
           </ul>

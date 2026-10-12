@@ -7,7 +7,7 @@ import { parseInput } from "../validation";
 import { visibleResources } from "../visibility";
 import type { Viewer } from "../viewer";
 import { courseCodeSchema, semesterSchema } from "./schemas";
-import type { CourseDetail, CourseSummary } from "./types";
+import type { CourseDetail, CourseOption, CourseSummary } from "./types";
 
 export async function listCoursesBySemester(viewer: Viewer, semester: number): Promise<CourseSummary[]> {
   const parsedSemester = parseInput(semesterSchema, semester);
@@ -33,12 +33,13 @@ export async function listCoursesBySemester(viewer: Viewer, semester: number): P
   }));
 }
 
-// Every course, for filter dropdowns. Courses are not secret, so the viewer does not change the result.
+// Every course, for the admin course filter and the resource form (which stores a course by id).
+// Courses are not secret, so the viewer does not change the result.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function listCourses(_viewer: Viewer): Promise<{ code: string; title: string; semester: number }[]> {
+export async function listCourses(_viewer: Viewer): Promise<CourseOption[]> {
   const { Course } = getDb();
   const courses = await Course.findAll({ order: [["code", "ASC"]] });
-  return courses.map((c) => ({ code: c.code, title: c.title, semester: c.semester }));
+  return courses.map((c) => ({ id: c.id, code: c.code, title: c.title, semester: c.semester }));
 }
 
 export async function getCourseByCode(viewer: Viewer, code: string): Promise<CourseDetail> {

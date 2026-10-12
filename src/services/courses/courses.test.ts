@@ -34,9 +34,9 @@ describe("listCourses", () => {
     await seed();
     const list = await listCourses(admin);
     expect(list).toEqual([
-      { code: "TEST301", title: "Course A", semester: 3 },
-      { code: "TEST302", title: "Course B", semester: 3 },
-      { code: "TEST501", title: "Course C", semester: 5 },
+      { id: expect.any(String), code: "TEST301", title: "Course A", semester: 3 },
+      { id: expect.any(String), code: "TEST302", title: "Course B", semester: 3 },
+      { id: expect.any(String), code: "TEST501", title: "Course C", semester: 5 },
     ]);
   });
 });

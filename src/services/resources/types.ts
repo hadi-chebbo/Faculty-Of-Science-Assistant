@@ -40,3 +40,19 @@ export interface ExamFilterOptions {
   years: number[];
   sessions: ExamSession[];
 }
+
+// Everything the admin edit form needs. The stored file's key is never exposed, only whether one exists.
+export interface ResourceForEdit {
+  id: string;
+  courseId: string;
+  type: ResourceType;
+  title: string;
+  description: string | null;
+  academicYearStart: number | null;
+  examSession: ExamSession | null;
+  language: Language;
+  externalUrl: string | null;
+  isPublished: boolean;
+  hasFile: boolean;
+  solutionOf: { id: string; title: string } | null;
+}
