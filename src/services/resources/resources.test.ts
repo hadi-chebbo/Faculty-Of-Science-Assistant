@@ -2,9 +2,9 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { ACADEMIC_YEAR_MIN } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
-import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
+import { ForbiddenError, NotFoundError, UnavailableError, ValidationError } from "../errors";
 import { requireAdmin, type Viewer } from "../viewer";
-import { getResource, listResources } from "./resources";
+import { getResource, getResourceLink, listResources } from "./resources";
 import { RESOURCE_PAGE_SIZE_DEFAULT, RESOURCE_PAGE_SIZE_MAX } from "./schemas";
 
 const SAMPLE_URL = "https://example.com/sample";
@@ -165,6 +165,78 @@ describe("getResource", () => {
   it("throws NotFoundError for a missing id and for a malformed id", async () => {
     await expect(getResource(null, "33333333-3333-4333-8333-333333333333")).rejects.toBeInstanceOf(NotFoundError);
     await expect(getResource(null, "42")).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("solutions on list items", () => {
+  it("lists the published solution of an exam and gives other resources an empty list", async () => {
+    const { solution } = await seed();
+    const items = (await listResources(null)).items;
+    const final2024 = items.find((r) => r.title === "Final 2024")!;
+    expect(final2024.solutions).toEqual([{ id: solution.id, type: "solution", title: "Final 2024 solution" }]);
+    expect(items.filter((r) => r.id !== final2024.id).every((r) => r.solutions.length === 0)).toBe(true);
+  });
+
+  it("hides a draft solution from anonymous visitors and students, shows it to an admin", async () => {
+    const { exam } = await seed();
+    const { Resource } = getDb();
+    await Resource.create({ courseId: exam.courseId, type: "solution", title: "Draft solution", solutionOfId: exam.id });
+    const solutionsOf = async (viewer: Viewer) =>
+      (await listResources(viewer)).items.find((r) => r.id === exam.id)!.solutions.map((s) => s.title);
+    expect(await solutionsOf(null)).toEqual(["Final 2024 solution"]);
+    expect(await solutionsOf(student)).toEqual(["Final 2024 solution"]);
+    expect(await solutionsOf(admin)).toEqual(["Draft solution", "Final 2024 solution"]);
+  });
+
+  it("keeps totals and page sizes correct when a resource has several solutions", async () => {
+    const { exam } = await seed();
+    const { Resource } = getDb();
+    await Resource.create({
+      courseId: exam.courseId, type: "solution", title: "Second solution", solutionOfId: exam.id, isPublished: true, externalUrl: SAMPLE_URL,
+    });
+    const first = await listResources(null, { pageSize: 2 });
+    const second = await listResources(null, { pageSize: 2, page: 2 });
+    const third = await listResources(null, { pageSize: 2, page: 3 });
+    expect(first.total).toBe(6);
+    expect([first.items.length, second.items.length, third.items.length]).toEqual([2, 2, 2]);
+    const ids = [...first.items, ...second.items, ...third.items].map((r) => r.id);
+    expect(new Set(ids).size).toBe(6);
+    const examItem = [...first.items, ...second.items, ...third.items].find((r) => r.id === exam.id)!;
+    expect(examItem.solutions.map((s) => s.title)).toEqual(["Final 2024 solution", "Second solution"]);
+  });
+});
+
+describe("getResourceLink", () => {
+  it("returns the url of a published resource", async () => {
+    const { exam } = await seed();
+    expect(await getResourceLink(null, exam.id)).toEqual({ url: SAMPLE_URL });
+  });
+
+  it("treats a draft as not found for non-admins, and returns it to an admin", async () => {
+    const { a } = await seed();
+    const { Resource } = getDb();
+    const draft = await Resource.create({ courseId: a.id, type: "lecture", title: "Draft with link", externalUrl: SAMPLE_URL });
+    await expect(getResourceLink(null, draft.id)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(getResourceLink(student, draft.id)).rejects.toBeInstanceOf(NotFoundError);
+    expect(await getResourceLink(admin, draft.id)).toEqual({ url: SAMPLE_URL });
+  });
+
+  it("throws NotFoundError for a missing id and for a malformed id", async () => {
+    await expect(getResourceLink(null, "33333333-3333-4333-8333-333333333333")).rejects.toBeInstanceOf(NotFoundError);
+    await expect(getResourceLink(null, "42")).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("throws UnavailableError for a stored file, which cannot be served yet", async () => {
+    const { a } = await seed();
+    const { Resource } = getDb();
+    const stored = await Resource.create({ courseId: a.id, type: "lecture", title: "Stored", fileKey: "abc", isPublished: true });
+    await expect(getResourceLink(null, stored.id)).rejects.toBeInstanceOf(UnavailableError);
+  });
+
+  it("throws UnavailableError for a draft with no source, when an admin looks at it", async () => {
+    const { draft } = await seed();
+    await expect(getResourceLink(admin, draft.id)).rejects.toBeInstanceOf(UnavailableError);
+    await expect(getResourceLink(null, draft.id)).rejects.toBeInstanceOf(NotFoundError);
   });
 });
 

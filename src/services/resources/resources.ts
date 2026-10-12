@@ -2,13 +2,13 @@ import { Op, Sequelize, type Order, type WhereOptions } from "sequelize";
 import { EXAM_SESSIONS } from "@/db/constants";
 import { getDb } from "@/db/models";
 import type { Resource } from "@/db/models";
-import { NotFoundError } from "../errors";
+import { NotFoundError, UnavailableError } from "../errors";
 import type { Page } from "../types";
 import { parseInput } from "../validation";
 import { visibleResources } from "../visibility";
 import { isAdmin, type Viewer } from "../viewer";
 import { idSchema, resourceFiltersSchema, type ResourceFilters } from "./schemas";
-import type { ResourceDetail, ResourceListItem, ResourceRef } from "./types";
+import type { ResourceDetail, ResourceLink, ResourceListItem, ResourceRef } from "./types";
 
 // Newest academic year first, then sessions in the order of EXAM_SESSIONS (partial, final,
 // second), then title. The id is only a tie-breaker so paging is stable when titles repeat.
@@ -25,7 +25,7 @@ export function resourceOrder(): Order {
   ];
 }
 
-export function toResourceListItem(resource: Resource, courseCode: string): ResourceListItem {
+export function toResourceListItem(resource: Resource, courseCode: string, solutions: ResourceRef[]): ResourceListItem {
   return {
     id: resource.id,
     courseCode,
@@ -36,11 +36,31 @@ export function toResourceListItem(resource: Resource, courseCode: string): Reso
     examSession: resource.examSession ?? null,
     language: resource.language,
     isPublished: resource.isPublished,
+    solutions,
   };
 }
 
 function toRef(resource: Resource): ResourceRef {
   return { id: resource.id, type: resource.type, title: resource.title };
+}
+
+// The solutions the viewer may see, for many resources at once (one query, so no N+1). Done
+// apart from the main query because a hasMany include would multiply rows and break paging.
+export async function visibleSolutionsOf(viewer: Viewer, ids: string[]): Promise<Map<string, ResourceRef[]>> {
+  const byResource = new Map<string, ResourceRef[]>();
+  if (ids.length === 0) return byResource;
+
+  const { Resource } = getDb();
+  const solutions = await Resource.findAll({
+    where: { solutionOfId: ids, ...visibleResources(viewer) },
+    order: [["title", "ASC"], ["id", "ASC"]],
+  });
+  for (const solution of solutions) {
+    const list = byResource.get(solution.solutionOfId!) ?? [];
+    list.push(toRef(solution));
+    byResource.set(solution.solutionOfId!, list);
+  }
+  return byResource;
 }
 
 export async function listResources(viewer: Viewer, filters: ResourceFilters = {}): Promise<Page<ResourceListItem>> {
@@ -75,7 +95,13 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
     offset: (page - 1) * pageSize,
   });
 
-  return { items: rows.map((row) => toResourceListItem(row, row.course!.code)), total: count, page, pageSize };
+  const solutions = await visibleSolutionsOf(viewer, rows.map((row) => row.id));
+  return {
+    items: rows.map((row) => toResourceListItem(row, row.course!.code, solutions.get(row.id) ?? [])),
+    total: count,
+    page,
+    pageSize,
+  };
 }
 
 export async function getResource(viewer: Viewer, id: string): Promise<ResourceDetail> {
@@ -95,9 +121,24 @@ export async function getResource(viewer: Viewer, id: string): Promise<ResourceD
 
   const visible = (r: Resource) => isAdmin(viewer) || r.isPublished;
   return {
-    ...toResourceListItem(row, row.course!.code),
+    ...toResourceListItem(row, row.course!.code, (row.solutions ?? []).filter(visible).map(toRef)),
     courseTitle: row.course!.title,
     solutionOf: row.solutionOf && visible(row.solutionOf) ? toRef(row.solutionOf) : null,
-    solutions: (row.solutions ?? []).filter(visible).map(toRef),
   };
+}
+
+// Where to send a visitor who opens a resource. Same visibility rule as everything else.
+export async function getResourceLink(viewer: Viewer, id: string): Promise<ResourceLink> {
+  if (!idSchema.safeParse(id).success) throw new NotFoundError("Resource not found");
+
+  const { Resource } = getDb();
+  const row = await Resource.findOne({
+    where: { id, ...visibleResources(viewer) },
+    attributes: ["externalUrl"],
+  });
+  if (!row) throw new NotFoundError("Resource not found");
+
+  if (row.externalUrl) return { url: row.externalUrl };
+  // Stored files need object storage, which does not exist yet; a draft may have no source at all.
+  throw new UnavailableError("This resource is not available yet");
 }
