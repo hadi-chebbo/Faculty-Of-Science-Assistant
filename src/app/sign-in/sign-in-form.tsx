@@ -41,7 +41,7 @@ export function SignInForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input id="email" name="email" type="email" autoComplete="username" required maxLength={254} className="h-11" />
@@ -59,7 +59,7 @@ export function SignInForm() {
         />
       </div>
       {error && (
-        <p role="alert" className="text-sm font-medium text-destructive">
+        <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
           {error}
         </p>
       )}
