@@ -6,7 +6,7 @@ import { parseInput } from "../validation";
 import type { Viewer } from "../viewer";
 import { getResource } from "./resources";
 import { idSchema, resourceInputSchema, type ResourceInput, type ResourceInputData } from "./schemas";
-import type { ResourceDetail } from "./types";
+import type { ResourceDetail, ResourceForEdit } from "./types";
 
 // The token's role can be up to 15 minutes old, so a write checks the role in the database.
 // Runs before input validation: an anonymous caller learns nothing about the input rules.
@@ -52,6 +52,32 @@ async function checkAgainstDatabase(
   }
 
   if (fields.length > 0) throw new ValidationError([...new Set(fields)]);
+}
+
+// The stored values of one resource, drafts included, for the admin edit form.
+export async function getResourceForEdit(viewer: Viewer, id: string): Promise<ResourceForEdit> {
+  await requireCurrentAdmin(viewer);
+  if (!idSchema.safeParse(id).success) throw new NotFoundError("Resource not found");
+
+  const { Resource } = getDb();
+  const row = await Resource.findByPk(id);
+  if (!row) throw new NotFoundError("Resource not found");
+  const target = row.solutionOfId ? await Resource.findByPk(row.solutionOfId, { attributes: ["id", "title"] }) : null;
+
+  return {
+    id: row.id,
+    courseId: row.courseId,
+    type: row.type,
+    title: row.title,
+    description: row.description ?? null,
+    academicYearStart: row.academicYearStart ?? null,
+    examSession: row.examSession ?? null,
+    language: row.language,
+    externalUrl: row.externalUrl ?? null,
+    isPublished: row.isPublished,
+    hasFile: row.fileKey != null,
+    solutionOf: target ? { id: target.id, title: target.title } : null,
+  };
 }
 
 export async function createResource(viewer: Viewer, input: ResourceInput): Promise<ResourceDetail> {

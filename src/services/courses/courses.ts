@@ -41,6 +41,13 @@ export async function listCourses(_viewer: Viewer): Promise<{ code: string; titl
   return courses.map((c) => ({ code: c.code, title: c.title, semester: c.semester }));
 }
 
+// Courses with their ids, for the admin resource form (which stores a course by id).
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function listCourseOptions(_viewer: Viewer): Promise<{ id: string; code: string; title: string }[]> {
+  const courses = await getDb().Course.findAll({ attributes: ["id", "code", "title"], order: [["code", "ASC"]] });
+  return courses.map((c) => ({ id: c.id, code: c.code, title: c.title }));
+}
+
 export async function getCourseByCode(viewer: Viewer, code: string): Promise<CourseDetail> {
   // A blank or over-long code can never match a course; answer the same as for a missing one.
   const parsedCode = courseCodeSchema.safeParse(code);
