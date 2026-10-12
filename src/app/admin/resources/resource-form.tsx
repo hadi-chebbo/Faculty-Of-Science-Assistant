@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,19 +23,30 @@ const FIELD_MESSAGES: Record<string, string> = {
 };
 
 const fieldClass = "h-11 md:h-9";
+const selectClass = "w-full [&_select]:h-11 md:[&_select]:h-9";
 
 function Field({ id, label, hint, error, children }: { id: string; label: string; hint?: string; error?: string; children: ReactNode }) {
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
       {children}
-      {hint && <p className="text-sm">{hint}</p>}
+      {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
       {error && (
         <p id={`${id}-error`} role="alert" className="text-sm font-medium text-destructive">
           {error}
         </p>
       )}
     </div>
+  );
+}
+
+// A labelled group of fields.
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <fieldset className="min-w-0 space-y-4">
+      <legend className="mb-1 w-full border-b pb-2 text-base font-semibold text-heading">{title}</legend>
+      {children}
+    </fieldset>
   );
 }
 
@@ -99,100 +111,114 @@ export function ResourceForm({ courses, resource }: { courses: CourseOption[]; r
   const invalid = (name: string) => (errors[name] ? true : undefined);
 
   return (
-    <form onSubmit={onSubmit} className="max-w-xl space-y-4">
-      <Field id="courseId" label="Course" error={errors.courseId}>
-        <NativeSelect id="courseId" name="courseId" required defaultValue={resource?.courseId ?? ""} aria-invalid={invalid("courseId")} className="w-full [&_select]:h-11 md:[&_select]:h-9">
-          {!resource && <NativeSelectOption value="" disabled>Choose a course</NativeSelectOption>}
-          {courses.map((c) => (
-            <NativeSelectOption key={c.id} value={c.id}>
-              {c.code} - {c.title}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-      </Field>
+    <form onSubmit={onSubmit} className="max-w-2xl">
+      <Card className="pb-0">
+        <CardContent className="gap-8">
+          <Section title="Basics">
+            <Field id="courseId" label="Course" error={errors.courseId}>
+              <NativeSelect id="courseId" name="courseId" required defaultValue={resource?.courseId ?? ""} aria-invalid={invalid("courseId")} className={selectClass}>
+                {!resource && <NativeSelectOption value="" disabled>Choose a course</NativeSelectOption>}
+                {courses.map((c) => (
+                  <NativeSelectOption key={c.id} value={c.id}>
+                    {c.code} - {c.title}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </Field>
 
-      <Field id="type" label="Type" error={errors.type}>
-        <NativeSelect id="type" name="type" value={type} onChange={(e) => setType(e.target.value as ResourceType)} aria-invalid={invalid("type")} className="w-full [&_select]:h-11 md:[&_select]:h-9">
-          {RESOURCE_TYPES.map((t) => (
-            <NativeSelectOption key={t} value={t}>
-              {RESOURCE_TYPE_LABELS[t]}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-      </Field>
+            <Field id="type" label="Type" error={errors.type}>
+              <NativeSelect id="type" name="type" value={type} onChange={(e) => setType(e.target.value as ResourceType)} aria-invalid={invalid("type")} className={selectClass}>
+                {RESOURCE_TYPES.map((t) => (
+                  <NativeSelectOption key={t} value={t}>
+                    {RESOURCE_TYPE_LABELS[t]}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </Field>
 
-      {resource?.solutionOf && type === "solution" && <p className="text-sm">Solution of: {resource.solutionOf.title}</p>}
+            {resource?.solutionOf && type === "solution" && (
+              <p className="text-sm text-muted-foreground">Solution of: {resource.solutionOf.title}</p>
+            )}
 
-      <Field id="title" label="Title" error={errors.title}>
-        <Input id="title" name="title" required maxLength={RESOURCE_TITLE_MAX_LENGTH} defaultValue={resource?.title ?? ""} aria-invalid={invalid("title")} className={fieldClass} />
-      </Field>
+            <Field id="title" label="Title" error={errors.title}>
+              <Input id="title" name="title" required maxLength={RESOURCE_TITLE_MAX_LENGTH} defaultValue={resource?.title ?? ""} aria-invalid={invalid("title")} className={fieldClass} />
+            </Field>
 
-      <Field id="description" label="Description" error={errors.description}>
-        <Textarea id="description" name="description" rows={3} defaultValue={resource?.description ?? ""} aria-invalid={invalid("description")} />
-      </Field>
+            <Field id="description" label="Description" error={errors.description}>
+              <Textarea id="description" name="description" rows={3} defaultValue={resource?.description ?? ""} aria-invalid={invalid("description")} />
+            </Field>
+          </Section>
 
-      <Field id="academicYearStart" label="Academic year start" hint="2024 means 2024-2025." error={errors.academicYearStart}>
-        <Input id="academicYearStart" name="academicYearStart" type="number" inputMode="numeric" defaultValue={resource?.academicYearStart ?? ""} aria-invalid={invalid("academicYearStart")} className={fieldClass} />
-      </Field>
+          <Section title="Details">
+            <div className="grid gap-4 md:grid-cols-2 md:items-start">
+              <Field id="academicYearStart" label="Academic year start" hint="2024 means 2024-2025." error={errors.academicYearStart}>
+                <Input id="academicYearStart" name="academicYearStart" type="number" inputMode="numeric" defaultValue={resource?.academicYearStart ?? ""} aria-invalid={invalid("academicYearStart")} className={fieldClass} />
+              </Field>
 
-      {type === "exam" && (
-        <Field id="examSession" label="Exam session" error={errors.examSession}>
-          <NativeSelect id="examSession" name="examSession" defaultValue={resource?.examSession ?? ""} aria-invalid={invalid("examSession")} className="w-full [&_select]:h-11 md:[&_select]:h-9">
-            <NativeSelectOption value="">Choose a session</NativeSelectOption>
-            {EXAM_SESSIONS.map((s: ExamSession) => (
-              <NativeSelectOption key={s} value={s}>
-                {EXAM_SESSION_LABELS[s]}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </Field>
-      )}
+              <Field id="language" label="Language" error={errors.language}>
+                <NativeSelect id="language" name="language" defaultValue={resource?.language ?? "en"} aria-invalid={invalid("language")} className={selectClass}>
+                  {LANGUAGES.map((l: Language) => (
+                    <NativeSelectOption key={l} value={l}>
+                      {LANGUAGE_LABELS[l]}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </Field>
 
-      <Field id="language" label="Language" error={errors.language}>
-        <NativeSelect id="language" name="language" defaultValue={resource?.language ?? "en"} aria-invalid={invalid("language")} className="w-full [&_select]:h-11 md:[&_select]:h-9">
-          {LANGUAGES.map((l: Language) => (
-            <NativeSelectOption key={l} value={l}>
-              {LANGUAGE_LABELS[l]}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-      </Field>
+              {type === "exam" && (
+                <Field id="examSession" label="Exam session" error={errors.examSession}>
+                  <NativeSelect id="examSession" name="examSession" defaultValue={resource?.examSession ?? ""} aria-invalid={invalid("examSession")} className={selectClass}>
+                    <NativeSelectOption value="">Choose a session</NativeSelectOption>
+                    {EXAM_SESSIONS.map((s: ExamSession) => (
+                      <NativeSelectOption key={s} value={s}>
+                        {EXAM_SESSION_LABELS[s]}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
+                </Field>
+              )}
+            </div>
+          </Section>
 
-      <Field
-        id="externalUrl"
-        label="Link"
-        hint={hasFile ? "This resource has a stored file." : "An https:// address."}
-        error={errors.externalUrl}
-      >
-        <Input id="externalUrl" name="externalUrl" type="url" disabled={hasFile} defaultValue={resource?.externalUrl ?? ""} placeholder="https://" aria-invalid={invalid("externalUrl")} className={fieldClass} />
-      </Field>
+          <Section title="Source and publishing">
+            <Field
+              id="externalUrl"
+              label="Link"
+              hint={hasFile ? "This resource has a stored file." : "An https:// address."}
+              error={errors.externalUrl}
+            >
+              <Input id="externalUrl" name="externalUrl" type="url" disabled={hasFile} defaultValue={resource?.externalUrl ?? ""} placeholder="https://" aria-invalid={invalid("externalUrl")} className={fieldClass} />
+            </Field>
 
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Checkbox id="isPublished" name="isPublished" defaultChecked={resource?.isPublished ?? false} aria-invalid={invalid("isPublished")} />
-          <Label htmlFor="isPublished">Published</Label>
-        </div>
-        {errors.isPublished && (
-          <p role="alert" className="text-sm font-medium text-destructive">
-            {errors.isPublished}
-          </p>
-        )}
-      </div>
+            <div className="space-y-2">
+              <div className="flex min-h-11 items-center gap-2 md:min-h-0">
+                <Checkbox id="isPublished" name="isPublished" defaultChecked={resource?.isPublished ?? false} aria-invalid={invalid("isPublished")} />
+                <Label htmlFor="isPublished">Published</Label>
+              </div>
+              {errors.isPublished && (
+                <p role="alert" className="text-sm font-medium text-destructive">
+                  {errors.isPublished}
+                </p>
+              )}
+            </div>
+          </Section>
 
-      {formError && (
-        <p role="alert" className="text-sm font-medium text-destructive">
-          {formError}
-        </p>
-      )}
+          {formError && (
+            <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
+              {formError}
+            </p>
+          )}
+        </CardContent>
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={pending} className="h-11 px-4">
-          {pending ? "Saving..." : "Save"}
-        </Button>
-        <Link href="/admin" className={buttonVariants({ variant: "outline", className: "h-11 px-4" })}>
-          Cancel
-        </Link>
-      </div>
+        <CardFooter className="justify-end gap-2 border-t bg-muted/50 py-4">
+          <Link href="/admin" className={buttonVariants({ variant: "outline", className: "h-11 px-4 md:h-9" })}>
+            Cancel
+          </Link>
+          <Button type="submit" disabled={pending} className="h-11 px-4 md:h-9">
+            {pending ? "Saving..." : "Save"}
+          </Button>
+        </CardFooter>
+      </Card>
     </form>
   );
 }

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { AdminBar } from "@/components/admin/admin-bar";
+import { FormBreadcrumb } from "@/components/admin/form-breadcrumb";
 import { PageTitle } from "@/components/site/page-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readForPage } from "@/lib/page-errors";
@@ -13,8 +15,9 @@ export const metadata: Metadata = { title: "Edit resource", robots: { index: fal
 export default function EditResourcePage({ params }: PageProps<"/admin/resources/[id]/edit">) {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
+      <FormBreadcrumb current="Edit resource" />
       <PageTitle>Edit resource</PageTitle>
-      <Suspense fallback={<Skeleton className="h-64 w-full max-w-xl" />}>
+      <Suspense fallback={<Skeleton className="h-64 w-full max-w-2xl" />}>
         {params.then(({ id }) => (
           <EditResourceContent id={id} />
         ))}
@@ -24,10 +27,15 @@ export default function EditResourcePage({ params }: PageProps<"/admin/resources
 }
 
 async function EditResourceContent({ id }: { id: string }) {
-  const { admin } = await requireAdminPage(`/admin/resources/${encodeURIComponent(id)}/edit`);
+  const { account, admin } = await requireAdminPage(`/admin/resources/${encodeURIComponent(id)}/edit`);
   const [courses, resource] = await Promise.all([
     readForPage(() => listCourses(admin)),
     readForPage(() => getResourceForEdit(admin, id)),
   ]);
-  return <ResourceForm courses={courses} resource={resource} />;
+  return (
+    <>
+      <AdminBar email={account.email} />
+      <ResourceForm courses={courses} resource={resource} />
+    </>
+  );
 }

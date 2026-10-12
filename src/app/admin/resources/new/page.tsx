@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { AdminBar } from "@/components/admin/admin-bar";
+import { FormBreadcrumb } from "@/components/admin/form-breadcrumb";
 import { PageTitle } from "@/components/site/page-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readForPage } from "@/lib/page-errors";
@@ -12,8 +14,9 @@ export const metadata: Metadata = { title: "New resource", robots: { index: fals
 export default function NewResourcePage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
+      <FormBreadcrumb current="New resource" />
       <PageTitle>New resource</PageTitle>
-      <Suspense fallback={<Skeleton className="h-64 w-full max-w-xl" />}>
+      <Suspense fallback={<Skeleton className="h-64 w-full max-w-2xl" />}>
         <NewResourceContent />
       </Suspense>
     </main>
@@ -21,7 +24,12 @@ export default function NewResourcePage() {
 }
 
 async function NewResourceContent() {
-  const { admin } = await requireAdminPage("/admin/resources/new");
+  const { account, admin } = await requireAdminPage("/admin/resources/new");
   const courses = await readForPage(() => listCourses(admin));
-  return <ResourceForm courses={courses} />;
+  return (
+    <>
+      <AdminBar email={account.email} />
+      <ResourceForm courses={courses} />
+    </>
+  );
 }
