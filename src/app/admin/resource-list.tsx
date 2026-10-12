@@ -71,7 +71,7 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
             {/* Visual column labels only; each row's own text already says what it is. */}
             <div aria-hidden className={`hidden gap-x-4 px-4 text-xs font-medium uppercase tracking-wide text-muted-foreground md:grid ${COLUMNS}`}>
               <span>Title</span>
-              <span>Course - type - year - session</span>
+              <span>Details</span>
               <span>Status</span>
               <span className="text-right">Actions</span>
             </div>
@@ -86,7 +86,7 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
                     variant="outline"
                     className={
                       r.isPublished
-                        ? `${BADGE_PLACE} border-emerald-700/30 bg-emerald-100 text-emerald-900 dark:border-emerald-400/30 dark:bg-emerald-950 dark:text-emerald-200`
+                        ? `${BADGE_PLACE} border-primary/30 bg-primary/10 text-link`
                         : `${BADGE_PLACE} border-dashed text-foreground`
                     }
                   >
