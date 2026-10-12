@@ -138,6 +138,11 @@ mock exam generation, personalization.
 ## Engineering rules
 
 - Work in small vertical slices that leave the app working and deployable.
+- Keep pull requests small and easy to review: one task, one concern, one PR. If a
+  plan is too big to review comfortably in one sitting, split it into separate
+  tasks before any code is written, each with its own PR and each leaving the app
+  working. Do not bundle refactors, dependency changes or unrelated fixes into a
+  feature PR.
 - No new dependency without a stated reason. Update `docs/dependencies.md` whenever
   a dependency is added or removed.
 - Every schema change is a migration; never edit the database by hand.

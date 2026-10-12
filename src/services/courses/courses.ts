@@ -33,6 +33,14 @@ export async function listCoursesBySemester(viewer: Viewer, semester: number): P
   }));
 }
 
+// Every course, for filter dropdowns. Courses are not secret, so the viewer does not change the result.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function listCourses(_viewer: Viewer): Promise<{ code: string; title: string; semester: number }[]> {
+  const { Course } = getDb();
+  const courses = await Course.findAll({ order: [["code", "ASC"]] });
+  return courses.map((c) => ({ code: c.code, title: c.title, semester: c.semester }));
+}
+
 export async function getCourseByCode(viewer: Viewer, code: string): Promise<CourseDetail> {
   // A blank or over-long code can never match a course; answer the same as for a missing one.
   const parsedCode = courseCodeSchema.safeParse(code);

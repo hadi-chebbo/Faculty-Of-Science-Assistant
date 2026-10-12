@@ -3,7 +3,7 @@ import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { NotFoundError, ValidationError } from "../errors";
 import type { Viewer } from "../viewer";
-import { getCourseByCode, listCoursesBySemester } from "./courses";
+import { getCourseByCode, listCourses, listCoursesBySemester } from "./courses";
 
 const SAMPLE_URL = "https://example.com/sample";
 const admin: Viewer = { id: "11111111-1111-4111-8111-111111111111", role: "admin" };
@@ -28,6 +28,18 @@ async function seed() {
   await Resource.create({ courseId: b.id, type: "notes", title: "Draft notes" });
   return { a, b };
 }
+
+describe("listCourses", () => {
+  it("returns every course across semesters, ordered by code", async () => {
+    await seed();
+    const list = await listCourses(admin);
+    expect(list).toEqual([
+      { code: "TEST301", title: "Course A", semester: 3 },
+      { code: "TEST302", title: "Course B", semester: 3 },
+      { code: "TEST501", title: "Course C", semester: 5 },
+    ]);
+  });
+});
 
 describe("listCoursesBySemester", () => {
   it("returns only that semester, ordered by code", async () => {
