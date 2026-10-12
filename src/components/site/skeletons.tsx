@@ -32,3 +32,12 @@ export function CourseSkeleton() {
     </div>
   );
 }
+
+export function SemesterSkeleton() {
+  return (
+    <div role="status" aria-label="Loading semester">
+      <TitleSkeleton />
+      <CourseListSkeleton />
+    </div>
+  );
+}

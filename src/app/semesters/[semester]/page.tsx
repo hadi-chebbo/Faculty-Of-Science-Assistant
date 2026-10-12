@@ -4,14 +4,13 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Crumbs } from "@/components/site/crumbs";
 import { PageTitle } from "@/components/site/page-title";
-import { CourseListSkeleton } from "@/components/site/skeletons";
+import { CourseListSkeleton, SemesterSkeleton } from "@/components/site/skeletons";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SEMESTER_MAX, SEMESTER_MIN } from "@/db/constants";
 import { readForPage } from "@/lib/page-errors";
 import { listCoursesBySemester } from "@/services/courses/courses";
 
-// The four semesters are known at build time, so the shell (title, breadcrumb) is prerendered
-// and only the course list streams in. Anything else (e.g. /semesters/9) renders the not-found
+// The four semesters are known at build time, so they are prerendered. Anything else (e.g. /semesters/9) renders the not-found
 // page. dynamicParams = false would make that a 404 from routing, but Cache Components rejects it.
 export function generateStaticParams() {
   return Array.from({ length: SEMESTER_MAX - SEMESTER_MIN + 1 }, (_, i) => ({
@@ -30,18 +29,32 @@ export async function generateMetadata({ params }: PageProps<"/semesters/[semest
   return { title: semester ? `Semester ${semester}` : "Not found" };
 }
 
-export default async function SemesterPage({ params }: PageProps<"/semesters/[semester]">) {
-  const semester = parseSemester((await params).semester);
+// The semester comes from `params`, which is URL data, so it is read inside Suspense. The
+// fallback covers the breadcrumb and title too, since they depend on it.
+export default function SemesterPage({ params }: PageProps<"/semesters/[semester]">) {
+  return (
+    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
+      <Suspense fallback={<SemesterSkeleton />}>
+        {params.then(({ semester }) => (
+          <SemesterContent semester={semester} />
+        ))}
+      </Suspense>
+    </main>
+  );
+}
+
+function SemesterContent({ semester: param }: { semester: string }) {
+  const semester = parseSemester(param);
   if (semester === null) notFound();
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
+    <>
       <Crumbs items={[{ label: "Home", href: "/" }, { label: `Semester ${semester}` }]} />
       <PageTitle>Semester {semester}</PageTitle>
       <Suspense fallback={<CourseListSkeleton />}>
         <CourseList semester={semester} />
       </Suspense>
-    </main>
+    </>
   );
 }
 
