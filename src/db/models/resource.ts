@@ -11,6 +11,7 @@ import {
 import { EXAM_SESSIONS, LANGUAGES, RESOURCE_TYPES } from "../constants";
 import type { ExamSession, Language, ResourceType } from "../constants";
 import type { Bookmark } from "./bookmark";
+import type { Chapter } from "./chapter";
 import type { Completion } from "./completion";
 import type { Course } from "./course";
 
@@ -25,12 +26,14 @@ export class Resource extends Model<InferAttributes<Resource>, InferCreationAttr
   declare language: CreationOptional<Language>;
   declare fileKey: CreationOptional<string | null>;
   declare externalUrl: CreationOptional<string | null>;
+  declare chapterId: CreationOptional<ForeignKey<Chapter["id"]> | null>;
   declare solutionOfId: CreationOptional<ForeignKey<Resource["id"]> | null>;
   declare isPublished: CreationOptional<boolean>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 
   declare course?: NonAttribute<Course>;
+  declare chapter?: NonAttribute<Chapter>;
   declare solutionOf?: NonAttribute<Resource>;
   declare solutions?: NonAttribute<Resource[]>;
   declare bookmarks?: NonAttribute<Bookmark[]>;
@@ -55,6 +58,7 @@ export function initResource(sequelize: Sequelize): typeof Resource {
       },
       fileKey: { type: DataTypes.TEXT, allowNull: true },
       externalUrl: { type: DataTypes.TEXT, allowNull: true },
+      chapterId: { type: DataTypes.UUID, allowNull: true },
       solutionOfId: { type: DataTypes.UUID, allowNull: true },
       isPublished: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       createdAt: DataTypes.DATE,

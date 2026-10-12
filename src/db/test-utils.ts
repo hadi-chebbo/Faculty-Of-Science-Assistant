@@ -13,7 +13,7 @@ export async function truncateAllTables(): Promise<void> {
   const db = getDb();
   await assertTestDatabase(db);
   await db.sequelize.query(
-    "TRUNCATE TABLE failed_sign_ins, refresh_tokens, bookmarks, completions, resources, courses, users RESTART IDENTITY CASCADE",
+    "TRUNCATE TABLE failed_sign_ins, refresh_tokens, bookmarks, completions, resources, chapters, courses, users RESTART IDENTITY CASCADE",
   );
 }
 

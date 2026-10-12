@@ -7,6 +7,7 @@ import {
   type NonAttribute,
   type Sequelize,
 } from "sequelize";
+import type { Chapter } from "./chapter";
 import type { Resource } from "./resource";
 
 export class Course extends Model<InferAttributes<Course>, InferCreationAttributes<Course>> {
@@ -17,6 +18,7 @@ export class Course extends Model<InferAttributes<Course>, InferCreationAttribut
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 
+  declare chapters?: NonAttribute<Chapter[]>;
   declare resources?: NonAttribute<Resource[]>;
 }
 
