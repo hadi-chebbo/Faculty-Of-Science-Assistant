@@ -27,7 +27,7 @@ const RESOURCE_TYPE_COUNT_NAMES: Record<ResourceType, [one: string, many: string
   exercise: ["exercise", "exercises"],
   exam: ["exam", "exams"],
   solution: ["solution", "solutions"],
-  other: ["other", "other"],
+  other: ["other item", "other items"],
 };
 
 // "3 lectures · 1 note · 2 exercises": what a list of groups holds, in the order given.
