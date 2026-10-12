@@ -2,15 +2,18 @@ import { fn, col } from "sequelize";
 import { RESOURCE_TYPES } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { NotFoundError } from "../errors";
-import { toResourceListItem } from "../resources/resources";
+import { resourceOrder, toResourceListItem } from "../resources/resources";
+import { parseInput } from "../validation";
 import { visibleResources } from "../visibility";
 import type { Viewer } from "../viewer";
+import { courseCodeSchema, semesterSchema } from "./schemas";
 import type { CourseDetail, CourseSummary } from "./types";
 
 export async function listCoursesBySemester(viewer: Viewer, semester: number): Promise<CourseSummary[]> {
+  const parsedSemester = parseInput(semesterSchema, semester);
   const { Course, Resource } = getDb();
 
-  const courses = await Course.findAll({ where: { semester }, order: [["code", "ASC"]] });
+  const courses = await Course.findAll({ where: { semester: parsedSemester }, order: [["code", "ASC"]] });
   if (courses.length === 0) return [];
 
   // One grouped query for all counts, using the same visibility rule as the lists.
@@ -31,20 +34,21 @@ export async function listCoursesBySemester(viewer: Viewer, semester: number): P
 }
 
 export async function getCourseByCode(viewer: Viewer, code: string): Promise<CourseDetail> {
+  // A blank or over-long code can never match a course; answer the same as for a missing one.
+  const parsedCode = courseCodeSchema.safeParse(code);
+  if (!parsedCode.success) throw new NotFoundError("Course not found");
+
   const { Course, Resource, sequelize } = getDb();
 
   // Course codes are unique regardless of letter case.
   const course = await Course.findOne({
-    where: sequelize.where(fn("lower", col("code")), code.trim().toLowerCase()),
+    where: sequelize.where(fn("lower", col("code")), parsedCode.data.toLowerCase()),
   });
   if (!course) throw new NotFoundError("Course not found");
 
   const resources = await Resource.findAll({
     where: { courseId: course.id, ...visibleResources(viewer) },
-    order: [
-      ["academicYearStart", "DESC NULLS LAST"],
-      ["title", "ASC"],
-    ],
+    order: resourceOrder(),
   });
 
   const groups = RESOURCE_TYPES.map((type) => ({

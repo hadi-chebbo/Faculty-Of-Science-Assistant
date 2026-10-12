@@ -28,6 +28,8 @@ These rules keep a future mobile API cheap.
 
 - No Next.js or React imports. Never touch a request, response or cookie.
 - Take plain arguments. Filters and paging are ordinary values.
+- Validate their own arguments with the entity's zod schema (`schemas.ts`) and throw `ValidationError`, so a caller that skips validation never reaches the database with a bad value. Ranges come from `src/db/constants.ts`, which mirrors the check constraints.
+- Lists that can grow are paged: they take `page` and `pageSize` and return a `Page<T>` with the total.
 - Take the viewer (the signed-in user, or nobody) as an argument, so the caller decides whether it came from a cookie or a token.
 - Return plain serialisable data with a named TypeScript type, never Sequelize model instances.
 - Permission checks live in the service, not in the route handler, so a page and an API route can never enforce different rules.

@@ -1,9 +1,11 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { ACADEMIC_YEAR_MIN } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
-import { ForbiddenError, NotFoundError } from "../errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import { requireAdmin, type Viewer } from "../viewer";
 import { getResource, listResources } from "./resources";
+import { RESOURCE_PAGE_SIZE_DEFAULT, RESOURCE_PAGE_SIZE_MAX } from "./schemas";
 
 const SAMPLE_URL = "https://example.com/sample";
 const admin: Viewer = { id: "11111111-1111-4111-8111-111111111111", role: "admin" };
@@ -41,38 +43,85 @@ async function seed() {
 describe("listResources", () => {
   it("hides drafts from anonymous visitors and students, shows them to an admin", async () => {
     await seed();
-    expect(await listResources(null)).toHaveLength(5);
-    expect(await listResources(student)).toHaveLength(5);
-    expect(await listResources(admin)).toHaveLength(6);
+    expect((await listResources(null)).items).toHaveLength(5);
+    expect((await listResources(student)).items).toHaveLength(5);
+    expect((await listResources(admin)).items).toHaveLength(6);
   });
 
   it("orders newest year first, then partial before final, then title", async () => {
     await seed();
-    const titles = (await listResources(null, { type: "exam" })).map((r) => r.title);
+    const titles = (await listResources(null, { type: "exam" })).items.map((r) => r.title);
     expect(titles).toEqual(["Partial 2024", "Final 2024", "Final 2022"]);
   });
 
   it("filters by each field on its own", async () => {
     await seed();
-    expect((await listResources(null, { courseCode: "test302" })).map((r) => r.title)).toEqual(["Other lecture"]);
-    expect(await listResources(null, { type: "solution" })).toHaveLength(1);
-    expect(await listResources(null, { academicYearStart: 2022 })).toHaveLength(1);
-    expect(await listResources(null, { examSession: "partial" })).toHaveLength(1);
-    expect((await listResources(null, { language: "fr" })).map((r) => r.title)).toEqual(["Final 2022"]);
+    expect((await listResources(null, { courseCode: "test302" })).items.map((r) => r.title)).toEqual(["Other lecture"]);
+    expect((await listResources(null, { type: "solution" })).items).toHaveLength(1);
+    expect((await listResources(null, { academicYearStart: 2022 })).items).toHaveLength(1);
+    expect((await listResources(null, { examSession: "partial" })).items).toHaveLength(1);
+    expect((await listResources(null, { language: "fr" })).items.map((r) => r.title)).toEqual(["Final 2022"]);
   });
 
   it("combines filters", async () => {
     await seed();
-    const result = await listResources(null, { courseCode: "TEST301", type: "exam", academicYearStart: 2024, examSession: "final" });
+    const { items: result } = await listResources(null, { courseCode: "TEST301", type: "exam", academicYearStart: 2024, examSession: "final" });
     expect(result.map((r) => r.title)).toEqual(["Final 2024"]);
-    expect(await listResources(null, { courseCode: "TEST302", type: "exam" })).toEqual([]);
+    expect((await listResources(null, { courseCode: "TEST302", type: "exam" })).items).toEqual([]);
   });
 
   it("does not expose file references", async () => {
     await seed();
-    const [first] = await listResources(null);
+    const [first] = (await listResources(null)).items;
     expect(first).not.toHaveProperty("fileKey");
     expect(first).not.toHaveProperty("externalUrl");
+  });
+
+  it("treats blank filter values as no filter, and accepts numbers as strings", async () => {
+    await seed();
+    const blank = { courseCode: " ", type: "", academicYearStart: "", examSession: "", language: "", page: "", pageSize: "" };
+    expect((await listResources(null, blank as never)).items).toHaveLength(5);
+    expect((await listResources(null, { academicYearStart: "2022" } as never)).items).toHaveLength(1);
+  });
+
+  it("filters by any year the database allows", async () => {
+    const { a } = await seed();
+    const { Resource } = getDb();
+    await Resource.create({
+      courseId: a.id, type: "exam", title: "Final 1990", academicYearStart: ACADEMIC_YEAR_MIN, examSession: "final", isPublished: true, externalUrl: SAMPLE_URL,
+    });
+    const page = await listResources(null, { academicYearStart: ACADEMIC_YEAR_MIN });
+    expect(page.items.map((r) => r.title)).toEqual(["Final 1990"]);
+  });
+
+  it("rejects values that are not valid filters with a ValidationError", async () => {
+    await expect(listResources(null, { academicYearStart: NaN })).rejects.toBeInstanceOf(ValidationError);
+    await expect(listResources(null, { academicYearStart: ACADEMIC_YEAR_MIN - 1 })).rejects.toBeInstanceOf(ValidationError);
+    await expect(listResources(null, { type: "bogus" as never })).rejects.toBeInstanceOf(ValidationError);
+    await expect(listResources(null, { page: 0 })).rejects.toBeInstanceOf(ValidationError);
+    await expect(listResources(null, { pageSize: RESOURCE_PAGE_SIZE_MAX + 1 })).rejects.toMatchObject({
+      name: "ValidationError",
+      fields: ["pageSize"],
+    });
+  });
+
+  it("pages the list and reports the total of visible resources", async () => {
+    await seed();
+    const first = await listResources(null, { pageSize: 2 });
+    const second = await listResources(null, { pageSize: 2, page: 2 });
+    const third = await listResources(null, { pageSize: 2, page: 3 });
+    expect(first).toMatchObject({ total: 5, page: 1, pageSize: 2 });
+    expect([first.items.length, second.items.length, third.items.length]).toEqual([2, 2, 1]);
+    const ids = [...first.items, ...second.items, ...third.items].map((r) => r.id);
+    expect(new Set(ids).size).toBe(5);
+    expect((await listResources(null, { pageSize: 2, page: 4 })).items).toEqual([]);
+    expect((await listResources(admin, { pageSize: 2 })).total).toBe(6);
+    expect((await listResources(null, { courseCode: "TEST302", pageSize: 2 })).total).toBe(1);
+  });
+
+  it("uses the default page size when none is given", async () => {
+    await seed();
+    expect(await listResources(null)).toMatchObject({ page: 1, pageSize: RESOURCE_PAGE_SIZE_DEFAULT, total: 5 });
   });
 });
 
@@ -93,6 +142,17 @@ describe("getResource", () => {
     await Resource.create({ courseId: exam.courseId, type: "solution", title: "Draft solution", solutionOfId: exam.id });
     expect((await getResource(student, exam.id)).solutions).toHaveLength(1);
     expect((await getResource(admin, exam.id)).solutions).toHaveLength(2);
+  });
+
+  it("does not link a published solution to its unpublished exam unless the viewer is an admin", async () => {
+    const { a } = await seed();
+    const { Resource } = getDb();
+    const draftExam = await Resource.create({ courseId: a.id, type: "exam", title: "Draft exam", examSession: "second" });
+    const solution = await Resource.create({
+      courseId: a.id, type: "solution", title: "Solution of draft", solutionOfId: draftExam.id, isPublished: true, externalUrl: SAMPLE_URL,
+    });
+    expect((await getResource(null, solution.id)).solutionOf).toBeNull();
+    expect((await getResource(admin, solution.id)).solutionOf?.id).toBe(draftExam.id);
   });
 
   it("treats an unpublished resource as not found for non-admins", async () => {
