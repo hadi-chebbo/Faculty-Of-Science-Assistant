@@ -215,6 +215,20 @@ describe("updateResource", () => {
     expect(await fieldsOf(updateResource(f.admin, f.exam.id, input))).toEqual(["courseId"]);
     expect((await getDb().Resource.findByPk(f.exam.id))!.courseId).toBe(f.course.id);
   });
+
+  it("blocks turning a resource into a solution while solutions point at it", async () => {
+    const f = await setup();
+    await getDb().Resource.create({ courseId: f.course.id, type: "solution", title: "Sol", solutionOfId: f.exam.id });
+    expect(await fieldsOf(updateResource(f.admin, f.exam.id, link(f, { type: "solution" })))).toEqual(["type"]);
+    expect((await getDb().Resource.findByPk(f.exam.id))!.type).toBe("exam");
+  });
+
+  it("names a field once when it fails two rules", async () => {
+    const f = await setup();
+    await getDb().Resource.create({ courseId: f.course.id, type: "solution", title: "Sol", solutionOfId: f.exam.id });
+    const input = link(f, { courseId: MISSING_ID, type: "exam", examSession: "final" });
+    expect(await fieldsOf(updateResource(f.admin, f.exam.id, input))).toEqual(["courseId"]);
+  });
 });
 
 describe("deleteResource", () => {

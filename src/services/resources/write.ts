@@ -40,12 +40,18 @@ async function checkAgainstDatabase(
   if (input.externalUrl && hasFile) fields.push("externalUrl");
   if (input.isPublished && !input.externalUrl && !hasFile) fields.push("isPublished");
 
-  // Moving a resource to another course would break the same-course rule of its solutions.
-  if (resource && resource.courseId !== input.courseId) {
-    if ((await Resource.count({ where: { solutionOfId: resource.id }, transaction })) > 0) fields.push("courseId");
+  // While solutions point at a resource it cannot move to another course (they must share it)
+  // or become a solution itself (a solution never answers a solution).
+  const moves = resource !== null && resource.courseId !== input.courseId;
+  const becomesSolution = input.type === "solution";
+  if (resource && (moves || becomesSolution)) {
+    if ((await Resource.count({ where: { solutionOfId: resource.id }, transaction })) > 0) {
+      if (moves) fields.push("courseId");
+      if (becomesSolution) fields.push("type");
+    }
   }
 
-  if (fields.length > 0) throw new ValidationError(fields);
+  if (fields.length > 0) throw new ValidationError([...new Set(fields)]);
 }
 
 export async function createResource(viewer: Viewer, input: ResourceInput): Promise<ResourceDetail> {
