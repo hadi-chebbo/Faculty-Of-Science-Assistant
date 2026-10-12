@@ -54,6 +54,8 @@ mock exam generation, personalization.
 
 ## Domain model (proposed)
 
+- All ids are UUIDs (`gen_random_uuid()` default in the database); foreign keys are
+  UUIDs and services treat every id as a string.
 - Course: unique course code, title, semester (3–6).
 - Resource: belongs to one course. Type (lecture, notes, exercise, exam,
   solution, other), title, description, academic year, exam session

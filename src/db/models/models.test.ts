@@ -46,6 +46,26 @@ async function seedGraph() {
   return { course, exam, solution, user, token, bookmark, completion };
 }
 
+describe("models: uuid ids", () => {
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+  it("every table gets a uuid id and uuid foreign keys", async () => {
+    const { exam, solution, user, token, bookmark, completion, course } = await seedGraph();
+    for (const id of [course.id, exam.id, user.id, token.id, bookmark.id, completion.id]) {
+      expect(id).toMatch(UUID);
+    }
+    expect(solution.solutionOfId).toBe(exam.id);
+  });
+
+  it("the database generates the id when the application does not", async () => {
+    const { sequelize } = getDb();
+    const [rows] = await sequelize.query(
+      "INSERT INTO courses (code, title, semester) VALUES ('TEST900', 'Default id', 3) RETURNING id",
+    );
+    expect((rows[0] as { id: string }).id).toMatch(UUID);
+  });
+});
+
 describe("models: create and read back", () => {
   it("Course", async () => {
     const { Course } = getDb();
