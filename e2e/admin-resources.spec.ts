@@ -61,17 +61,20 @@ test("choosing a course and applying updates the URL and the list", async ({ pag
   await expect(page.getByText("Sample draft lecture", { exact: true })).toHaveCount(0);
 });
 
-test("Next goes to page 2 and shows different rows", async ({ page }) => {
+// Titles repeat across the demo courses, so the pages are told apart by their number, not by text.
+test("Next goes to page 2 and Previous comes back", async ({ page }) => {
   await signInAsAdmin(page);
   await page.goto("/admin");
-  await expect(page.getByRole("link", { name: /next/i })).toBeVisible();
-  const firstTitles = await page.getByRole("listitem").locator("p.font-medium").allTextContents();
-  expect(firstTitles.length).toBe(20);
+  await expect(page.getByText(/page 1 of \d+/)).toBeVisible();
+  await expect(page.getByRole("listitem").locator("p.font-medium")).toHaveCount(20);
+  await expect(page.getByRole("link", { name: /previous/i })).toHaveCount(0);
 
   await page.getByRole("link", { name: /next/i }).click();
-  await expect(page).toHaveURL(/page=2/);
-  await expect(page.getByRole("link", { name: /previous/i })).toBeVisible();
-  const secondTitles = await page.getByRole("listitem").locator("p.font-medium").allTextContents();
-  expect(secondTitles.length).toBeGreaterThan(0);
-  expect(secondTitles.some((t) => firstTitles.includes(t))).toBe(false);
+  await expect(page).toHaveURL(/\/admin\?page=2$/);
+  await expect(page.getByText(/page 2 of \d+/)).toBeVisible();
+  await expect(page.getByRole("listitem").locator("p.font-medium").first()).toBeVisible();
+
+  await page.getByRole("link", { name: /previous/i }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.getByText(/page 1 of \d+/)).toBeVisible();
 });
