@@ -24,6 +24,33 @@ export class ValidationError extends Error {
   }
 }
 
+// Wrong email or password. Deliberately says nothing about which of the two was wrong.
+export class InvalidCredentialsError extends Error {
+  constructor() {
+    super("Invalid credentials");
+    this.name = "InvalidCredentialsError";
+  }
+}
+
+// Too many recent failed sign-ins for this email or IP. Checked before the password is.
+export class TooManyAttemptsError extends Error {
+  readonly retryAfterSeconds: number;
+
+  constructor(retryAfterSeconds: number) {
+    super("Too many attempts");
+    this.name = "TooManyAttemptsError";
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
+// The refresh token is unknown, expired, revoked or already used. One error for all of them.
+export class InvalidSessionError extends Error {
+  constructor() {
+    super("Invalid session");
+    this.name = "InvalidSessionError";
+  }
+}
+
 // The resource exists and is visible, but its material cannot be served (yet).
 export class UnavailableError extends Error {
   constructor(message = "Unavailable") {
