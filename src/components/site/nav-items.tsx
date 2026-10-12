@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 interface NavItem {
   label: string;
   icon: LucideIcon;
-  // Exams and Search have no pages yet: no href means a disabled item.
+  // Search has no page yet: no href means a disabled item.
   href?: string;
   isActive?: (pathname: string) => boolean;
 }
@@ -20,7 +20,7 @@ const ITEMS: NavItem[] = [
     href: "/",
     isActive: (p) => p === "/" || p.startsWith("/semesters") || p.startsWith("/courses"),
   },
-  { label: "Exams", icon: FileText },
+  { label: "Exams", icon: FileText, href: "/exams", isActive: (p) => p.startsWith("/exams") },
   { label: "Search", icon: Search },
 ];
 
