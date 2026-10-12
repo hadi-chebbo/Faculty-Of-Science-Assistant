@@ -113,6 +113,26 @@ describe("getCourseByCode", () => {
     expect(exams?.resources.map((r) => r.title)).toEqual(["Newer second", "A partial", "Published exam"]);
   });
 
+  it("attaches visible solutions to their exam, keeping each group and its resources intact", async () => {
+    const { a } = await seed();
+    const { Resource } = getDb();
+    const exam = (await Resource.findOne({ where: { courseId: a.id, title: "Published exam" } }))!;
+    for (const [title, isPublished] of [["Solution one", true], ["Solution two", true], ["Draft solution", false]] as const) {
+      await Resource.create({ courseId: a.id, type: "solution", title, solutionOfId: exam.id, isPublished, externalUrl: SAMPLE_URL });
+    }
+    const titlesOf = async (viewer: Viewer) => {
+      const course = await getCourseByCode(viewer, "TEST301");
+      const examItem = course.groups.find((g) => g.type === "exam")!.resources;
+      return { groups: course.groups.map((g) => [g.type, g.resources.length]), solutions: examItem[0].solutions.map((s) => s.title) };
+    };
+    expect(await titlesOf(null)).toEqual({
+      groups: [["lecture", 1], ["exam", 1], ["solution", 2]],
+      solutions: ["Solution one", "Solution two"],
+    });
+    expect((await titlesOf(admin)).solutions).toEqual(["Draft solution", "Solution one", "Solution two"]);
+    expect((await titlesOf(admin)).groups).toEqual([["lecture", 2], ["exam", 1], ["solution", 3]]);
+  });
+
   it("throws NotFoundError for a blank or over-long code", async () => {
     await expect(getCourseByCode(null, "   ")).rejects.toBeInstanceOf(NotFoundError);
     await expect(getCourseByCode(null, "X".repeat(21))).rejects.toBeInstanceOf(NotFoundError);

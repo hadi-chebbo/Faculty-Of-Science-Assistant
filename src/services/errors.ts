@@ -23,3 +23,11 @@ export class ValidationError extends Error {
     this.fields = fields;
   }
 }
+
+// The resource exists and is visible, but its material cannot be served (yet).
+export class UnavailableError extends Error {
+  constructor(message = "Unavailable") {
+    super(message);
+    this.name = "UnavailableError";
+  }
+}

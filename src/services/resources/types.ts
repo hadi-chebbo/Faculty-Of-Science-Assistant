@@ -10,6 +10,8 @@ export interface ResourceListItem {
   examSession: ExamSession | null;
   language: Language;
   isPublished: boolean;
+  // Solutions of this resource that the viewer may see.
+  solutions: ResourceRef[];
 }
 
 // A pointer to a related resource (the exam a solution answers, or a solution of an exam).
@@ -22,5 +24,9 @@ export interface ResourceRef {
 export interface ResourceDetail extends ResourceListItem {
   courseTitle: string;
   solutionOf: ResourceRef | null;
-  solutions: ResourceRef[];
+}
+
+// Where opening a resource leads. Only a URL for now; stored files will bring signed URLs.
+export interface ResourceLink {
+  url: string;
 }
