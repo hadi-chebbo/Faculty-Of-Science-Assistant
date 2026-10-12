@@ -1,64 +1,61 @@
 import { expect, test } from "@playwright/test";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed
-test("a course with chapters opens by chapter", async ({ page }) => {
+test("a course with chapters opens on chapter cards", async ({ page }) => {
   await page.goto("/courses/DEMO301");
 
-  const chapters = page.locator("details[id^='chapter-']");
-  await expect(chapters).toHaveCount(3);
+  await expect(page.getByRole("link", { name: "Chapters" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("tab")).toHaveCount(0);
+
+  const cards = page.locator("main ul.grid > li");
+  await expect(cards).toHaveCount(3);
   for (const [index, title] of ["Sample chapter 1", "Sample chapter 2", "Sample chapter 3"].entries()) {
-    await expect(chapters.nth(index)).toHaveAttribute("id", `chapter-${index + 1}`);
-    await expect(chapters.nth(index).locator("summary")).toContainText(`Chapter ${index + 1}`);
-    await expect(chapters.nth(index).locator("summary")).toContainText(title);
-    await expect(chapters.nth(index).locator("summary")).toContainText("1 item");
+    const card = cards.nth(index);
+    await expect(card).toContainText(`Chapter ${index + 1}`);
+    await expect(card).toContainText(title);
+    await expect(card.getByRole("link")).toHaveAttribute("href", `/courses/DEMO301/chapters/${index + 1}`);
   }
+  // What is inside each chapter.
+  await expect(cards.nth(0)).toContainText("1 lecture");
+  await expect(cards.nth(1)).toContainText("1 lecture");
+  await expect(cards.nth(2)).toContainText("1 note");
 
-  // Only the first chapter is open.
-  await expect(chapters.nth(0)).toHaveAttribute("open", "");
-  await expect(chapters.nth(1)).not.toHaveAttribute("open", "");
-  await expect(chapters.nth(0).getByText("Sample lecture 1")).toBeVisible();
-  await expect(page.getByText("Sample lecture 2")).toBeHidden();
+  // Rows of other areas are not on this page.
+  await expect(page.getByText("Sample partial exam 2023")).toHaveCount(0);
+  await expect(page.getByText("Sample exercise sheet 1", { exact: true })).toHaveCount(0);
+});
 
-  await chapters.nth(1).locator("summary").click();
-  await expect(chapters.nth(1).getByText("Sample lecture 2")).toBeVisible();
+test("the areas switch through the links and the URL", async ({ page }) => {
+  await page.goto("/courses/DEMO301");
 
-  // Material with no chapter, with its solution as a link on the row.
-  await expect(page.getByRole("heading", { name: "General", level: 2 })).toBeVisible();
-  await expect(page.getByText("Sample exercise sheet 1", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: /^Solution/ })).toHaveCount(2); // exercise sheet and partial exam
-
-  // Exams.
-  await expect(page.getByRole("heading", { name: "Previous exams", level: 2 })).toBeVisible();
+  await page.getByRole("link", { name: "Previous exams" }).click();
+  await expect(page).toHaveURL(/\/courses\/DEMO301\?tab=exams$/);
+  await expect(page.getByRole("link", { name: "Previous exams" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByText("Sample partial exam 2023", { exact: true })).toBeVisible();
   await expect(page.getByText("Sample final exam 2022", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "All exams for this course" })).toHaveAttribute("href", "/exams?course=DEMO301");
+
+  await page.getByRole("link", { name: "Other material" }).click();
+  await expect(page).toHaveURL(/\/courses\/DEMO301\?tab=other$/);
+  await expect(page.getByRole("link", { name: "Other material" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByText("Sample exercise sheet 1", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Solution/ })).toHaveCount(1);
+
+  await page.getByRole("link", { name: "Chapters" }).click();
+  await expect(page).toHaveURL(/\/courses\/DEMO301\??$/);
+  await expect(page.getByRole("link", { name: "Chapters" })).toHaveAttribute("aria-current", "page");
 });
 
-test("the switch moves between the chapter view and the tabs", async ({ page }) => {
-  await page.goto("/courses/DEMO301");
-  await expect(page.getByRole("link", { name: "By chapter" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("tab")).toHaveCount(0);
-
-  await page.getByRole("link", { name: "By type" }).click();
-  await expect(page).toHaveURL(/\/courses\/DEMO301\?view=type$/);
-  await expect(page.getByRole("link", { name: "By type" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("tab", { name: /Lectures/ })).toBeVisible();
-  await expect(page.locator("details")).toHaveCount(0);
-
-  await page.getByRole("link", { name: "By chapter" }).click();
-  await expect(page).toHaveURL(/\/courses\/DEMO301$/);
-  await expect(page.locator("details[id^='chapter-']")).toHaveCount(3);
+test("an unknown tab value shows Chapters", async ({ page }) => {
+  await page.goto("/courses/DEMO301?tab=nonsense");
+  await expect(page.getByRole("link", { name: "Chapters" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByText("Sample chapter 1")).toBeVisible();
 });
 
-test("a course without chapters shows the tabs and no switch", async ({ page }) => {
+test("a course without chapters shows the by-type tabs and no area links", async ({ page }) => {
   await page.goto("/courses/DEMO401");
   await expect(page.getByRole("tab", { name: /Lectures/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "By type" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "By chapter" })).toHaveCount(0);
-});
-
-test("an unknown view value shows the default view", async ({ page }) => {
-  await page.goto("/courses/DEMO301?view=nonsense");
-  await expect(page.locator("details[id^='chapter-']")).toHaveCount(3);
-  await expect(page.getByRole("link", { name: "By chapter" })).toHaveAttribute("aria-current", "page");
+  for (const name of ["Chapters", "Previous exams", "Other material"]) {
+    await expect(page.getByRole("link", { name })).toHaveCount(0);
+  }
 });
