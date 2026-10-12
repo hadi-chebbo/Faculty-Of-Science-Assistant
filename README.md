@@ -2,6 +2,7 @@
 
 Study platform for Computer Science students of the Faculty of Science, Lebanese University (Hadath).
 See `CLAUDE.md` for product context, scope and engineering rules.
+See `docs/dependencies.md` for what each dependency is and why the project has it.
 
 ## Requirements
 

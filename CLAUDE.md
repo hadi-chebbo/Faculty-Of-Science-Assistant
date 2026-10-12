@@ -124,7 +124,8 @@ mock exam generation, personalization.
 ## Engineering rules
 
 - Work in small vertical slices that leave the app working and deployable.
-- No new dependency without a stated reason.
+- No new dependency without a stated reason. Update `docs/dependencies.md` whenever
+  a dependency is added or removed.
 - Every schema change is a migration; never edit the database by hand.
 - Authorization is checked on the server for every admin action.
 - Uploads are validated for type and size on the server; files are stored
