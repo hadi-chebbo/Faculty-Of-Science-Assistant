@@ -33,6 +33,7 @@ These rules keep a future mobile API cheap.
 - Take the viewer (the signed-in user, or nobody) as an argument, so the caller decides whether it came from a cookie or a token.
 - Return plain serialisable data with a named TypeScript type, never Sequelize model instances.
 - Permission checks live in the service, not in the route handler, so a page and an API route can never enforce different rules.
+- A handler may shape the same error differently per client. `GET /api/v1/resources/[id]/open` answers JSON errors (404/503/500) to API clients, but redirects a request that accepts `text/html` to the static `/resource-unavailable` page, so a browser never shows raw JSON.
 
 Illustration of the pattern (not existing code):
 
