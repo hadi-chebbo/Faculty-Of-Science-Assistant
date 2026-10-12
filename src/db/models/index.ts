@@ -3,11 +3,12 @@ import { getSequelize } from "../sequelize";
 import { Bookmark, initBookmark } from "./bookmark";
 import { Completion, initCompletion } from "./completion";
 import { Course, initCourse } from "./course";
+import { FailedSignIn, initFailedSignIn } from "./failed-sign-in";
 import { RefreshToken, initRefreshToken } from "./refresh-token";
 import { Resource, initResource } from "./resource";
 import { User, initUser } from "./user";
 
-export { Bookmark, Completion, Course, RefreshToken, Resource, User };
+export { Bookmark, Completion, Course, FailedSignIn, RefreshToken, Resource, User };
 
 export interface Db {
   sequelize: Sequelize;
@@ -17,6 +18,7 @@ export interface Db {
   RefreshToken: typeof RefreshToken;
   Bookmark: typeof Bookmark;
   Completion: typeof Completion;
+  FailedSignIn: typeof FailedSignIn;
 }
 
 // Cached on globalThis together with the connection, so hot reload never re-initialises models.
@@ -33,6 +35,7 @@ export function getDb(): Db {
   initRefreshToken(sequelize);
   initBookmark(sequelize);
   initCompletion(sequelize);
+  initFailedSignIn(sequelize);
 
   Course.hasMany(Resource, { foreignKey: "courseId", as: "resources" });
   Resource.belongsTo(Course, { foreignKey: "courseId", as: "course" });
@@ -52,6 +55,6 @@ export function getDb(): Db {
   Resource.hasMany(Bookmark, { foreignKey: "resourceId", as: "bookmarks" });
   Resource.hasMany(Completion, { foreignKey: "resourceId", as: "completions" });
 
-  globalForDb.__db = { sequelize, Course, Resource, User, RefreshToken, Bookmark, Completion };
+  globalForDb.__db = { sequelize, Course, Resource, User, RefreshToken, Bookmark, Completion, FailedSignIn };
   return globalForDb.__db;
 }
