@@ -15,7 +15,7 @@ import type { ChapterLink } from "@/services/courses/types";
 export const metadata: Metadata = { title: "Chapter" };
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
-const BUTTON = `inline-flex min-h-11 items-center gap-2 rounded-lg border bg-card px-4 text-sm font-medium text-heading transition-colors hover:border-primary/40 ${FOCUS}`;
+const BUTTON = `inline-flex min-h-11 items-center gap-2 rounded-lg border bg-card px-4 py-2 text-sm font-medium text-heading transition-colors hover:border-primary/40 ${FOCUS}`;
 
 // Course codes and positions are runtime data: reading them and the chapter happens inside
 // Suspense, behind a skeleton.
