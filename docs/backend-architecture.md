@@ -56,6 +56,8 @@ Built so far: `POST /api/v1/auth/sign-in`, `/refresh` and `/sign-out`, plus `GET
 
 `getViewer()` (`src/lib/auth/viewer.ts`) reads the access cookie and returns the `Viewer`. Only `/admin` calls it. Public pages keep passing `null`, so they carry no per-user data and drafts are never rendered outside the admin area. The refresh cookie is scoped to `/api/v1/auth`, so ordinary page requests never carry it.
 
+The admin resource write services are exposed as `POST /api/v1/resources` (201 with `{ resource }`), `PUT /api/v1/resources/[id]` (200 with `{ resource }`, replacing all editable fields) and `DELETE /api/v1/resources/[id]` (204). All are `no-store` and check the same-origin rule first. The handlers are thin: the shared part (origin check, viewer, error mapping) is in `src/lib/resources-api.ts`, and the service validates the body and re-checks the admin role in the database. A request with no valid session is `401 Not signed in`; a signed-in user who is not an admin is `403 Forbidden`. Invalid input is `400` with the offending `fields`, and an unknown or malformed id is `404`.
+
 Server pages must not call the app's own API over HTTP. If an endpoint must be proven to work, it gets an automated test that calls it over HTTP instead.
 
 ## Alternatives considered
