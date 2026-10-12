@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
-import { NotFoundError } from "../errors";
+import { NotFoundError, ValidationError } from "../errors";
 import type { Viewer } from "../viewer";
 import { getCourseByCode, listCoursesBySemester } from "./courses";
 
@@ -56,6 +56,19 @@ describe("listCoursesBySemester", () => {
   });
 });
 
+describe("listCoursesBySemester input", () => {
+  it("rejects a semester that is not 3 to 6 with a ValidationError", async () => {
+    for (const semester of [NaN, 2, 7, 3.5]) {
+      await expect(listCoursesBySemester(null, semester)).rejects.toBeInstanceOf(ValidationError);
+    }
+  });
+
+  it("accepts the semester as a string, as it arrives from a URL", async () => {
+    await seed();
+    expect(await listCoursesBySemester(null, "5" as never)).toHaveLength(1);
+  });
+});
+
 describe("public course DTOs", () => {
   it("do not expose a course id", async () => {
     await seed();
@@ -89,6 +102,20 @@ describe("getCourseByCode", () => {
   it("returns no groups for a course whose resources are all drafts", async () => {
     await seed();
     expect((await getCourseByCode(null, "TEST302")).groups).toEqual([]);
+  });
+
+  it("orders exams newest year first, then partial before final", async () => {
+    const { a } = await seed();
+    const { Resource } = getDb();
+    await Resource.create({ courseId: a.id, type: "exam", title: "A partial", academicYearStart: 2024, examSession: "partial", isPublished: true, externalUrl: SAMPLE_URL });
+    await Resource.create({ courseId: a.id, type: "exam", title: "Newer second", academicYearStart: 2025, examSession: "second", isPublished: true, externalUrl: SAMPLE_URL });
+    const exams = (await getCourseByCode(null, "TEST301")).groups.find((g) => g.type === "exam");
+    expect(exams?.resources.map((r) => r.title)).toEqual(["Newer second", "A partial", "Published exam"]);
+  });
+
+  it("throws NotFoundError for a blank or over-long code", async () => {
+    await expect(getCourseByCode(null, "   ")).rejects.toBeInstanceOf(NotFoundError);
+    await expect(getCourseByCode(null, "X".repeat(21))).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it("throws NotFoundError for an unknown code", async () => {

@@ -8,3 +8,10 @@ export type ResourceType = (typeof RESOURCE_TYPES)[number];
 export type ExamSession = (typeof EXAM_SESSIONS)[number];
 export type Language = (typeof LANGUAGES)[number];
 export type UserRole = (typeof USER_ROLES)[number];
+
+// Ranges enforced by the check constraints, shared with input validation so the two cannot drift.
+export const SEMESTER_MIN = 3;
+export const SEMESTER_MAX = 6;
+export const ACADEMIC_YEAR_MIN = 1990;
+export const ACADEMIC_YEAR_MAX = 2100;
+export const COURSE_CODE_MAX_LENGTH = 20;

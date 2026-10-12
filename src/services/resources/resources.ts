@@ -1,23 +1,29 @@
 import { Op, Sequelize, type Order, type WhereOptions } from "sequelize";
+import { EXAM_SESSIONS } from "@/db/constants";
 import { getDb } from "@/db/models";
 import type { Resource } from "@/db/models";
 import { NotFoundError } from "../errors";
+import type { Page } from "../types";
+import { parseInput } from "../validation";
 import { visibleResources } from "../visibility";
 import { isAdmin, type Viewer } from "../viewer";
-import { idSchema, type ResourceFilters } from "./schemas";
+import { idSchema, resourceFiltersSchema, type ResourceFilters } from "./schemas";
 import type { ResourceDetail, ResourceListItem, ResourceRef } from "./types";
 
-// Newest academic year first, then partial, final, second, then title.
-const LIST_ORDER: Order = [
-  ["academicYearStart", "DESC NULLS LAST"],
-  [
-    Sequelize.literal(
-      `CASE "Resource"."exam_session" WHEN 'partial' THEN 1 WHEN 'final' THEN 2 WHEN 'second' THEN 3 ELSE 4 END`,
-    ),
-    "ASC",
-  ],
-  ["title", "ASC"],
-];
+// Newest academic year first, then sessions in the order of EXAM_SESSIONS (partial, final,
+// second), then title. The id is only a tie-breaker so paging is stable when titles repeat.
+// The session column is named from the model, so the expression follows a rename.
+export function resourceOrder(): Order {
+  const { Resource } = getDb();
+  const column = `"${Resource.name}"."${Resource.getAttributes().examSession.field}"`;
+  const cases = EXAM_SESSIONS.map((session, index) => `WHEN '${session}' THEN ${index}`).join(" ");
+  return [
+    ["academicYearStart", "DESC NULLS LAST"],
+    [Sequelize.literal(`CASE ${column} ${cases} ELSE ${EXAM_SESSIONS.length} END`), "ASC"],
+    ["title", "ASC"],
+    ["id", "ASC"],
+  ];
+}
 
 export function toResourceListItem(resource: Resource, courseCode: string): ResourceListItem {
   return {
@@ -37,16 +43,20 @@ function toRef(resource: Resource): ResourceRef {
   return { id: resource.id, type: resource.type, title: resource.title };
 }
 
-export async function listResources(viewer: Viewer, filters: ResourceFilters = {}): Promise<ResourceListItem[]> {
+export async function listResources(viewer: Viewer, filters: ResourceFilters = {}): Promise<Page<ResourceListItem>> {
+  const { courseCode, type, academicYearStart, examSession, language, page, pageSize } = parseInput(
+    resourceFiltersSchema,
+    filters,
+  );
   const { Resource, Course, sequelize } = getDb();
 
   const where: WhereOptions[] = [visibleResources(viewer)];
-  if (filters.type) where.push({ type: filters.type });
-  if (filters.academicYearStart !== undefined) where.push({ academicYearStart: filters.academicYearStart });
-  if (filters.examSession) where.push({ examSession: filters.examSession });
-  if (filters.language) where.push({ language: filters.language });
+  if (type) where.push({ type });
+  if (academicYearStart !== undefined) where.push({ academicYearStart });
+  if (examSession) where.push({ examSession });
+  if (language) where.push({ language });
 
-  const rows = await Resource.findAll({
+  const { rows, count } = await Resource.findAndCountAll({
     where: { [Op.and]: where },
     include: [
       {
@@ -55,15 +65,17 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
         attributes: ["code"],
         required: true,
         // Course codes are unique regardless of letter case, so match the same way.
-        where: filters.courseCode
-          ? sequelize.where(sequelize.fn("lower", sequelize.col("course.code")), filters.courseCode.trim().toLowerCase())
+        where: courseCode
+          ? sequelize.where(sequelize.fn("lower", sequelize.col("course.code")), courseCode.toLowerCase())
           : undefined,
       },
     ],
-    order: LIST_ORDER,
+    order: resourceOrder(),
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
   });
 
-  return rows.map((row) => toResourceListItem(row, row.course!.code));
+  return { items: rows.map((row) => toResourceListItem(row, row.course!.code)), total: count, page, pageSize };
 }
 
 export async function getResource(viewer: Viewer, id: string): Promise<ResourceDetail> {

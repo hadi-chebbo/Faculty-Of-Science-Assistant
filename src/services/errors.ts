@@ -12,3 +12,14 @@ export class ForbiddenError extends Error {
     this.name = "ForbiddenError";
   }
 }
+
+// The caller passed arguments the service cannot accept. `fields` names the offending inputs.
+export class ValidationError extends Error {
+  readonly fields: string[];
+
+  constructor(fields: string[], message = "Invalid input") {
+    super(fields.length > 0 ? `${message}: ${fields.join(", ")}` : message);
+    this.name = "ValidationError";
+    this.fields = fields;
+  }
+}
