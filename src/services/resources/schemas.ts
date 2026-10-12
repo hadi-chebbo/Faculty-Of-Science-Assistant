@@ -5,6 +5,7 @@ import {
   COURSE_CODE_MAX_LENGTH,
   EXAM_SESSIONS,
   LANGUAGES,
+  RESOURCE_TITLE_MAX_LENGTH,
   RESOURCE_TYPES,
   SEMESTER_MAX,
   SEMESTER_MIN,
@@ -46,4 +47,58 @@ export interface ResourceFilters {
   language?: Language;
   page?: number;
   pageSize?: number;
+}
+
+// Blank and null both mean "not given" for the optional write fields.
+const blankOrNullToUndefined = (value: unknown) => (value === null ? undefined : blankToUndefined(value));
+const given = <T extends z.ZodType>(schema: T) => z.preprocess(blankOrNullToUndefined, schema.optional());
+
+const httpsUrl = z
+  .string()
+  .trim()
+  .refine((value) => value.startsWith("https://") && URL.canParse(value));
+
+// What an admin may set on a resource; the same for create and update. Rules that need the
+// database (course, solution target, source) are checked by the write service.
+export const resourceInputSchema = z
+  .object({
+    courseId: idSchema,
+    type: z.enum(RESOURCE_TYPES),
+    title: z.string().trim().min(1).max(RESOURCE_TITLE_MAX_LENGTH),
+    description: given(z.string().trim()).transform((value) => value ?? null),
+    academicYearStart: given(z.coerce.number().int().min(ACADEMIC_YEAR_MIN).max(ACADEMIC_YEAR_MAX)).transform(
+      (value) => value ?? null,
+    ),
+    examSession: given(z.enum(EXAM_SESSIONS)).transform((value) => value ?? null),
+    language: z.preprocess(blankOrNullToUndefined, z.enum(LANGUAGES).default("en")),
+    externalUrl: given(httpsUrl).transform((value) => value ?? null),
+    solutionOfId: given(idSchema).transform((value) => value ?? null),
+    isPublished: z.boolean().default(false),
+  })
+  .superRefine((input, ctx) => {
+    if (input.type === "exam" && input.examSession === null) {
+      ctx.addIssue({ code: "custom", path: ["examSession"] });
+    }
+    if (input.type !== "exam" && input.examSession !== null) {
+      ctx.addIssue({ code: "custom", path: ["examSession"] });
+    }
+    if (input.type !== "solution" && input.solutionOfId !== null) {
+      ctx.addIssue({ code: "custom", path: ["solutionOfId"] });
+    }
+  });
+
+export type ResourceInputData = z.output<typeof resourceInputSchema>;
+
+// What a typed caller passes. Optional fields may be left out, null or blank.
+export interface ResourceInput {
+  courseId: string;
+  type: ResourceType;
+  title: string;
+  description?: string | null;
+  academicYearStart?: number | null;
+  examSession?: ExamSession | null;
+  language?: Language;
+  externalUrl?: string | null;
+  solutionOfId?: string | null;
+  isPublished?: boolean;
 }

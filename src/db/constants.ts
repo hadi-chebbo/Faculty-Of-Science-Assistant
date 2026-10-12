@@ -15,3 +15,4 @@ export const SEMESTER_MAX = 6;
 export const ACADEMIC_YEAR_MIN = 1990;
 export const ACADEMIC_YEAR_MAX = 2100;
 export const COURSE_CODE_MAX_LENGTH = 20;
+export const RESOURCE_TITLE_MAX_LENGTH = 200;
