@@ -2,7 +2,6 @@ import type { ResourceType } from "@/db/constants";
 import type { ResourceListItem } from "../resources/types";
 
 export interface CourseSummary {
-  id: string;
   code: string;
   title: string;
   semester: number;
@@ -15,7 +14,6 @@ export interface ResourceGroup {
 }
 
 export interface CourseDetail {
-  id: string;
   code: string;
   title: string;
   semester: number;

@@ -56,6 +56,15 @@ describe("listCoursesBySemester", () => {
   });
 });
 
+describe("public course DTOs", () => {
+  it("do not expose a course id", async () => {
+    await seed();
+    const [first] = await listCoursesBySemester(null, 3);
+    expect(first).not.toHaveProperty("id");
+    expect(await getCourseByCode(null, "TEST301")).not.toHaveProperty("id");
+  });
+});
+
 describe("getCourseByCode", () => {
   it("groups visible resources by type in the standard type order", async () => {
     await seed();

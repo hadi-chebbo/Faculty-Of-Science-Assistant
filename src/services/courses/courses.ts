@@ -23,7 +23,6 @@ export async function listCoursesBySemester(viewer: Viewer, semester: number): P
   const countByCourse = new Map(counts.map((c) => [c.courseId, Number(c.count)]));
 
   return courses.map((c) => ({
-    id: c.id,
     code: c.code,
     title: c.title,
     semester: c.semester,
@@ -53,5 +52,5 @@ export async function getCourseByCode(viewer: Viewer, code: string): Promise<Cou
     resources: resources.filter((r) => r.type === type).map((r) => toResourceListItem(r, course.code)),
   })).filter((g) => g.resources.length > 0);
 
-  return { id: course.id, code: course.code, title: course.title, semester: course.semester, groups };
+  return { code: course.code, title: course.title, semester: course.semester, groups };
 }
