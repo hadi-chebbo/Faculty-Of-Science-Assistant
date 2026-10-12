@@ -98,6 +98,8 @@ test("resource rows on a course page open in a new tab through the API route", a
   await expect(row).toHaveAttribute("rel", /noopener/);
   await expect(row).toHaveAttribute("href", /^\/api\/v1\/resources\/[0-9a-f-]{36}\/open$/);
 
+  // The course page opens by chapter; the tabs are behind "By type".
+  await page.getByRole("link", { name: "By type" }).click();
   await page.getByRole("tab", { name: /Exams/ }).click();
   const solution = page.getByRole("link", { name: /^Solution/ });
   await expect(solution).toHaveCount(1);

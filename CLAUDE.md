@@ -134,7 +134,11 @@ mock exam generation, personalization.
   breadcrumb trail on inner pages. Items without a page yet are shown disabled.
 - Home is a landing page: headline, short description, "Browse courses" button, three
   benefit points, then the semester cards. No claims about features that do not exist.
-- Course page: one tab per resource type that has resources, with its count.
+- Course page: for a course with chapters, "By chapter" is the default view: one collapsible
+  chapter block each (native `<details>`, the first with material open), then a General section
+  and a Previous exams section. A "By chapter" / "By type" switch lives in the URL
+  (`?view=type`). "By type" and courses without chapters show one tab per resource type that
+  has resources, with its count.
 - Exams page (`/exams`): filters (semester, course, academic year, session) live in the URL, so
   views are shareable and Back works. A plain GET form with an Apply button works without
   JavaScript; with JavaScript a dropdown change submits automatically. Unusable URL values are
