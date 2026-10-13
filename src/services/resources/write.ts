@@ -1,20 +1,12 @@
 import type { Transaction } from "sequelize";
 import { getDb } from "@/db/models";
-import { getAccount } from "../auth/auth";
-import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
+import { requireCurrentAdmin } from "../auth/require-admin";
+import { NotFoundError, ValidationError } from "../errors";
 import { parseInput } from "../validation";
 import type { Viewer } from "../viewer";
 import { getResource } from "./resources";
 import { idSchema, resourceInputSchema, type ResourceInput, type ResourceInputData } from "./schemas";
 import type { ResourceDetail, ResourceForEdit } from "./types";
-
-// The token's role can be up to 15 minutes old, so a write checks the role in the database.
-// Runs before input validation: an anonymous caller learns nothing about the input rules.
-async function requireCurrentAdmin(viewer: Viewer): Promise<NonNullable<Viewer>> {
-  const account = await getAccount(viewer);
-  if (!viewer || !account || account.role !== "admin") throw new ForbiddenError();
-  return { id: account.id, role: account.role };
-}
 
 // The checks that need the database. `resource` is the row being edited, or null when creating.
 // All problems are collected so the form can mark every offending field at once.
