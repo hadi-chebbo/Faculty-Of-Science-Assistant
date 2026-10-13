@@ -2,7 +2,8 @@ import { ChevronRight, FileText } from "lucide-react";
 import Link from "next/link";
 import { ResourceRow } from "@/components/site/resource-row";
 import { StateBlock } from "@/components/site/state-block";
-import { RESOURCE_TYPE_LABELS, describeGroups } from "@/lib/labels";
+import { groupExamsByYear } from "@/lib/group-exams";
+import { EXAM_SESSION_LABELS, RESOURCE_TYPE_LABELS, describeGroups, formatAcademicYear } from "@/lib/labels";
 import type { CourseOutline, ResourceGroup } from "@/services/courses/types";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
@@ -92,11 +93,24 @@ export function ExamsArea({ code, exams }: { code: string; exams: CourseOutline[
   }
   return (
     <div>
-      <ul className="space-y-2">
-        {exams.map((exam) => (
-          <ResourceRow key={exam.id} resource={exam} />
+      <div className="space-y-4">
+        {groupExamsByYear(exams).map((group) => (
+          <div key={group.year ?? "none"}>
+            <h2 className="mb-2 text-sm font-medium text-heading">
+              {group.year === null ? "Year not set" : formatAcademicYear(group.year)}
+            </h2>
+            <ul className="space-y-2">
+              {group.exams.map((exam) => (
+                <ResourceRow
+                  key={exam.id}
+                  resource={exam}
+                  lead={exam.examSession ? EXAM_SESSION_LABELS[exam.examSession] : "Exam"}
+                />
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
       <Link
         href={`/exams?course=${encodeURIComponent(code)}`}
         className={`mt-3 inline-flex min-h-11 items-center rounded-md text-sm text-link underline-offset-4 hover:underline md:min-h-9 ${FOCUS}`}
