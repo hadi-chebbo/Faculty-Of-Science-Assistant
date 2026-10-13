@@ -1,4 +1,4 @@
-import type { Transaction } from "sequelize";
+import { col, fn, Op, type Transaction } from "sequelize";
 import { CHAPTER_COUNT_MAX } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { requireCurrentAdmin } from "../auth/require-admin";
@@ -6,7 +6,7 @@ import { NotFoundError, ValidationError } from "../errors";
 import { parseInput } from "../validation";
 import type { Viewer } from "../viewer";
 import { chapterInputSchema, idSchema, type ChapterInput } from "./schemas";
-import type { AdminChapter } from "./types";
+import type { AdminChapter, AdminChapterWithCount } from "./types";
 
 async function chaptersOf(courseId: string, transaction?: Transaction): Promise<AdminChapter[]> {
   const rows = await getDb().Chapter.findAll({ where: { courseId }, order: [["position", "ASC"]], transaction });
@@ -51,6 +51,21 @@ export async function listChapters(viewer: Viewer, courseId: string): Promise<Ad
   await requireCurrentAdmin(viewer);
   await requireCourse(courseId);
   return chaptersOf(courseId);
+}
+
+// For the admin chapters page: each chapter with how many resources are filed under it, drafts included.
+export async function listChaptersWithCounts(viewer: Viewer, courseId: string): Promise<AdminChapterWithCount[]> {
+  await requireCurrentAdmin(viewer);
+  await requireCourse(courseId);
+  const chapters = await chaptersOf(courseId);
+  const counts = await getDb().Resource.findAll({
+    attributes: ["chapterId", [fn("count", col("id")), "n"]],
+    where: { courseId, chapterId: { [Op.ne]: null } },
+    group: ["chapterId"],
+    raw: true,
+  });
+  const byChapter = new Map(counts.map((row) => [String(row.chapterId), Number((row as unknown as { n: string }).n)]));
+  return chapters.map((chapter) => ({ ...chapter, itemCount: byChapter.get(chapter.id) ?? 0 }));
 }
 
 // Added at the end.

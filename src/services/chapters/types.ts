@@ -4,3 +4,8 @@ export interface AdminChapter {
   position: number;
   title: string;
 }
+
+// A chapter with the number of resources filed under it, drafts included.
+export interface AdminChapterWithCount extends AdminChapter {
+  itemCount: number;
+}
