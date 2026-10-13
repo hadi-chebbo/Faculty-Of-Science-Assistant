@@ -8,7 +8,15 @@ import { verifyStorageToken } from "@/lib/storage/token";
 const respond = (status: number, headers: Record<string, string> = {}) =>
   new Response(null, { status, headers: { ...NO_STORE, ...headers } });
 
-const isLocal = () => getStorageConfig().driver === "local";
+// Any configuration that is not a usable local driver (R2, or R2 with its settings missing) means
+// this route does not exist.
+const isLocal = () => {
+  try {
+    return getStorageConfig().driver === "local";
+  } catch {
+    return false;
+  }
+};
 
 export async function PUT(request: Request) {
   if (!isLocal()) return respond(404);
