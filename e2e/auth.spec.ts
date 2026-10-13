@@ -228,7 +228,9 @@ test("public pages render the same signed in and signed out", async ({ page }) =
     for (const path of paths) {
       await page.goto(path);
       await page.waitForLoadState("networkidle");
-      texts.push(await page.locator("main").innerText());
+      // The home page shows a live count of chapters, which other specs change while this one
+      // runs. That figure depends on the moment, not on who is looking, so it is left out.
+      texts.push((await page.locator("main").innerText()).replace(/(Chapters\s+)\d+/, "$1#"));
     }
     return texts;
   };
