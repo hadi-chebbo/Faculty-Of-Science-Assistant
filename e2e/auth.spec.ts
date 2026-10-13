@@ -32,6 +32,9 @@ async function signInThroughForm(page: Page, email: string, password: string) {
   await page.getByRole("button", { name: "Sign in" }).click();
 }
 
+// The header account button is the only menu trigger in the top bar.
+const accountButton = (page: Page) => page.locator('header button[aria-haspopup="menu"]');
+
 async function sessionCookies(page: Page) {
   const cookies = await page.context().cookies();
   return {
@@ -76,7 +79,7 @@ test("correct credentials reach /admin; the cookies are httpOnly and Lax", async
   await ownAddress(page);
   await signInThroughForm(page, ADMIN_EMAIL, ADMIN_PASSWORD);
   await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.getByText(`Signed in as ${ADMIN_EMAIL}`)).toBeVisible();
+  await expect(accountButton(page)).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 
   const { access, refresh } = await sessionCookies(page);
@@ -101,7 +104,7 @@ test("the admin page is not cached", async ({ page }) => {
 test("signing out ends the session and clears the cookies", async ({ page }) => {
   await ownAddress(page);
   await signInThroughForm(page, ADMIN_EMAIL, ADMIN_PASSWORD);
-  await expect(page.getByText(`Signed in as ${ADMIN_EMAIL}`)).toBeVisible();
+  await expect(accountButton(page)).toBeVisible();
   const { refresh } = await sessionCookies(page);
 
   await page.getByRole("button", { name: "Sign out" }).click();
@@ -128,7 +131,7 @@ test("an expired access token is renewed silently from the refresh cookie", asyn
   await page.context().clearCookies({ name: "ua_access" });
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.getByText(`Signed in as ${ADMIN_EMAIL}`)).toBeVisible();
+  await expect(accountButton(page)).toBeVisible();
 
   const after = await sessionCookies(page);
   expect(after.access).toBeDefined();
@@ -208,9 +211,12 @@ test("a successful sign-in never puts a token in the response body", async ({ pa
 test("a signed-in student cannot see the admin page", async ({ page }) => {
   await ownAddress(page);
   await signInThroughForm(page, STUDENT_EMAIL, STUDENT_PASSWORD);
-  await expect(page).toHaveURL(/\/admin$/);
+  // A student is not sent to the admin area after signing in.
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto("/admin");
   await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
-  await expect(page.getByText("Signed in as")).toHaveCount(0);
+  await expect(accountButton(page)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Resources" })).toHaveCount(0);
 });
 
 test("public pages render the same signed in and signed out", async ({ page }) => {
