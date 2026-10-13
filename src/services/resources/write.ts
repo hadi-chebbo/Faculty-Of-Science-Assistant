@@ -60,6 +60,7 @@ export async function getResourceForEdit(viewer: Viewer, id: string): Promise<Re
   const row = await Resource.findByPk(id);
   if (!row) throw new NotFoundError("Resource not found");
   const target = row.solutionOfId ? await Resource.findByPk(row.solutionOfId, { attributes: ["id", "title"] }) : null;
+  const solutionCount = await Resource.count({ where: { solutionOfId: row.id } });
 
   return {
     id: row.id,
@@ -75,6 +76,7 @@ export async function getResourceForEdit(viewer: Viewer, id: string): Promise<Re
     hasFile: row.fileKey != null,
     chapterId: row.chapterId ?? null,
     solutionOf: target ? { id: target.id, title: target.title } : null,
+    solutionCount,
   };
 }
 

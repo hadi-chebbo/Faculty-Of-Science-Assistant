@@ -3,6 +3,16 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,6 +28,7 @@ import type { ChapterOption } from "@/services/chapters/options";
 import type { CourseOption } from "@/services/courses/types";
 import type { SolutionTarget } from "@/services/resources/solution-targets";
 import type { ResourceForEdit } from "@/services/resources/types";
+import { deleteNotes } from "./delete-notes";
 
 const FIELD_MESSAGES: Record<string, string> = {
   isPublished: "Add a link before publishing.",
@@ -84,6 +95,7 @@ export function ResourceForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const hasFile = resource?.hasFile ?? false;
   const courseChapters = chapters.filter((c) => c.courseId === courseId);
   const courseTargets = solutionTargets.filter((t) => t.courseId === courseId && t.id !== resource?.id);
@@ -137,6 +149,31 @@ export function ResourceForm({
         setFormError("Something went wrong. Please try again.");
       }
     } catch {
+      setFormError("Could not reach the server. Check your connection and try again.");
+    }
+    setPending(false);
+  }
+
+  async function onDelete() {
+    if (!resource) return;
+    setPending(true);
+    setFormError(null);
+    try {
+      const response = await adminFetch(`/api/v1/resources/${resource.id}`, { method: "DELETE" }, () => router.replace("/sign-in"));
+      // 404: already deleted elsewhere, which is the state the admin asked for.
+      if (response.ok || response.status === 404) {
+        router.push("/admin");
+        router.refresh();
+        return;
+      }
+      setConfirmingDelete(false);
+      if (response.status === 401) {
+        setFormError("Your session has ended. Redirecting to sign in.");
+        return;
+      }
+      setFormError("Something went wrong. Please try again.");
+    } catch {
+      setConfirmingDelete(false);
       setFormError("Could not reach the server. Check your connection and try again.");
     }
     setPending(false);
@@ -325,15 +362,59 @@ export function ResourceForm({
           )}
         </CardContent>
 
-        <CardFooter className="justify-end gap-2 border-t bg-muted/50 py-4">
-          <Link href="/admin" className={buttonVariants({ variant: "outline", className: "h-11 px-4 md:h-9" })}>
-            Cancel
-          </Link>
-          <Button type="submit" disabled={pending} className="h-11 px-4 md:h-9">
-            {pending ? "Saving..." : "Save"}
-          </Button>
+        <CardFooter className="flex-wrap justify-between gap-2 border-t bg-muted/50 py-4">
+          {resource ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={() => setConfirmingDelete(true)}
+              className="h-11 px-4 text-destructive hover:text-destructive md:h-9"
+            >
+              Delete
+            </Button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
+            <Link href="/admin" className={buttonVariants({ variant: "outline", className: "h-11 px-4 md:h-9" })}>
+              Cancel
+            </Link>
+            <Button type="submit" disabled={pending} className="h-11 px-4 md:h-9">
+              {pending ? "Saving..." : "Save"}
+            </Button>
+          </div>
         </CardFooter>
       </Card>
+
+      {resource && (
+        <AlertDialog open={confirmingDelete} onOpenChange={(open) => !open && !pending && setConfirmingDelete(false)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete &ldquo;{resource.title}&rdquo;?</AlertDialogTitle>
+              <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
+            </AlertDialogHeader>
+            {deleteNotes(resource.isPublished, resource.solutionCount).map((note) => (
+              <p key={note} className="text-sm text-muted-foreground">
+                {note}
+              </p>
+            ))}
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={pending}
+                onClick={(event) => {
+                  event.preventDefault();
+                  void onDelete();
+                }}
+              >
+                {pending ? "Deleting..." : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </form>
   );
 }
