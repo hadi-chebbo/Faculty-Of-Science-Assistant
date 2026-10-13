@@ -52,15 +52,15 @@ mock exam generation, personalization.
   ones before then.
 - Every resource has a stored file (owner's decision, 2026-10-13). A link is
   never the resource itself: `external_url` is an optional backup shown beside
-  the file. A resource cannot be published without a file. (proposed: a draft
-  may be saved without one.)
+  the file. A resource cannot be published without a file; a draft may be
+  saved without one.
 - Every resource opens inside the platform, on a reader page of our own, not by
   sending the student away: the file shown in the page, a Download action, an
   action to open the file outside the reader, and room for the AI assistant
   planned for after launch to help while they read. The reader is part of the
   MVP. The current open route, which redirects to the material, is a stopgap
-  until the reader exists. (proposed: "open outside the reader" opens the file
-  itself in a new tab; the backup link, when there is one, is shown separately.)
+  until the reader exists. "Open outside the reader" opens the file itself in a
+  new tab; the backup link, when there is one, is shown separately.
 - When a requirement is ambiguous, ask; do not invent product behaviour.
 
 ## Domain model (proposed)
@@ -180,8 +180,8 @@ mock exam generation, personalization.
 - Every schema change is a migration; never edit the database by hand.
 - Authorization is checked on the server for every admin action.
 - Uploads are validated for type and size on the server; files are stored
-  under generated keys, never under user-supplied names. (proposed: PDF only,
-  at most 50 MB.)
+  under generated keys, never under user-supplied names. Uploads are PDF only, at
+  most 50 MB.
 - Secrets live in environment variables and are never committed. Keep
   `.env.example` current.
 - UI is designed mobile-first and must stay usable on a slow connection.
