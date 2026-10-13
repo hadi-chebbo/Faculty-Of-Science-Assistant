@@ -32,14 +32,14 @@ export function VisibilityCard({
             <input type="radio" name="visibility" checked={!isPublished} onChange={() => onChange(false)} className="mt-1 accent-primary" />
             <span>
               <b className="block text-sm font-medium text-heading">Draft</b>
-              <small className="text-[0.8125rem] text-muted-foreground">Only you can see it.</small>
+              <small className="block text-[0.8125rem] leading-snug text-muted-foreground">Only you can see it.</small>
             </span>
           </label>
           <label className={CHOICE}>
             <input type="radio" name="visibility" checked={isPublished} onChange={() => onChange(true)} className="mt-1 accent-primary" />
             <span>
               <b className="block text-sm font-medium text-heading">Published</b>
-              <small className="text-[0.8125rem] text-muted-foreground">Visible to students. Needs a file or link.</small>
+              <small className="block text-[0.8125rem] leading-snug text-muted-foreground">Visible to students. Needs a file or link.</small>
             </span>
           </label>
         </div>
