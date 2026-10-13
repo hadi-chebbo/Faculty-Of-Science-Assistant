@@ -17,9 +17,12 @@ export const metadata: Metadata = { title: "Edit resource", robots: { index: fal
 export default function EditResourcePage({ params }: PageProps<"/admin/resources/[id]/edit">) {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
-      <FormBreadcrumb current="Edit resource" />
-      <PageTitle>Edit resource</PageTitle>
-      <Suspense fallback={<Skeleton className="h-64 w-full max-w-2xl" />}>
+      <Suspense fallback={<div className="space-y-4" aria-hidden>
+          <Skeleton className="h-11 w-full max-w-sm md:h-9" />
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-64 w-full max-w-2xl" />
+        </div>}>
         {params.then(({ id }) => (
           <EditResourceContent id={id} />
         ))}
@@ -38,7 +41,9 @@ async function EditResourceContent({ id }: { id: string }) {
   ]);
   return (
     <>
-      <AdminBar />
+      <AdminBar current="resources" />
+      <FormBreadcrumb current="Edit resource" />
+      <PageTitle>Edit resource</PageTitle>
       <ResourceForm courses={courses} chapters={chapters} solutionTargets={solutionTargets} resource={resource} />
     </>
   );

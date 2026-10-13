@@ -13,8 +13,11 @@ export const metadata: Metadata = { title: "Admin", robots: { index: false, foll
 export default function AdminPage({ searchParams }: PageProps<"/admin">) {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
-      <PageTitle>Admin</PageTitle>
-      <Suspense fallback={<Skeleton className="h-16 w-full max-w-sm" />}>
+      <Suspense fallback={<div className="space-y-4" aria-hidden>
+          <Skeleton className="h-11 w-full max-w-sm md:h-9" />
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-40 w-full" />
+        </div>}>
         {searchParams.then((raw) => (
           <AdminContent raw={raw} />
         ))}
@@ -28,7 +31,8 @@ async function AdminContent({ raw }: { raw: Record<string, string | string[] | u
 
   return (
     <>
-      <AdminBar />
+      <AdminBar current="resources" />
+      <PageTitle>Admin</PageTitle>
       <ResourceList viewer={admin} raw={raw} />
     </>
   );

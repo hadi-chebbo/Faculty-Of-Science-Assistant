@@ -124,3 +124,25 @@ test("a row with no file or link shows a hint instead of Open", async ({ page })
   await expect(row.getByText("No file or link yet")).toBeVisible();
   await expect(row.getByRole("link", { name: /^Open/ })).toHaveCount(0);
 });
+
+test("the admin bar sits above the title and marks the current section", async ({ page }) => {
+  await signInAsAdmin(page);
+  const nav = page.getByRole("navigation", { name: "Admin sections" });
+  const sections = [
+    { path: "/admin", current: "Resources", other: "Chapters" },
+    { path: "/admin/chapters", current: "Chapters", other: "Resources" },
+    { path: "/admin/resources/new", current: "Resources", other: "Chapters" },
+  ];
+  for (const { path, current, other } of sections) {
+    await page.goto(path);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(nav.getByRole("link", { name: current })).toHaveAttribute("aria-current", "page");
+    await expect(nav.getByRole("link", { name: other })).not.toHaveAttribute("aria-current", "page");
+    // The navigation comes before the h1 in document order.
+    const navFirst = await nav.evaluate((el) => {
+      const h1 = document.querySelector("h1");
+      return !!h1 && !!(el.compareDocumentPosition(h1) & Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+    expect(navFirst, `${path}: admin navigation is before the h1`).toBe(true);
+  }
+});

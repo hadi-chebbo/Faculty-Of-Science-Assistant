@@ -217,6 +217,7 @@ test("a signed-in student cannot see the admin page", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
   await expect(accountButton(page)).toBeVisible();
   await expect(page.getByRole("link", { name: "Resources" })).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Admin sections" })).toHaveCount(0);
 });
 
 test("public pages render the same signed in and signed out", async ({ page }) => {
