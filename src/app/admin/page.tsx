@@ -24,11 +24,11 @@ export default function AdminPage({ searchParams }: PageProps<"/admin">) {
 }
 
 async function AdminContent({ raw }: { raw: Record<string, string | string[] | undefined> }) {
-  const { account, admin } = await requireAdminPage("/admin");
+  const { admin } = await requireAdminPage("/admin");
 
   return (
     <>
-      <AdminBar email={account.email} />
+      <AdminBar />
       <ResourceList viewer={admin} raw={raw} />
     </>
   );

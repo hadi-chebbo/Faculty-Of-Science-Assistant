@@ -27,14 +27,14 @@ export default function EditResourcePage({ params }: PageProps<"/admin/resources
 }
 
 async function EditResourceContent({ id }: { id: string }) {
-  const { account, admin } = await requireAdminPage(`/admin/resources/${encodeURIComponent(id)}/edit`);
+  const { admin } = await requireAdminPage(`/admin/resources/${encodeURIComponent(id)}/edit`);
   const [courses, resource] = await Promise.all([
     readForPage(() => listCourses(admin)),
     readForPage(() => getResourceForEdit(admin, id)),
   ]);
   return (
     <>
-      <AdminBar email={account.email} />
+      <AdminBar />
       <ResourceForm courses={courses} resource={resource} />
     </>
   );

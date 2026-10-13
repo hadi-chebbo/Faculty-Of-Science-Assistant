@@ -28,6 +28,6 @@ export default function SignInPage() {
 
 async function RedirectIfSignedIn() {
   const account = await getAccount(await getViewer());
-  if (account) redirect("/admin");
+  if (account) redirect(account.role === "admin" ? "/admin" : "/");
   return null;
 }

@@ -28,7 +28,7 @@ It prints nothing when the file is complete. Terms: "runtime" means the app need
 
 ## Styling and components
 
-shadcn/ui is not a package you import. Its CLI copies component source files into `src/components/ui` (currently badge, breadcrumb, button, card, skeleton, tabs). `components.json` tells the CLI the style (`radix-vega`), the CSS file (`src/app/globals.css`) and the aliases (`@/components/ui`, `@/lib/utils`). Add a component with `npx shadcn@latest add <name>`, as CLAUDE.md requires. The copied files import the packages in this section.
+shadcn/ui is not a package you import. Its CLI copies component source files into `src/components/ui` (currently badge, breadcrumb, button, card, dropdown-menu, skeleton, tabs). `components.json` tells the CLI the style (`radix-vega`), the CSS file (`src/app/globals.css`) and the aliases (`@/components/ui`, `@/lib/utils`). Add a component with `npx shadcn@latest add <name>`, as CLAUDE.md requires. The copied files import the packages in this section.
 
 | Package | What it is | Why we have it | Where used | Declared / installed | Section OK? |
 |---|---|---|---|---|---|
@@ -36,7 +36,7 @@ shadcn/ui is not a package you import. Its CLI copies component source files int
 | `@tailwindcss/turbopack` | A loader that runs Tailwind on CSS files when Next builds with Turbopack. | Needed to process Tailwind v4 under Turbopack. Specific reason not recorded. | `next.config.ts` (`turbopack.rules["*.css"]`). | `^4` / 4.3.3 | Yes, dev (build step) |
 | `tw-animate-css` | CSS classes for animations used by shadcn components. | Added with the shadcn setup (commit 00d48ea). | `@import "tw-animate-css"` in `src/app/globals.css`. No JavaScript import. | `^1.4.0` / 1.4.0 | In `dependencies` but build-time only. See review item 4. |
 | `shadcn` | The shadcn/ui CLI, which also ships a stylesheet. | Added with the shadcn setup (commit 00d48ea). | `@import "shadcn/tailwind.css"` in `src/app/globals.css`; the `shadcn` command for adding components. | `^4.21.4` / 4.21.4 | Debatable. See review item 3. |
-| `radix-ui` | Unstyled accessible UI building blocks (tabs, slot and others). | The shadcn `radix-vega` style builds on it. | `src/components/ui/{tabs,breadcrumb,badge,button}.tsx`. | `^1.7.0` / 1.7.0 | Yes, runtime |
+| `radix-ui` | Unstyled accessible UI building blocks (tabs, slot and others). | The shadcn `radix-vega` style builds on it. | `src/components/ui/{tabs,breadcrumb,badge,button,dropdown-menu}.tsx`. | `^1.7.0` / 1.7.0 | Yes, runtime |
 | `class-variance-authority` | Helper that picks CSS class sets from named variants (for example button size). | Used by the shadcn components. | `src/components/ui/{tabs,badge,button}.tsx`. | `^0.7.1` / 0.7.1 | Yes, runtime |
 | `cn` | A small library that merges class names and resolves Tailwind conflicts. Its description: "Drop-in replacement for clsx + tailwind-merge". It comes from the `shadcn-ui/cn` repository. | Added by the shadcn setup (commit 00d48ea). It supplies the `cn()` function. | `src/lib/utils.ts` re-exports it. `src/components/ui/{badge,card,breadcrumb,tabs,skeleton,button}.tsx` import it directly from `"cn"`. | `^0.4.0` / 0.4.0 | Yes, runtime. It is used. See review item 1. |
 | `lucide-react` | A set of SVG icons as React components. | `components.json` sets `iconLibrary: lucide`. | `src/app/page.tsx`, `src/app/courses/[code]/resource-tabs.tsx`, `src/components/ui/breadcrumb.tsx`, `src/components/site/{theme-toggle,nav-items}.tsx`. | `^1.55.0` / 1.55.0 | Yes, runtime |

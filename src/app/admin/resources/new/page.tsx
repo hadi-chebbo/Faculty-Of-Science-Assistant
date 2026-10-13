@@ -24,11 +24,11 @@ export default function NewResourcePage() {
 }
 
 async function NewResourceContent() {
-  const { account, admin } = await requireAdminPage("/admin/resources/new");
+  const { admin } = await requireAdminPage("/admin/resources/new");
   const courses = await readForPage(() => listCourses(admin));
   return (
     <>
-      <AdminBar email={account.email} />
+      <AdminBar />
       <ResourceForm courses={courses} />
     </>
   );

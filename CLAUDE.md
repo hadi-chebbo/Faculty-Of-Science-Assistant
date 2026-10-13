@@ -106,7 +106,7 @@ mock exam generation, personalization.
   live in httpOnly, SameSite=Lax cookies; tokens are never in response bodies.
 - Sign-in is rate-limited in the database (`failed_sign_ins`): 5 failures per
   email or 20 per IP in 15 minutes refuse further attempts before the password
-  is checked. Public pages never read the session; only `/admin` does.
+  is checked. Public pages never read the session on the server (only `/admin` does); the header account control asks `GET /api/v1/auth/me` from the browser after the page has loaded.
 - The single admin account is created by a seed script; there is no public
   sign-up for admins.
 - Migration style: one table per file; Sequelize API (`createTable`,
@@ -131,7 +131,7 @@ mock exam generation, personalization.
 - UI language: English only.
 - Navigation adapts to the device. Phone: slim top bar plus a fixed bottom tab bar
   (Browse, Exams, Search). Desktop (md and up): the same items inline in the top bar and a
-  breadcrumb trail on inner pages. Items without a page yet are shown disabled.
+  breadcrumb trail on inner pages. Items without a page yet are shown disabled. The top bar also shows a "Sign in" link or, when signed in, an account button with the user's name (never the email) and a menu with Admin (admins only) and Sign out.
 - Home is a landing page: headline, short description, "Browse courses" button, three
   benefit points, then the semester cards. No claims about features that do not exist.
 - Course page: for a course with chapters, three areas, one visible at a time and chosen by

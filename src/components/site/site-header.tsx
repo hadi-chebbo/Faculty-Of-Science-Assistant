@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { AccountControl } from "./account-control";
 import { NavItems } from "./nav-items";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -18,7 +19,10 @@ export function SiteHeader() {
               <NavItems variant="top" />
             </Suspense>
           </nav>
-          <div className="ml-auto md:ml-0">
+          <div className="ml-auto flex items-center gap-1 md:ml-0">
+            <Suspense fallback={<div aria-hidden className="h-11 w-24 md:h-9" />}>
+              <AccountControl />
+            </Suspense>
             <ThemeToggle />
           </div>
         </div>
