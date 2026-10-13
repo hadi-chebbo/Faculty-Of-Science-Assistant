@@ -11,10 +11,10 @@ import type { FileStorage } from "./types";
 const ROUTE = "/api/v1/storage/local";
 
 export function createLocalStorage(dir: string): FileStorage {
-  const root = path.resolve(dir);
+  const root = path.resolve(/*turbopackIgnore: true*/ dir);
   const fileOf = (key: string) => {
     assertStorageKey(key);
-    return path.join(root, ...key.split("/"));
+    return path.join(/*turbopackIgnore: true*/ root, ...key.split("/"));
   };
 
   return {

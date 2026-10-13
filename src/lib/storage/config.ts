@@ -30,7 +30,9 @@ export function parseStorageConfig(source: Record<string, string | undefined>): 
   if (driver === "local" && onVercel) {
     throw new Error("STORAGE_DRIVER=local cannot be used on Vercel: a function has no durable disk. Use r2.");
   }
-  return { driver, localDir: path.resolve(env.STORAGE_LOCAL_DIR ?? ".storage") };
+  // The folder is chosen at run time and only the local driver reads it, so the bundler is told
+  // not to trace the whole project into the route because of this path.
+  return { driver, localDir: path.resolve(/*turbopackIgnore: true*/ env.STORAGE_LOCAL_DIR ?? ".storage") };
 }
 
 export function getStorageConfig(): StorageConfig {
