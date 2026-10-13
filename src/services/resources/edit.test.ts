@@ -51,7 +51,7 @@ describe("getResourceForEdit", () => {
     expect(await getResourceForEdit(f.admin, f.exam.id)).toEqual({
       id: f.exam.id, courseId: f.course.id, type: "exam", title: "Final 2024", description: "Old exam",
       academicYearStart: 2024, examSession: "final", language: "fr", externalUrl: "https://example.com/a",
-      isPublished: true, hasFile: false, solutionOf: null,
+      isPublished: true, hasFile: false, chapterId: null, solutionOf: null,
     });
   });
 

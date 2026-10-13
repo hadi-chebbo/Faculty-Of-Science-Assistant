@@ -5,7 +5,7 @@ import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import type { Viewer } from "../viewer";
 import type { ResourceInput } from "./schemas";
-import { createResource, deleteResource, updateResource } from "./write";
+import { createResource, deleteResource, getResourceForEdit, updateResource } from "./write";
 
 const URL_A = "https://example.com/a";
 const URL_B = "https://example.com/b";
@@ -256,5 +256,42 @@ describe("deleteResource", () => {
     expect((await Resource.findByPk(solution.id))!.solutionOfId).toBeNull();
     expect(await Bookmark.count()).toBe(0);
     expect(await Completion.count()).toBe(0);
+  });
+});
+
+describe("chapters", () => {
+  async function withChapters(f: Fixture) {
+    const { Chapter } = getDb();
+    const mine = await Chapter.create({ courseId: f.course.id, position: 1, title: "Chapter 1" });
+    const theirs = await Chapter.create({ courseId: f.other.id, position: 1, title: "Chapter X" });
+    return { mine, theirs };
+  }
+
+  it("creates and updates a resource with a chapter of its course, and null clears it", async () => {
+    const f = await setup();
+    const { mine } = await withChapters(f);
+    const created = await createResource(f.admin, link(f, { chapterId: mine.id }));
+    expect((await getDb().Resource.findByPk(created.id))!.chapterId).toBe(mine.id);
+    expect((await getResourceForEdit(f.admin, created.id)).chapterId).toBe(mine.id);
+
+    await updateResource(f.admin, created.id, link(f, { title: "Renamed", chapterId: mine.id }));
+    expect((await getDb().Resource.findByPk(created.id))!.chapterId).toBe(mine.id);
+
+    await updateResource(f.admin, created.id, link(f, { chapterId: null }));
+    expect((await getDb().Resource.findByPk(created.id))!.chapterId).toBeNull();
+    expect((await getResourceForEdit(f.admin, created.id)).chapterId).toBeNull();
+  });
+
+  it("rejects a chapter of another course, an unknown chapter and a chapter on an exam", async () => {
+    const f = await setup();
+    const { mine, theirs } = await withChapters(f);
+
+    expect(await fieldsOf(createResource(f.admin, link(f, { chapterId: theirs.id })))).toEqual(["chapterId"]);
+    expect(await fieldsOf(createResource(f.admin, link(f, { chapterId: MISSING_ID })))).toEqual(["chapterId"]);
+    expect(
+      await fieldsOf(createResource(f.admin, link(f, { type: "exam", examSession: "final", chapterId: mine.id }))),
+    ).toEqual(["chapterId"]);
+    expect(await fieldsOf(updateResource(f.admin, f.exam.id, link(f, { chapterId: theirs.id })))).toEqual(["chapterId"]);
+    expect(await countResources()).toBe(1);
   });
 });
