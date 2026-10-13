@@ -138,6 +138,19 @@ describe("saving with an uploaded file", () => {
     expect(await exists(key)).toBe(true);
   });
 
+  it("does not delete a saved resource's file when its object was overwritten with something else", async () => {
+    const f = await setup();
+    const { key, ticket } = await upload();
+    const first = await createResource(f.admin, input(f, { fileTicket: ticket }));
+    // The upload URL is still valid for a while after saving: the object is replaced by a non-PDF.
+    await getStorage().put(key, new TextEncoder().encode("not a pdf any more"), UPLOAD_CONTENT_TYPE);
+
+    expect(await fieldsOf(createResource(f.admin, input(f, { title: "Copy", fileTicket: ticket })))).toEqual(["file"]);
+    expect(await fieldsOf(updateResource(f.admin, first.id, input(f, { fileTicket: ticket })))).toEqual(["file"]);
+    expect((await rowOf(first.id))!.fileKey).toBe(key);
+    expect(await exists(key)).toBe(true);
+  });
+
   it("keeps the uploaded file when other checks fail, so the ticket can be used again", async () => {
     const f = await setup();
     const { key, ticket } = await upload();

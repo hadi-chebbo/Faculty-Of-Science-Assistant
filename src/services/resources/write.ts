@@ -23,7 +23,8 @@ async function removeStoredFile(key: string, resourceId: string): Promise<void> 
 }
 
 // Turns a ticket into the key of an uploaded object that is fit to be attached: a PDF within the
-// size limit. An object that fails the inspection is deleted. Anything wrong is a "file" error.
+// size limit. An object that fails the inspection is deleted, unless a saved resource already uses
+// its key. Anything wrong is a "file" error.
 async function acceptUpload(ticket: string): Promise<string> {
   const key = await verifyUploadTicket(ticket);
   if (!key) throw new ValidationError(["file"]);
@@ -39,7 +40,10 @@ async function acceptUpload(ticket: string): Promise<string> {
     acceptable = start !== null && looksLikePdf(start);
   }
   if (!acceptable) {
-    await storage.delete(key);
+    // The upload URL stays valid for a few minutes, so the object under a key that a saved resource
+    // already uses could have been overwritten. That file is the resource's: never delete it here.
+    const owned = (await getDb().Resource.count({ where: { fileKey: key } })) > 0;
+    if (!owned) await storage.delete(key);
     throw new ValidationError(["file"]);
   }
   return key;
