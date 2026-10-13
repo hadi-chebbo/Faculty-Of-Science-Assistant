@@ -75,6 +75,8 @@ export const resourceInputSchema = z
     solutionOfId: given(idSchema).transform((value) => value ?? null),
     chapterId: given(idSchema).transform((value) => value ?? null),
     isPublished: z.boolean().default(false),
+    // Proof of a file uploaded through createResourceUpload; blank, null or absent means no new file.
+    fileTicket: given(z.string().trim()).transform((value) => value ?? null),
   })
   .superRefine((input, ctx) => {
     if (input.type === "exam" && input.examSession === null) {
@@ -106,4 +108,5 @@ export interface ResourceInput {
   solutionOfId?: string | null;
   chapterId?: string | null;
   isPublished?: boolean;
+  fileTicket?: string | null;
 }

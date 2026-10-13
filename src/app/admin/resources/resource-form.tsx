@@ -95,7 +95,7 @@ export function ResourceForm({
       academicYearStart: text("academicYearStart"),
       examSession: type === "exam" ? text("examSession") : null,
       language: text("language"),
-      externalUrl: hasFile ? null : text("externalUrl"),
+      externalUrl: text("externalUrl"),
       solutionOfId: type === "solution" && solutionOfId ? solutionOfId : null,
       chapterId: type !== "exam" && chapterId ? chapterId : null,
       isPublished,
@@ -330,12 +330,11 @@ export function ResourceForm({
         </FormCard>
 
         <FormCard title="The material" description="A resource needs a file or a link before it can be published.">
-          <Field id="externalUrl" label="Link" hint={hasFile ? "This resource has a stored file." : "An https:// address."} error={errors.externalUrl}>
+          <Field id="externalUrl" label="Link" hint={hasFile ? "Optional backup link (https://)." : "An https:// address."} error={errors.externalUrl}>
             <Input
               id="externalUrl"
               name="externalUrl"
               type="url"
-              disabled={hasFile}
               defaultValue={resource?.externalUrl ?? ""}
               placeholder="https://"
               aria-invalid={invalid("externalUrl")}
