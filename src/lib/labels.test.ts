@@ -4,6 +4,7 @@ import {
   EXAM_SESSION_LABELS,
   LANGUAGE_LABELS,
   RESOURCE_TYPE_LABELS,
+  RESOURCE_TYPE_SINGULAR_LABELS,
   describeGroups,
   formatAcademicYear,
 } from "./labels";
@@ -42,5 +43,13 @@ describe("labels", () => {
   it("use the agreed wording", () => {
     expect(RESOURCE_TYPE_LABELS.exercise).toBe("Exercises");
     expect(EXAM_SESSION_LABELS.second).toBe("Second session");
+  });
+});
+
+describe("RESOURCE_TYPE_SINGULAR_LABELS", () => {
+  it("has a singular label for every type, in the order of RESOURCE_TYPES", () => {
+    expect(RESOURCE_TYPES.map((t) => RESOURCE_TYPE_SINGULAR_LABELS[t])).toEqual([
+      "Lecture", "Notes", "Exercise", "Exam", "Solution", "Other",
+    ]);
   });
 });

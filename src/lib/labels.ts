@@ -10,6 +10,16 @@ export const RESOURCE_TYPE_LABELS: Record<ResourceType, string> = {
   other: "Other",
 };
 
+// One item of each type, for choosing a type. RESOURCE_TYPE_LABELS above is the plural, for headings.
+export const RESOURCE_TYPE_SINGULAR_LABELS: Record<ResourceType, string> = {
+  lecture: "Lecture",
+  notes: "Notes",
+  exercise: "Exercise",
+  exam: "Exam",
+  solution: "Solution",
+  other: "Other",
+};
+
 export const EXAM_SESSION_LABELS: Record<ExamSession, string> = {
   partial: "Partial",
   final: "Final",

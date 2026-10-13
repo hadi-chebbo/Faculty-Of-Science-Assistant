@@ -52,8 +52,15 @@ describe("getResourceForEdit", () => {
       id: f.exam.id, courseId: f.course.id, type: "exam", title: "Final 2024", description: "Old exam",
       academicYearStart: 2024, examSession: "final", language: "fr", externalUrl: "https://example.com/a",
       isPublished: true, hasFile: false, chapterId: null, solutionOf: null,
-      solutionCount: 0,
+      solutionCount: 0, updatedAt: expect.any(String),
     });
+  });
+
+  it("reports when it was last saved as an ISO date", async () => {
+    const f = await setup();
+    const { updatedAt } = await getResourceForEdit(f.admin, f.exam.id);
+    expect(Number.isNaN(Date.parse(updatedAt))).toBe(false);
+    expect(new Date(updatedAt).toISOString()).toBe(updatedAt);
   });
 
   it("reports a stored file without exposing its key", async () => {

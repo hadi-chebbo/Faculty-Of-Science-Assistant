@@ -81,6 +81,31 @@ async function solutionOfTitle(title: string): Promise<string | null> {
   }
 }
 
+// Test-only lookup: no endpoint returns a course id.
+async function courseIdOf(code: string): Promise<string> {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    const result = await client.query("SELECT id FROM courses WHERE code = $1", [code]);
+    return result.rows[0].id as string;
+  } finally {
+    await client.end();
+  }
+}
+
+// Test-only lookup of the stored academic year start (null when not set).
+async function academicYearStartOf(title: string): Promise<number | null> {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    const result = await client.query("SELECT academic_year_start FROM resources WHERE title = $1", [title]);
+    expect(result.rows).toHaveLength(1);
+    return (result.rows[0].academic_year_start as number | null) ?? null;
+  } finally {
+    await client.end();
+  }
+}
+
 // Deletes through the API as a separate signed-in admin client, so a test that tampers with the
 // browser's cookies cannot break its own cleanup.
 async function cleanup(request: APIRequestContext, origin: string, title: string) {
@@ -97,7 +122,13 @@ async function fillBasics(page: Page, title: string) {
   await page.getByLabel("Title", { exact: true }).fill(title);
 }
 
-const rowFor = (page: Page, title: string) => page.getByRole("listitem").filter({ hasText: title });
+// The form's controls: the type is a group of radio buttons named by their singular label ("Exam"),
+// the visibility another ("Draft" / "Published"), and the one save button's name follows the visibility.
+const chooseType = (page: Page, label: string) => page.getByRole("radio", { name: label, exact: true }).check();
+const setVisibility = (page: Page, label: "Draft" | "Published") => page.getByRole("radio", { name: new RegExp(`^${label}`) }).check();
+const save = (page: Page) => page.getByRole("button", { name: /^Save (draft|and publish)$/ }).click();
+
+const rowFor =(page: Page, title: string) => page.getByRole("listitem").filter({ hasText: title });
 
 test.describe("admin resource form", () => {
   let origin: string;
@@ -115,7 +146,7 @@ test.describe("admin resource form", () => {
       // The list page has a "Course" filter too; wait until the form page has replaced it.
       await expect(page.getByRole("heading", { name: "New resource" })).toBeVisible();
       await fillBasics(page, title);
-      await page.getByRole("button", { name: "Save" }).click();
+      await save(page);
       await page.waitForURL(/\/admin$/);
 
       await page.goto(`/admin?course=${COURSE}`);
@@ -125,7 +156,7 @@ test.describe("admin resource form", () => {
       await expect(page.getByRole("heading", { name: "Edit resource" })).toBeVisible();
       await expect(page.getByLabel("Title", { exact: true })).toHaveValue(title);
       await page.getByLabel("Title", { exact: true }).fill(renamed);
-      await page.getByRole("button", { name: "Save" }).click();
+      await save(page);
       await page.waitForURL(/\/admin$/);
 
       await page.goto(`/admin?course=${COURSE}`);
@@ -143,16 +174,16 @@ test.describe("admin resource form", () => {
       await page.goto("/admin/resources/new");
       await fillBasics(page, title);
 
-      await page.getByLabel("Published").check();
-      await page.getByRole("button", { name: "Save" }).click();
+      await setVisibility(page, "Published");
+      await save(page);
       await expect(page.getByText("Add a link before publishing.")).toBeVisible();
       await expect(page.getByText("The resource was not saved.")).toBeVisible();
       await expect(page).toHaveURL(/\/admin\/resources\/new$/);
 
       await expect(page.getByLabel("Exam session")).toHaveCount(0);
-      await page.getByLabel("Type", { exact: true }).selectOption("exam");
+      await chooseType(page, "Exam");
       await expect(page.getByLabel("Exam session")).toBeVisible();
-      await page.getByLabel("Type", { exact: true }).selectOption("lecture");
+      await chooseType(page, "Lecture");
       await expect(page.getByLabel("Exam session")).toHaveCount(0);
 
       expect(await idsByTitle(title)).toHaveLength(0);
@@ -168,8 +199,8 @@ test.describe("admin resource form", () => {
       await page.goto("/admin/resources/new");
       await fillBasics(page, title);
       await page.getByLabel("Link", { exact: true }).fill("https://example.com/e2e");
-      await page.getByLabel("Published").check();
-      await page.getByRole("button", { name: "Save" }).click();
+      await setVisibility(page, "Published");
+      await save(page);
       await page.waitForURL(/\/admin$/);
 
       const anonymous = await browser.newContext();
@@ -193,7 +224,7 @@ test.describe("admin resource form", () => {
       await fillBasics(page, title);
 
       await page.context().clearCookies({ name: "ua_access" });
-      await page.getByRole("button", { name: "Save" }).click();
+      await save(page);
       await page.waitForURL(/\/admin$/);
 
       expect(await idsByTitle(title)).toHaveLength(1);
@@ -214,7 +245,7 @@ test.describe("admin resource form", () => {
       await page.getByLabel("Title", { exact: true }).fill(title);
       await expect(page.getByLabel("Chapter")).toBeEnabled();
       await page.getByLabel("Chapter").selectOption({ label: "2. Sample chapter 2" });
-      await page.getByRole("button", { name: "Save" }).click();
+      await save(page);
       await page.waitForURL(/\/admin$/);
       expect(await chapterPositionOf(title)).toBe(2);
 
@@ -224,14 +255,14 @@ test.describe("admin resource form", () => {
       await expect(chapter.locator("option:checked")).toHaveText("2. Sample chapter 2");
 
       await chapter.selectOption({ label: "No chapter" });
-      await page.getByRole("button", { name: "Save" }).click();
+      await save(page);
       await page.waitForURL(/\/admin$/);
       expect(await chapterPositionOf(title)).toBeNull();
 
       await page.goto(`/admin/resources/${id}/edit`);
       await expect(chapter.locator("option:checked")).toHaveText("No chapter");
       await chapter.selectOption({ label: "3. Sample chapter 3" });
-      await page.getByRole("button", { name: "Save" }).click();
+      await save(page);
       await page.waitForURL(/\/admin$/);
       expect(await chapterPositionOf(title)).toBe(3);
     } finally {
@@ -251,7 +282,7 @@ test.describe("admin resource form", () => {
       await page.locator("#courseId").selectOption({ label: COURSE_LABEL });
       await expect(page.getByLabel("Chapter")).toBeDisabled();
       await expect(page.getByLabel("Chapter")).toContainText("No chapters in this course");
-      await page.getByRole("button", { name: "Save" }).click();
+      await save(page);
       await page.waitForURL(/\/admin$/);
       expect(await chapterPositionOf(title)).toBeNull();
     } finally {
@@ -264,9 +295,9 @@ test.describe("admin resource form", () => {
     await page.goto("/admin/resources/new");
     await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
     await expect(page.getByLabel("Chapter")).toBeVisible();
-    await page.getByLabel("Type", { exact: true }).selectOption("exam");
+    await chooseType(page, "Exam");
     await expect(page.getByLabel("Chapter")).toHaveCount(0);
-    await page.getByLabel("Type", { exact: true }).selectOption("lecture");
+    await chooseType(page, "Lecture");
     await expect(page.getByLabel("Chapter")).toBeVisible();
   });
 
@@ -274,10 +305,10 @@ test.describe("admin resource form", () => {
     await signInAsAdmin(page);
     await page.goto("/admin/resources/new");
     await expect(page.getByLabel("Solution of", { exact: true })).toHaveCount(0);
-    await page.getByLabel("Type", { exact: true }).selectOption("solution");
+    await chooseType(page, "Solution");
     await expect(page.getByLabel("Solution of", { exact: true })).toBeDisabled();
     await expect(page.getByLabel("Solution of", { exact: true })).toContainText("Choose a course first");
-    await page.getByLabel("Type", { exact: true }).selectOption("lecture");
+    await chooseType(page, "Lecture");
     await expect(page.getByLabel("Solution of", { exact: true })).toHaveCount(0);
   });
 
@@ -287,13 +318,13 @@ test.describe("admin resource form", () => {
       await signInAsAdmin(page);
       await page.goto("/admin/resources/new");
       await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
-      await page.getByLabel("Type", { exact: true }).selectOption("solution");
+      await chooseType(page, "Solution");
       await page.getByLabel("Title", { exact: true }).fill(title);
       const solutionOf = page.getByLabel("Solution of", { exact: true });
       await expect(solutionOf).toBeEnabled();
       await expect(solutionOf.locator("option:checked")).toHaveText("Not linked");
       await solutionOf.selectOption({ label: LINKED_EXERCISE });
-      await page.getByRole("button", { name: "Save" }).click();
+      await save(page);
       await page.waitForURL(/\/admin$/);
       expect(await solutionOfTitle(title)).toBe(LINKED_EXERCISE);
 
@@ -304,14 +335,14 @@ test.describe("admin resource form", () => {
       await expect(solutionOf.locator("option", { hasText: title })).toHaveCount(0);
 
       await solutionOf.selectOption({ label: LINKED_EXAM_LABEL });
-      await page.getByRole("button", { name: "Save" }).click();
+      await save(page);
       await page.waitForURL(/\/admin$/);
       expect(await solutionOfTitle(title)).toBe(LINKED_EXAM);
 
       await page.goto(`/admin/resources/${id}/edit`);
       await expect(solutionOf.locator("option:checked")).toHaveText(LINKED_EXAM_LABEL);
       await solutionOf.selectOption({ label: "Not linked" });
-      await page.getByRole("button", { name: "Save" }).click();
+      await save(page);
       await page.waitForURL(/\/admin$/);
       expect(await solutionOfTitle(title)).toBeNull();
     } finally {
@@ -325,7 +356,7 @@ test.describe("admin resource form", () => {
       await signInAsAdmin(page);
       await page.goto("/admin/resources/new");
       await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
-      await page.getByLabel("Type", { exact: true }).selectOption("solution");
+      await chooseType(page, "Solution");
       await page.getByLabel("Title", { exact: true }).fill(title);
       const solutionOf = page.getByLabel("Solution of", { exact: true });
       await solutionOf.selectOption({ label: LINKED_EXERCISE });
@@ -334,7 +365,7 @@ test.describe("admin resource form", () => {
       await expect(solutionOf.locator("option:checked")).toHaveText("Not linked");
       await expect(solutionOf.locator("option", { hasText: LINKED_EXERCISE })).toHaveCount(0);
       await expect(solutionOf.locator("option", { hasText: "Sample exercise sheet 1" })).toHaveCount(1);
-      await page.getByRole("button", { name: "Save" }).click();
+      await save(page);
       await page.waitForURL(/\/admin$/);
       expect(await solutionOfTitle(title)).toBeNull();
     } finally {
@@ -345,7 +376,7 @@ test.describe("admin resource form", () => {
   test("New resource has no Delete button", async ({ page }) => {
     await signInAsAdmin(page);
     await page.goto("/admin/resources/new");
-    await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Save draft" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Delete" })).toHaveCount(0);
   });
 
@@ -355,7 +386,7 @@ test.describe("admin resource form", () => {
       await signInAsAdmin(page);
       await page.goto("/admin/resources/new");
       await fillBasics(page, title);
-      await page.getByRole("button", { name: "Save" }).click();
+      await save(page);
       await page.waitForURL(/\/admin$/);
 
       const [id] = await idsByTitle(title);
@@ -387,15 +418,15 @@ test.describe("admin resource form", () => {
       await signInAsAdmin(page);
       await page.goto("/admin/resources/new");
       await fillBasics(page, exercise);
-      await page.getByLabel("Type", { exact: true }).selectOption("exercise");
-      await page.getByRole("button", { name: "Save" }).click();
+      await chooseType(page, "Exercise");
+      await save(page);
       await page.waitForURL(/\/admin$/);
 
       await page.goto("/admin/resources/new");
       await fillBasics(page, solution);
-      await page.getByLabel("Type", { exact: true }).selectOption("solution");
+      await chooseType(page, "Solution");
       await page.getByLabel("Solution of", { exact: true }).selectOption({ label: exercise });
-      await page.getByRole("button", { name: "Save" }).click();
+      await save(page);
       await page.waitForURL(/\/admin$/);
       expect(await solutionOfTitle(solution)).toBe(exercise);
 
@@ -421,15 +452,147 @@ test.describe("admin resource form", () => {
       await signInAsAdmin(page);
       await page.goto("/admin/resources/new");
       await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
-      await page.getByLabel("Type", { exact: true }).selectOption("solution");
+      await chooseType(page, "Solution");
       await page.getByLabel("Title", { exact: true }).fill(title);
       await page.getByLabel("Solution of", { exact: true }).selectOption({ label: LINKED_EXERCISE });
-      await page.getByLabel("Type", { exact: true }).selectOption("lecture");
-      await page.getByRole("button", { name: "Save" }).click();
+      await chooseType(page, "Lecture");
+      await save(page);
       await page.waitForURL(/\/admin$/);
       expect(await solutionOfTitle(title)).toBeNull();
     } finally {
       await cleanup(request, origin, title);
+    }
+  });
+
+  test("the type chooser works with the arrow keys; Exam shows Exam session and hides Chapter", async ({ page }) => {
+    await signInAsAdmin(page);
+    await page.goto("/admin/resources/new");
+    const group = page.getByRole("group", { name: "Type" });
+    await expect(group.getByRole("radio")).toHaveCount(6);
+    await expect(group.getByRole("radio", { name: "Lecture", exact: true })).toBeChecked();
+    await expect(page.getByLabel("Chapter")).toBeVisible();
+
+    await group.getByRole("radio", { name: "Lecture", exact: true }).focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(group.getByRole("radio", { name: "Notes", exact: true })).toBeChecked();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+    await expect(group.getByRole("radio", { name: "Exam", exact: true })).toBeChecked();
+    await expect(page.getByLabel("Exam session")).toBeVisible();
+    await expect(page.getByLabel("Chapter")).toHaveCount(0);
+    await page.keyboard.press("ArrowUp");
+    await expect(group.getByRole("radio", { name: "Exercise", exact: true })).toBeChecked();
+    await expect(page.getByLabel("Exam session")).toHaveCount(0);
+    await expect(page.getByLabel("Chapter")).toBeVisible();
+  });
+
+  test("the preview follows the title, language, year, chapter and type", async ({ page }) => {
+    await signInAsAdmin(page);
+    await page.goto("/admin/resources/new");
+    const preview = page.getByTestId("preview");
+    const where = page.getByTestId("preview-where");
+    await expect(preview).toContainText("Untitled");
+    await expect(where).toHaveText("Choose a course to see where it will appear.");
+
+    await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
+    await page.getByLabel("Chapter").selectOption({ label: "2. Sample chapter 2" });
+    await page.getByLabel("Title", { exact: true }).fill("Preview lecture");
+    await page.getByLabel("Academic year").selectOption({ label: "2024-2025" });
+    await page.getByRole("radio", { name: "French" }).check();
+    await expect(preview).toContainText("Preview lecture");
+    await expect(preview).toContainText("FR");
+    await expect(preview).toContainText("2024-2025");
+    await expect(where).toHaveText("In DEMO510 › Chapter 2 › Lectures");
+
+    await page.getByLabel("Chapter").selectOption({ label: "No chapter" });
+    await expect(where).toHaveText("In DEMO510 › Other material › Lectures");
+
+    await chooseType(page, "Exam");
+    await page.getByLabel("Exam session").selectOption({ label: "Final" });
+    await expect(preview).toContainText("Final");
+    await expect(where).toHaveText("In DEMO510 › Previous exams");
+    await expect(preview.getByRole("listitem")).toHaveCount(0);
+    await expect(preview.getByRole("link")).toHaveCount(0);
+  });
+
+  test("the save button follows the visibility choice", async ({ page }) => {
+    await signInAsAdmin(page);
+    await page.goto("/admin/resources/new");
+    await expect(page.getByRole("radio", { name: /^Draft/ })).toBeChecked();
+    await expect(page.getByRole("button", { name: "Save draft" })).toBeVisible();
+    await setVisibility(page, "Published");
+    await expect(page.getByRole("button", { name: "Save and publish" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Save draft" })).toHaveCount(0);
+    await setVisibility(page, "Draft");
+    await expect(page.getByRole("button", { name: "Save draft" })).toBeVisible();
+  });
+
+  test("the edit page shows the stored status and the last saved date; New resource shows neither", async ({ page, request }) => {
+    const title = uniqueTitle();
+    try {
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await expect(page.getByText("Last saved")).toHaveCount(0);
+      await fillBasics(page, title);
+      await save(page);
+      await page.waitForURL(/\/admin$/);
+
+      const [id] = await idsByTitle(title);
+      await page.goto(`/admin/resources/${id}/edit`);
+      const header = page.locator("main p").filter({ hasText: "Last saved" });
+      await expect(header).toContainText("Draft");
+      await expect(header).toContainText(/Last saved \d{1,2} \w{3,4} \d{4}/);
+      // The pill shows the stored state: choosing Published does not change it before saving.
+      await setVisibility(page, "Published");
+      await expect(header).toContainText("Draft");
+      await expect(header).not.toContainText("Published");
+
+      await page.getByLabel("Link", { exact: true }).fill("https://example.com/e2e");
+      await save(page);
+      await page.waitForURL(/\/admin$/);
+      await page.goto(`/admin/resources/${id}/edit`);
+      await expect(header).toContainText("Published");
+      await expect(page.getByRole("radio", { name: /^Published/ })).toBeChecked();
+    } finally {
+      await cleanup(request, origin, title);
+    }
+  });
+
+  test("the academic year dropdown saves the start year and shows a stored year outside the list", async ({ page, request }) => {
+    const title = uniqueTitle();
+    const old = uniqueTitle();
+    try {
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await fillBasics(page, title);
+      const year = page.getByLabel("Academic year");
+      await expect(year.locator("option:checked")).toHaveText("Not set");
+      await year.selectOption({ label: "2024-2025" });
+      await save(page);
+      await page.waitForURL(/\/admin$/);
+      expect(await academicYearStartOf(title)).toBe(2024);
+
+      const [id] = await idsByTitle(title);
+      await page.goto(`/admin/resources/${id}/edit`);
+      await expect(year.locator("option:checked")).toHaveText("2024-2025");
+      await year.selectOption({ label: "Not set" });
+      await save(page);
+      await page.waitForURL(/\/admin$/);
+      expect(await academicYearStartOf(title)).toBeNull();
+
+      // A year older than the 15 offered is created through the API, then must still be shown.
+      const courseId = await courseIdOf(COURSE);
+      const created = await page.request.post("/api/v1/resources", {
+        headers: { origin },
+        data: { courseId, type: "lecture", title: old, academicYearStart: 2001, isPublished: false },
+      });
+      expect(created.status()).toBe(201);
+      const [oldId] = await idsByTitle(old);
+      await page.goto(`/admin/resources/${oldId}/edit`);
+      await expect(year.locator("option:checked")).toHaveText("2001-2002");
+    } finally {
+      await cleanup(request, origin, title);
+      await cleanup(request, origin, old);
     }
   });
 });

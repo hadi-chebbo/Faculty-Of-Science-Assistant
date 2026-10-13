@@ -20,7 +20,7 @@ export default function NewResourcePage() {
           <Skeleton className="h-11 w-full max-w-sm md:h-9" />
           <Skeleton className="h-5 w-48" />
           <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-64 w-full max-w-2xl" />
+          <Skeleton className="h-64 w-full" />
         </div>}>
         <NewResourceContent />
       </Suspense>

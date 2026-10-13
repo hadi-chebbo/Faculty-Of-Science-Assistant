@@ -19,7 +19,7 @@ function openHref(id: string): string {
   return `/api/v1/resources/${id}/open`;
 }
 
-const TYPE_ICONS: Record<ResourceType, LucideIcon> = {
+export const TYPE_ICONS: Record<ResourceType, LucideIcon> = {
   lecture: Presentation,
   notes: NotebookText,
   exercise: PencilLine,
