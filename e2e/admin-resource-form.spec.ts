@@ -342,7 +342,80 @@ test.describe("admin resource form", () => {
     }
   });
 
-  test("changing the type from Solution to Lecture stores no link", async ({ page, request }) => {
+  test("New resource has no Delete button", async ({ page }) => {
+    await signInAsAdmin(page);
+    await page.goto("/admin/resources/new");
+    await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Delete" })).toHaveCount(0);
+  });
+
+  test("delete a draft from its edit page after confirming", async ({ page, request }) => {
+    const title = uniqueTitle();
+    try {
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await fillBasics(page, title);
+      await page.getByRole("button", { name: "Save" }).click();
+      await page.waitForURL(/\/admin$/);
+
+      const [id] = await idsByTitle(title);
+      await page.goto(`/admin/resources/${id}/edit`);
+      await page.getByRole("button", { name: "Delete" }).click();
+      const dialog = page.getByRole("alertdialog");
+      await expect(dialog.getByRole("heading", { name: `Delete “${title}”?` })).toBeVisible();
+      await expect(dialog.getByText("This cannot be undone.")).toBeVisible();
+      await expect(dialog.getByText("It is published")).toHaveCount(0);
+      await expect(dialog.getByText("solution")).toHaveCount(0);
+
+      await dialog.getByRole("button", { name: "Cancel" }).click();
+      await expect(dialog).toHaveCount(0);
+      expect(await idsByTitle(title)).toHaveLength(1);
+
+      await page.getByRole("button", { name: "Delete" }).click();
+      await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+      await page.waitForURL(/\/admin$/);
+      expect(await idsByTitle(title)).toHaveLength(0);
+    } finally {
+      await cleanup(request, origin, title);
+    }
+  });
+
+  test("deleting an exercise keeps its solution and unlinks it", async ({ page, request }) => {
+    const exercise = uniqueTitle();
+    const solution = uniqueTitle();
+    try {
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await fillBasics(page, exercise);
+      await page.getByLabel("Type", { exact: true }).selectOption("exercise");
+      await page.getByRole("button", { name: "Save" }).click();
+      await page.waitForURL(/\/admin$/);
+
+      await page.goto("/admin/resources/new");
+      await fillBasics(page, solution);
+      await page.getByLabel("Type", { exact: true }).selectOption("solution");
+      await page.getByLabel("Solution of", { exact: true }).selectOption({ label: exercise });
+      await page.getByRole("button", { name: "Save" }).click();
+      await page.waitForURL(/\/admin$/);
+      expect(await solutionOfTitle(solution)).toBe(exercise);
+
+      const [id] = await idsByTitle(exercise);
+      await page.goto(`/admin/resources/${id}/edit`);
+      await page.getByRole("button", { name: "Delete" }).click();
+      const dialog = page.getByRole("alertdialog");
+      await expect(dialog.getByText("Its 1 solution is kept but will no longer be linked to it.")).toBeVisible();
+      await dialog.getByRole("button", { name: "Delete" }).click();
+      await page.waitForURL(/\/admin$/);
+
+      expect(await idsByTitle(exercise)).toHaveLength(0);
+      expect(await solutionOfTitle(solution)).toBeNull();
+    } finally {
+      await cleanup(request, origin, solution);
+      await cleanup(request, origin, exercise);
+    }
+  });
+
+  test("changing the type from Solution to Lecture stores no link",async ({ page, request }) => {
     const title = uniqueTitle();
     try {
       await signInAsAdmin(page);
