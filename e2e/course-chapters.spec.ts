@@ -59,3 +59,33 @@ test("a course without chapters shows the by-type tabs and no area links", async
     await expect(page.getByRole("link", { name })).toHaveCount(0);
   }
 });
+
+test("previous exams are grouped by academic year, each row led by its session", async ({ page }) => {
+  await page.goto("/courses/DEMO310?tab=exams");
+
+  await expect(page.locator("main h2")).toHaveText(["2025-2026", "2024-2025", "2023-2024", "2022-2023"]);
+
+  // The first block: Final (solved), then Second session, in session order.
+  const first = page.locator("main h2").first().locator("xpath=following-sibling::ul[1]/li");
+  await expect(first).toHaveCount(2);
+  await expect(first.nth(0)).toContainText("Final");
+  await expect(first.nth(0)).toContainText("Sample final exam 2025");
+  await expect(first.nth(0).getByRole("link", { name: /^Solution/ })).toBeVisible();
+  await expect(first.nth(1)).toContainText("Second session");
+  await expect(first.nth(1).getByRole("link", { name: /^Solution/ })).toHaveCount(0);
+
+  // The second block holds all three sessions, in order.
+  const second = page.locator("main h2").nth(1).locator("xpath=following-sibling::ul[1]/li");
+  await expect(second).toHaveCount(3);
+  await expect(second.nth(0)).toContainText("Partial");
+  await expect(second.nth(1)).toContainText("Final");
+  await expect(second.nth(2)).toContainText("Second session");
+
+  // The year and session badges are not repeated in a row: only the language badge is left.
+  await expect(first.nth(0).getByText("2025-2026")).toHaveCount(0);
+
+  await expect(page.getByRole("link", { name: "All exams for this course" })).toHaveAttribute(
+    "href",
+    "/exams?course=DEMO310",
+  );
+});
