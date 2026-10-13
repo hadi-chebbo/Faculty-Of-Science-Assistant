@@ -62,6 +62,8 @@ The admin creates and edits resources through a form at `/admin/resources/new` a
 
 The admin resource write services are exposed as `POST /api/v1/resources` (201 with `{ resource }`), `PUT /api/v1/resources/[id]` (200 with `{ resource }`, replacing all editable fields) and `DELETE /api/v1/resources/[id]` (204). All are `no-store` and check the same-origin rule first. The handlers are thin: the shared part (origin check, viewer, error mapping) is in `src/lib/resources-api.ts`, and the service validates the body and re-checks the admin role in the database. A request with no valid session is `401 Not signed in`; a signed-in user who is not an admin is `403 Forbidden`. Invalid input is `400` with the offending `fields`, and an unknown or malformed id is `404`.
 
+The chapter write services are exposed the same way, through the same `adminWrite` helper, which answers a not-found error with the error's own message (`Resource not found`, `Course not found` or `Chapter not found`). Every success is `200` (`201` for create) with `{ chapters }`, the course's chapters in order: `POST /api/v1/courses/[courseId]/chapters` (201, body `{ title }`), `PUT /api/v1/courses/[courseId]/chapters/order` (200, body `{ chapterIds }`), `PUT /api/v1/chapters/[id]` (200, body `{ title }`) and `DELETE /api/v1/chapters/[id]` (200). `courseId` is the course's UUID, not its code. There is no GET route; server pages read through the service.
+
 Server pages must not call the app's own API over HTTP. If an endpoint must be proven to work, it gets an automated test that calls it over HTTP instead.
 
 ## Alternatives considered
