@@ -23,14 +23,27 @@ async function askMe(): Promise<{ user: Account | null; renewable: boolean }> {
   return response.json();
 }
 
+// Renews the session, one caller at a time across every tab of this browser. A refresh token works
+// once and a second use signs the whole session out, so tabs that load together must not all
+// present the same one: each waits for the lock and first checks whether another already renewed.
+async function renew(): Promise<Account | null> {
+  const work = async () => {
+    const again = await askMe();
+    if (again.user || !again.renewable) return again.user;
+    const refreshed = await fetch("/api/v1/auth/refresh", { method: "POST" });
+    return refreshed.ok ? (await askMe()).user : null;
+  };
+  // Browsers without the Web Locks API renew unguarded.
+  return navigator.locks ? navigator.locks.request("ua-session-refresh", work) : work();
+}
+
 // Admin pages renew an expired session themselves (through /api/v1/auth/restore, while this
 // control is already on screen), so there this control must not rotate the same refresh token.
 async function findAccount(mayRefresh: boolean): Promise<Account | null> {
   try {
     const first = await askMe();
     if (first.user || !first.renewable || !mayRefresh) return first.user;
-    const refreshed = await fetch("/api/v1/auth/refresh", { method: "POST" });
-    return refreshed.ok ? (await askMe()).user : null;
+    return await renew();
   } catch {
     return null;
   }

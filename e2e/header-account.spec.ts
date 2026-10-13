@@ -98,6 +98,28 @@ test("an expired access cookie is renewed from the refresh cookie by the header"
   await expect(accountButton(page)).toHaveText("Demo Student");
 });
 
+// A refresh token works once; a second use ends the whole session. Tabs that load together must
+// therefore take turns, and every one of them ends up signed in.
+test("several tabs with an expired access cookie renew once and all stay signed in", async ({ page, context }) => {
+  await ownAddress(page);
+  await signIn(page, STUDENT_EMAIL, STUDENT_PASSWORD);
+  const tabs = [page, await context.newPage(), await context.newPage()];
+  const refreshes: number[] = [];
+  for (const tab of tabs) {
+    tab.on("response", (response) => {
+      if (new URL(response.url()).pathname === "/api/v1/auth/refresh") refreshes.push(response.status());
+    });
+  }
+  await context.clearCookies({ name: "ua_access" });
+  await Promise.all(tabs.map((tab) => tab.goto("/")));
+  for (const tab of tabs) await expect(accountButton(tab)).toHaveText("Demo Student");
+  expect(refreshes).toEqual([200]);
+
+  // The session survived: a later page load is still signed in.
+  await page.reload();
+  await expect(accountButton(page)).toHaveText("Demo Student");
+});
+
 test("GET /api/v1/auth/me without cookies is signed out, and never contains an email when signed in", async ({
   page,
   request,
