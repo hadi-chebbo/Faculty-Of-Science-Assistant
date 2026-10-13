@@ -28,7 +28,7 @@ It prints nothing when the file is complete. Terms: "runtime" means the app need
 
 ## Styling and components
 
-shadcn/ui is not a package you import. Its CLI copies component source files into `src/components/ui` (currently badge, breadcrumb, button, card, dropdown-menu, skeleton, tabs). `components.json` tells the CLI the style (`radix-vega`), the CSS file (`src/app/globals.css`) and the aliases (`@/components/ui`, `@/lib/utils`). Add a component with `npx shadcn@latest add <name>`, as CLAUDE.md requires. The copied files import the packages in this section.
+shadcn/ui is not a package you import. Its CLI copies component source files into `src/components/ui` (currently alert-dialog, badge, breadcrumb, button, card, dropdown-menu, skeleton, tabs). `components.json` tells the CLI the style (`radix-vega`), the CSS file (`src/app/globals.css`) and the aliases (`@/components/ui`, `@/lib/utils`). Add a component with `npx shadcn@latest add <name>`, as CLAUDE.md requires. The copied files import the packages in this section.
 
 | Package | What it is | Why we have it | Where used | Declared / installed | Section OK? |
 |---|---|---|---|---|---|

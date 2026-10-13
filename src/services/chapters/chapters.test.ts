@@ -4,7 +4,7 @@ import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import type { Viewer } from "../viewer";
-import { createChapter, deleteChapter, listChapters, renameChapter, reorderChapters } from "./chapters";
+import { createChapter, deleteChapter, listChapters, listChaptersWithCounts, renameChapter, reorderChapters } from "./chapters";
 
 const MISSING_ID = "33333333-3333-4333-8333-333333333333";
 
@@ -230,5 +230,40 @@ describe("deleteChapter", () => {
     expect(await deleteChapter(f.admin, ids[0])).toEqual([]);
     await expect(deleteChapter(f.admin, ids[0])).rejects.toBeInstanceOf(NotFoundError);
     await expect(deleteChapter(f.admin, "nope")).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("listChaptersWithCounts", () => {
+  it("counts every resource filed under a chapter, drafts included, and 0 for an empty one", async () => {
+    const f = await setup();
+    const ids = await addChapters(f, 3);
+    const { Resource } = getDb();
+    await Resource.create({ courseId: f.course.id, chapterId: ids[0], type: "lecture", title: "Draft", isPublished: false });
+    await Resource.create({ courseId: f.course.id, chapterId: ids[0], type: "notes", title: "Published", isPublished: true, externalUrl: "https://example.com/a" });
+    await Resource.create({ courseId: f.course.id, chapterId: ids[1], type: "lecture", title: "Only" });
+    await Resource.create({ courseId: f.course.id, type: "lecture", title: "No chapter" });
+
+    const list = await listChaptersWithCounts(f.admin, f.course.id);
+    expect(list).toEqual([
+      { id: ids[0], position: 1, title: "C1", itemCount: 2 },
+      { id: ids[1], position: 2, title: "C2", itemCount: 1 },
+      { id: ids[2], position: 3, title: "C3", itemCount: 0 },
+    ]);
+  });
+
+  it("lists only the given course", async () => {
+    const f = await setup();
+    await getDb().Resource.create({ courseId: f.other.id, chapterId: f.otherChapter.id, type: "lecture", title: "Elsewhere" });
+    await addChapters(f, 1);
+    expect((await listChaptersWithCounts(f.admin, f.course.id)).map((c) => [c.title, c.itemCount])).toEqual([["C1", 0]]);
+    expect((await listChaptersWithCounts(f.admin, f.other.id)).map((c) => [c.title, c.itemCount])).toEqual([["Other 1", 1]]);
+  });
+
+  it("refuses non-admins and rejects an unknown course", async () => {
+    const f = await setup();
+    for (const viewer of [null, f.student]) {
+      await expect(listChaptersWithCounts(viewer, f.course.id)).rejects.toBeInstanceOf(ForbiddenError);
+    }
+    await expect(listChaptersWithCounts(f.admin, MISSING_ID)).rejects.toBeInstanceOf(NotFoundError);
   });
 });

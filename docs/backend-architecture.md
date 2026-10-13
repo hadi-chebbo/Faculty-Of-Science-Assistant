@@ -64,6 +64,8 @@ The admin resource write services are exposed as `POST /api/v1/resources` (201 w
 
 The chapter write services are exposed the same way, through the same `adminWrite` helper, which answers a not-found error with the error's own message (`Resource not found`, `Course not found` or `Chapter not found`). Every success is `200` (`201` for create) with `{ chapters }`, the course's chapters in order: `POST /api/v1/courses/[courseId]/chapters` (201, body `{ title }`), `PUT /api/v1/courses/[courseId]/chapters/order` (200, body `{ chapterIds }`), `PUT /api/v1/chapters/[id]` (200, body `{ title }`) and `DELETE /api/v1/chapters/[id]` (200). `courseId` is the course's UUID, not its code. There is no GET route; server pages read through the service.
 
+The admin chapters page (`/admin/chapters?course=CODE`) is the first screen to use these routes. The server page reads through `listChaptersWithCounts`, which returns each chapter with `itemCount`, the number of resources filed under it (drafts included); `listChapters` and the routes' `{ chapters }` shape are unchanged. The client list in `src/app/admin/chapters/` writes through `adminFetch`, then calls `router.refresh()` so the page re-renders with fresh chapters and counts instead of trusting the response body.
+
 Server pages must not call the app's own API over HTTP. If an endpoint must be proven to work, it gets an automated test that calls it over HTTP instead.
 
 ## Alternatives considered
