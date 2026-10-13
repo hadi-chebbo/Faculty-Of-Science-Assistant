@@ -1,7 +1,13 @@
-import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { GET as serveStorageRoute } from "@/app/api/v1/storage/local/route";
 import { ACADEMIC_YEAR_MIN } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
+import { getStorage } from "@/lib/storage/config";
+import { newResourceFileKey } from "@/lib/storage/keys";
 import { ForbiddenError, NotFoundError, UnavailableError, ValidationError } from "../errors";
 import { requireAdmin, type Viewer } from "../viewer";
 import { getResource, getResourceLink, listExamFilterOptions, listResources } from "./resources";
@@ -11,13 +17,33 @@ const SAMPLE_URL = "https://example.com/sample";
 const admin: Viewer = { id: "11111111-1111-4111-8111-111111111111", role: "admin" };
 const student: Viewer = { id: "22222222-2222-4222-8222-222222222222", role: "student" };
 
+const PDF_BYTES = new TextEncoder().encode("%PDF-1.4\nstored body");
+let storageDir: string;
+
+beforeAll(async () => {
+  process.env.AUTH_SECRET = "resources-test-secret-0123456789abcdef0123";
+  delete process.env.STORAGE_DRIVER;
+  delete process.env.VERCEL;
+  storageDir = await fs.mkdtemp(path.join(os.tmpdir(), "ua-resources-"));
+  process.env.STORAGE_LOCAL_DIR = storageDir;
+});
+
 beforeEach(async () => {
   await truncateAllTables();
 });
 
 afterAll(async () => {
+  await fs.rm(storageDir, { recursive: true, force: true });
   await closeDb();
 });
+
+async function storeFile() {
+  const key = newResourceFileKey();
+  await getStorage().put(key, PDF_BYTES, "application/pdf");
+  return { key };
+}
+
+const serveFromStorage = (url: string) => serveStorageRoute(new Request(new URL(url, "http://localhost")));
 
 async function seed() {
   const { Course, Resource } = getDb();
@@ -338,11 +364,37 @@ describe("getResourceLink", () => {
     await expect(getResourceLink(null, "42")).rejects.toBeInstanceOf(NotFoundError);
   });
 
-  it("throws UnavailableError for a stored file, which cannot be served yet", async () => {
+  it("returns a signed read URL for a stored file, which the storage route serves with the stored bytes", async () => {
     const { a } = await seed();
-    const { Resource } = getDb();
-    const stored = await Resource.create({ courseId: a.id, type: "lecture", title: "Stored", fileKey: "abc", isPublished: true });
-    await expect(getResourceLink(null, stored.id)).rejects.toBeInstanceOf(UnavailableError);
+    const { key } = await storeFile();
+    const stored = await getDb().Resource.create({ courseId: a.id, type: "lecture", title: "Stored", fileKey: key, isPublished: true });
+    const { url } = await getResourceLink(null, stored.id);
+    expect(url).toContain("/api/v1/storage/local");
+    const response = await serveFromStorage(url);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("application/pdf");
+    expect(response.headers.get("content-disposition")).toBe("inline");
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(PDF_BYTES);
+  });
+
+  it("prefers the stored file when the resource has a file and a link", async () => {
+    const { a } = await seed();
+    const { key } = await storeFile();
+    const both = await getDb().Resource.create({
+      courseId: a.id, type: "lecture", title: "Both", fileKey: key, externalUrl: SAMPLE_URL, isPublished: true,
+    });
+    const { url } = await getResourceLink(null, both.id);
+    expect(url).not.toBe(SAMPLE_URL);
+    expect(url).toContain("/api/v1/storage/local");
+  });
+
+  it("keeps the visibility rules for a draft with a stored file", async () => {
+    const { a } = await seed();
+    const { key } = await storeFile();
+    const draft = await getDb().Resource.create({ courseId: a.id, type: "lecture", title: "Draft file", fileKey: key });
+    await expect(getResourceLink(null, draft.id)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(getResourceLink(student, draft.id)).rejects.toBeInstanceOf(NotFoundError);
+    expect((await getResourceLink(admin, draft.id)).url).toContain("/api/v1/storage/local");
   });
 
   it("throws UnavailableError for a draft with no source, when an admin looks at it", async () => {
