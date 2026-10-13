@@ -142,9 +142,9 @@ mock exam generation, personalization.
   links that live in the URL: Chapters (default), Previous exams (`?tab=exams`) and Other
   material (`?tab=other`, only when there is material with no chapter). Chapters are cards, each
   linking to its own page (`/courses/CODE/chapters/N`) and saying what is inside; an empty
-  chapter is shown muted, not as a link. A course without chapters shows one tab per resource
-  type that has resources, with its count. Previous exams are grouped by academic year (newest
-  first), each row led by its session.
+  chapter is shown muted, not as a link. In the Previous exams area, exams are grouped by
+  academic year (newest first) and each row is led by its session. A course without chapters
+  shows one tab per resource type that has resources, with its count.
 - Exams page (`/exams`): filters (semester, course, academic year, session) live in the URL, so
   views are shareable and Back works. A plain GET form with an Apply button works without
   JavaScript; with JavaScript a dropdown change submits automatically. Unusable URL values are
