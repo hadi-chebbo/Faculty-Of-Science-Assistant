@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,22 +12,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
-import { EXAM_SESSIONS, LANGUAGES, RESOURCE_TITLE_MAX_LENGTH, RESOURCE_TYPES } from "@/db/constants";
+import { EXAM_SESSIONS, RESOURCE_TITLE_MAX_LENGTH } from "@/db/constants";
 import type { ExamSession, Language, ResourceType } from "@/db/constants";
 import { adminFetch } from "@/lib/admin-fetch";
-import { EXAM_SESSION_LABELS, LANGUAGE_LABELS, RESOURCE_TYPE_LABELS, formatAcademicYear } from "@/lib/labels";
+import { EXAM_SESSION_LABELS, formatAcademicYear } from "@/lib/labels";
 import type { ChapterOption } from "@/services/chapters/options";
 import type { CourseOption } from "@/services/courses/types";
 import type { SolutionTarget } from "@/services/resources/solution-targets";
 import type { ResourceForEdit } from "@/services/resources/types";
+import { LanguageSwitch, TypeChooser } from "./choice-groups";
 import { deleteNotes } from "./delete-notes";
+import { academicYearOptions } from "./form-helpers";
+import { Field, FormCard, RadioField, fieldClass, selectClass } from "./form-parts";
+import { FormPreview } from "./form-preview";
+import { VisibilityCard } from "./visibility-card";
 
 const FIELD_MESSAGES: Record<string, string> = {
   isPublished: "Add a link before publishing.",
@@ -36,34 +36,6 @@ const FIELD_MESSAGES: Record<string, string> = {
   chapterId: "Choose a chapter of this course.",
   solutionOfId: "Choose an exercise or exam of this course.",
 };
-
-const fieldClass = "h-11 md:h-9";
-const selectClass = "w-full [&_select]:h-11 md:[&_select]:h-9";
-
-function Field({ id, label, hint, error, children }: { id: string; label: string; hint?: string; error?: string; children: ReactNode }) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
-      {error && (
-        <p id={`${id}-error`} role="alert" className="text-sm font-medium text-destructive">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
-// A labelled group of fields.
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <fieldset className="min-w-0 space-y-4">
-      <legend className="mb-1 w-full border-b pb-2 text-base font-semibold text-heading">{title}</legend>
-      {children}
-    </fieldset>
-  );
-}
 
 // "2024-2025 Final - Title" for an exam, the title for an exercise.
 function targetLabel(t: SolutionTarget): string {
@@ -89,13 +61,19 @@ export function ResourceForm({
 }) {
   const router = useRouter();
   const [type, setType] = useState<ResourceType>(resource?.type ?? "lecture");
+  const [title, setTitle] = useState(resource?.title ?? "");
   const [courseId, setCourseId] = useState(resource?.courseId ?? "");
   const [chapterId, setChapterId] = useState(resource?.chapterId ?? "");
   const [solutionOfId, setSolutionOfId] = useState(resource?.solutionOf?.id ?? "");
+  const [yearStart, setYearStart] = useState(resource?.academicYearStart == null ? "" : String(resource.academicYearStart));
+  const [examSession, setExamSession] = useState<ExamSession | "">(resource?.examSession ?? "");
+  const [language, setLanguage] = useState<Language>(resource?.language ?? "en");
+  const [isPublished, setIsPublished] = useState(resource?.isPublished ?? false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [yearOptions] = useState(() => academicYearOptions(new Date().getFullYear(), resource?.academicYearStart ?? null));
   const hasFile = resource?.hasFile ?? false;
   const courseChapters = chapters.filter((c) => c.courseId === courseId);
   const courseTargets = solutionTargets.filter((t) => t.courseId === courseId && t.id !== resource?.id);
@@ -120,7 +98,7 @@ export function ResourceForm({
       externalUrl: hasFile ? null : text("externalUrl"),
       solutionOfId: type === "solution" && solutionOfId ? solutionOfId : null,
       chapterId: type !== "exam" && chapterId ? chapterId : null,
-      isPublished: form.get("isPublished") === "on",
+      isPublished,
     };
 
     setPending(true);
@@ -182,10 +160,33 @@ export function ResourceForm({
   const invalid = (name: string) => (errors[name] ? true : undefined);
 
   return (
-    <form onSubmit={onSubmit} className="max-w-2xl">
-      <Card className="pb-0">
-        <CardContent className="gap-8">
-          <Section title="Basics">
+    <form onSubmit={onSubmit} className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_19rem]">
+      <div className="flex min-w-0 flex-col gap-4">
+        <FormCard title="What is it?" description="The type decides which of the fields below apply.">
+          <RadioField id="type" legend="Type" error={errors.type}>
+            <TypeChooser value={type} onChange={setType} />
+          </RadioField>
+
+          <Field id="title" label="Title" error={errors.title}>
+            <Input
+              id="title"
+              name="title"
+              required
+              maxLength={RESOURCE_TITLE_MAX_LENGTH}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              aria-invalid={invalid("title")}
+              className={fieldClass}
+            />
+          </Field>
+
+          <Field id="description" label="Description" optional error={errors.description}>
+            <Textarea id="description" name="description" rows={3} defaultValue={resource?.description ?? ""} aria-invalid={invalid("description")} />
+          </Field>
+        </FormCard>
+
+        <FormCard title="Where does it belong?" description="Students find it under this course and chapter.">
+          <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
             <Field id="courseId" label="Course" error={errors.courseId}>
               <NativeSelect
                 id="courseId"
@@ -209,18 +210,8 @@ export function ResourceForm({
               </NativeSelect>
             </Field>
 
-            <Field id="type" label="Type" error={errors.type}>
-              <NativeSelect id="type" name="type" value={type} onChange={(e) => setType(e.target.value as ResourceType)} aria-invalid={invalid("type")} className={selectClass}>
-                {RESOURCE_TYPES.map((t) => (
-                  <NativeSelectOption key={t} value={t}>
-                    {RESOURCE_TYPE_LABELS[t]}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </Field>
-
             {type !== "exam" && (
-              <Field id="chapterId" label="Chapter" hint="Material with no chapter is listed under Other material." error={errors.chapterId}>
+              <Field id="chapterId" label="Chapter" hint="With no chapter it is listed under Other material." error={errors.chapterId}>
                 <NativeSelect
                   id="chapterId"
                   name="chapterId"
@@ -245,147 +236,135 @@ export function ResourceForm({
                 </NativeSelect>
               </Field>
             )}
+          </div>
 
-            {type === "solution" && (
-              <Field
+          {type === "solution" && (
+            <Field
+              id="solutionOfId"
+              label="Solution of"
+              hint="The exercise or exam this solution answers. Students see it as a Solution link on that row."
+              error={errors.solutionOfId}
+            >
+              <NativeSelect
                 id="solutionOfId"
-                label="Solution of"
-                hint="The exercise or exam this solution answers. Students see it as a Solution link on that row."
-                error={errors.solutionOfId}
+                name="solutionOfId"
+                value={solutionOfId}
+                onChange={(e) => setSolutionOfId(e.target.value)}
+                disabled={courseTargets.length === 0 && !keptSelected}
+                aria-invalid={invalid("solutionOfId")}
+                className={selectClass}
               >
+                {courseTargets.length === 0 && !keptSelected ? (
+                  <NativeSelectOption value="">{courseId ? "No exercises or exams in this course" : "Choose a course first"}</NativeSelectOption>
+                ) : (
+                  <>
+                    <NativeSelectOption value="">Not linked</NativeSelectOption>
+                    {keptSelected && <NativeSelectOption value={keptSolution.id}>{keptSolution.title}</NativeSelectOption>}
+                    {exerciseTargets.length > 0 && (
+                      <NativeSelectOptGroup label="Exercises">
+                        {exerciseTargets.map((t) => (
+                          <NativeSelectOption key={t.id} value={t.id}>
+                            {targetLabel(t)}
+                          </NativeSelectOption>
+                        ))}
+                      </NativeSelectOptGroup>
+                    )}
+                    {examTargets.length > 0 && (
+                      <NativeSelectOptGroup label="Exams">
+                        {examTargets.map((t) => (
+                          <NativeSelectOption key={t.id} value={t.id}>
+                            {targetLabel(t)}
+                          </NativeSelectOption>
+                        ))}
+                      </NativeSelectOptGroup>
+                    )}
+                  </>
+                )}
+              </NativeSelect>
+            </Field>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
+            {type === "exam" && (
+              <Field id="examSession" label="Exam session" error={errors.examSession}>
                 <NativeSelect
-                  id="solutionOfId"
-                  name="solutionOfId"
-                  value={solutionOfId}
-                  onChange={(e) => setSolutionOfId(e.target.value)}
-                  disabled={courseTargets.length === 0 && !keptSelected}
-                  aria-invalid={invalid("solutionOfId")}
+                  id="examSession"
+                  name="examSession"
+                  value={examSession}
+                  onChange={(e) => setExamSession(e.target.value as ExamSession | "")}
+                  aria-invalid={invalid("examSession")}
                   className={selectClass}
                 >
-                  {courseTargets.length === 0 && !keptSelected ? (
-                    <NativeSelectOption value="">{courseId ? "No exercises or exams in this course" : "Choose a course first"}</NativeSelectOption>
-                  ) : (
-                    <>
-                      <NativeSelectOption value="">Not linked</NativeSelectOption>
-                      {keptSelected && <NativeSelectOption value={keptSolution.id}>{keptSolution.title}</NativeSelectOption>}
-                      {exerciseTargets.length > 0 && (
-                        <NativeSelectOptGroup label="Exercises">
-                          {exerciseTargets.map((t) => (
-                            <NativeSelectOption key={t.id} value={t.id}>
-                              {targetLabel(t)}
-                            </NativeSelectOption>
-                          ))}
-                        </NativeSelectOptGroup>
-                      )}
-                      {examTargets.length > 0 && (
-                        <NativeSelectOptGroup label="Exams">
-                          {examTargets.map((t) => (
-                            <NativeSelectOption key={t.id} value={t.id}>
-                              {targetLabel(t)}
-                            </NativeSelectOption>
-                          ))}
-                        </NativeSelectOptGroup>
-                      )}
-                    </>
-                  )}
-                </NativeSelect>
-              </Field>
-            )}
-
-            <Field id="title" label="Title" error={errors.title}>
-              <Input id="title" name="title" required maxLength={RESOURCE_TITLE_MAX_LENGTH} defaultValue={resource?.title ?? ""} aria-invalid={invalid("title")} className={fieldClass} />
-            </Field>
-
-            <Field id="description" label="Description" error={errors.description}>
-              <Textarea id="description" name="description" rows={3} defaultValue={resource?.description ?? ""} aria-invalid={invalid("description")} />
-            </Field>
-          </Section>
-
-          <Section title="Details">
-            <div className="grid gap-4 md:grid-cols-2 md:items-start">
-              <Field id="academicYearStart" label="Academic year start" hint="2024 means 2024-2025." error={errors.academicYearStart}>
-                <Input id="academicYearStart" name="academicYearStart" type="number" inputMode="numeric" defaultValue={resource?.academicYearStart ?? ""} aria-invalid={invalid("academicYearStart")} className={fieldClass} />
-              </Field>
-
-              <Field id="language" label="Language" error={errors.language}>
-                <NativeSelect id="language" name="language" defaultValue={resource?.language ?? "en"} aria-invalid={invalid("language")} className={selectClass}>
-                  {LANGUAGES.map((l: Language) => (
-                    <NativeSelectOption key={l} value={l}>
-                      {LANGUAGE_LABELS[l]}
+                  <NativeSelectOption value="">Choose a session</NativeSelectOption>
+                  {EXAM_SESSIONS.map((s) => (
+                    <NativeSelectOption key={s} value={s}>
+                      {EXAM_SESSION_LABELS[s]}
                     </NativeSelectOption>
                   ))}
                 </NativeSelect>
               </Field>
+            )}
 
-              {type === "exam" && (
-                <Field id="examSession" label="Exam session" error={errors.examSession}>
-                  <NativeSelect id="examSession" name="examSession" defaultValue={resource?.examSession ?? ""} aria-invalid={invalid("examSession")} className={selectClass}>
-                    <NativeSelectOption value="">Choose a session</NativeSelectOption>
-                    {EXAM_SESSIONS.map((s: ExamSession) => (
-                      <NativeSelectOption key={s} value={s}>
-                        {EXAM_SESSION_LABELS[s]}
-                      </NativeSelectOption>
-                    ))}
-                  </NativeSelect>
-                </Field>
-              )}
-            </div>
-          </Section>
-
-          <Section title="Source and publishing">
-            <Field
-              id="externalUrl"
-              label="Link"
-              hint={hasFile ? "This resource has a stored file." : "An https:// address."}
-              error={errors.externalUrl}
-            >
-              <Input id="externalUrl" name="externalUrl" type="url" disabled={hasFile} defaultValue={resource?.externalUrl ?? ""} placeholder="https://" aria-invalid={invalid("externalUrl")} className={fieldClass} />
+            <Field id="academicYearStart" label="Academic year" optional={type !== "exam"} error={errors.academicYearStart}>
+              <NativeSelect
+                id="academicYearStart"
+                name="academicYearStart"
+                value={yearStart}
+                onChange={(e) => setYearStart(e.target.value)}
+                aria-invalid={invalid("academicYearStart")}
+                className={selectClass}
+              >
+                <NativeSelectOption value="">Not set</NativeSelectOption>
+                {yearOptions.map((y) => (
+                  <NativeSelectOption key={y.value} value={y.value}>
+                    {y.label}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
             </Field>
 
-            <div className="space-y-2">
-              <div className="flex min-h-11 items-center gap-2 md:min-h-0">
-                <Checkbox id="isPublished" name="isPublished" defaultChecked={resource?.isPublished ?? false} aria-invalid={invalid("isPublished")} />
-                <Label htmlFor="isPublished">Published</Label>
-              </div>
-              {errors.isPublished && (
-                <p role="alert" className="text-sm font-medium text-destructive">
-                  {errors.isPublished}
-                </p>
-              )}
-            </div>
-          </Section>
-
-          {formError && (
-            <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
-              {formError}
-            </p>
-          )}
-        </CardContent>
-
-        <CardFooter className="flex-wrap justify-between gap-2 border-t bg-muted/50 py-4">
-          {resource ? (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={pending}
-              onClick={() => setConfirmingDelete(true)}
-              className="h-11 px-4 text-destructive hover:text-destructive md:h-9"
-            >
-              Delete
-            </Button>
-          ) : (
-            <span />
-          )}
-          <div className="flex gap-2">
-            <Link href="/admin" className={buttonVariants({ variant: "outline", className: "h-11 px-4 md:h-9" })}>
-              Cancel
-            </Link>
-            <Button type="submit" disabled={pending} className="h-11 px-4 md:h-9">
-              {pending ? "Saving..." : "Save"}
-            </Button>
+            <RadioField id="language" legend="Language" error={errors.language}>
+              <LanguageSwitch value={language} onChange={setLanguage} />
+            </RadioField>
           </div>
-        </CardFooter>
-      </Card>
+        </FormCard>
+
+        <FormCard title="The material" description="A resource needs a file or a link before it can be published.">
+          <Field id="externalUrl" label="Link" hint={hasFile ? "This resource has a stored file." : "An https:// address."} error={errors.externalUrl}>
+            <Input
+              id="externalUrl"
+              name="externalUrl"
+              type="url"
+              disabled={hasFile}
+              defaultValue={resource?.externalUrl ?? ""}
+              placeholder="https://"
+              aria-invalid={invalid("externalUrl")}
+              className={fieldClass}
+            />
+          </Field>
+        </FormCard>
+      </div>
+
+      <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20">
+        <VisibilityCard
+          isPublished={isPublished}
+          onChange={setIsPublished}
+          error={errors.isPublished}
+          formError={formError}
+          pending={pending}
+          canDelete={resource !== undefined}
+          onDelete={() => setConfirmingDelete(true)}
+        />
+        <FormPreview
+          type={type}
+          title={title}
+          language={language}
+          academicYearStart={yearStart ? Number(yearStart) : null}
+          examSession={examSession || null}
+          courseCode={courses.find((c) => c.id === courseId)?.code ?? ""}
+          chapterPosition={courseChapters.find((c) => c.id === chapterId)?.position ?? null}
+        />
+      </aside>
 
       {resource && (
         <AlertDialog open={confirmingDelete} onOpenChange={(open) => !open && !pending && setConfirmingDelete(false)}>
