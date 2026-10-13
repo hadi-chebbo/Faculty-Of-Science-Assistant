@@ -27,7 +27,7 @@ In:
 - Browse semesters → courses → resources, grouped by resource type.
 - Previous exams filterable by course, academic year and session.
 - Search over course codes, titles and resource metadata.
-- Open PDFs in the browser and download them.
+- Read every resource on a page of our own (the reader), and download it.
 - Admin-only upload and tagging of resources.
 
 After launch, in this order:
@@ -50,12 +50,17 @@ mock exam generation, personalization.
   titles and resources. The real course list and files are loaded in a
   separate data-gathering phase; do not ask for them or invent real-looking
   ones before then.
-- Files are meant to be read inside the platform, on a page of our own, not by
-  sending the student away to the file's link: the AI assistant planned for
-  after launch should be able to help while they read. The current open route,
-  which redirects to the material, is a stopgap. Design file storage and the
-  open flow so a file can be shown inside our own page. When the reader page is
-  built is not yet decided.
+- Every resource has a stored file (owner's decision, 2026-10-13). A link is
+  never the resource itself: `external_url` is an optional backup shown beside
+  the file. A resource cannot be published without a file; a draft may be
+  saved without one.
+- Every resource opens inside the platform, on a reader page of our own, not by
+  sending the student away: the file shown in the page, a Download action, an
+  action to open the file outside the reader, and room for the AI assistant
+  planned for after launch to help while they read. The reader is part of the
+  MVP. The current open route, which redirects to the material, is a stopgap
+  until the reader exists. "Open outside the reader" opens the file itself in a
+  new tab; the backup link, when there is one, is shown separately.
 - When a requirement is ambiguous, ask; do not invent product behaviour.
 
 ## Domain model (proposed)
@@ -65,7 +70,8 @@ mock exam generation, personalization.
 - Course: unique course code, title, semester (3–6).
 - Resource: belongs to one course. Type (lecture, notes, exercise, exam,
   solution, other), title, description, academic year, exam session
-  (partial, final, second — exams only), language (en, fr), file reference,
+  (partial, final, second — exams only), language (en, fr), stored file
+  (required to publish), optional backup link,
   optional link to the resource it is a solution of, optional chapter of the
   same course (never on exams; a resource with no chapter is listed under
   General), published flag.
@@ -87,7 +93,11 @@ mock exam generation, personalization.
   `down`). Postgres full-text search; no separate search service.
 - Package manager: npm. Node 22+. `@types/node` is kept at 24.
 - S3-compatible object storage for files, delivered through short-lived
-  signed URLs.
+  signed URLs. All storage access goes through one interface in
+  `src/lib/storage` with two drivers: Cloudflare R2 in production and a local
+  folder for development, tests and CI, so nothing needs the cloud to run.
+  Browsers upload straight to storage through a signed URL (a Vercel function
+  cannot receive a large request body); the server then checks what arrived.
 - Tailwind CSS with shadcn/ui (confirmed). Build UI from shadcn/ui components;
   add each one through its CLI as it is needed, and do not hand-roll a
   component that shadcn/ui already provides or add another component library.
@@ -170,7 +180,8 @@ mock exam generation, personalization.
 - Every schema change is a migration; never edit the database by hand.
 - Authorization is checked on the server for every admin action.
 - Uploads are validated for type and size on the server; files are stored
-  under generated keys, never under user-supplied names.
+  under generated keys, never under user-supplied names. Uploads are PDF only, at
+  most 50 MB.
 - Secrets live in environment variables and are never committed. Keep
   `.env.example` current.
 - UI is designed mobile-first and must stay usable on a slow connection.
