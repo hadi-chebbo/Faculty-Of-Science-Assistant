@@ -68,6 +68,14 @@ The admin chapters page (`/admin/chapters?course=CODE`) is the first screen to u
 
 Server pages must not call the app's own API over HTTP. If an endpoint must be proven to work, it gets an automated test that calls it over HTTP instead.
 
+## File storage
+
+Every resource will have one stored PDF. All code reaches files through one interface, `FileStorage` (`src/lib/storage/types.ts`), with two drivers chosen by `STORAGE_DRIVER`: a local folder (development, tests, CI, so none of them needs the cloud) and Cloudflare R2 (production, a later change). `getStorage()` builds the driver lazily, so importing it reads no environment and the build needs no storage configuration. Keys are generated (`resources/<uuid>.pdf`) and every driver rejects any key outside lower-case letters, digits, `-`, `_`, `.` and `/` before touching the disk.
+
+Browsers upload straight to storage through a short-lived signed URL, because a Vercel function cannot receive a large request body; the server afterwards checks what arrived (size, and `looksLikePdf` on the first bytes). Files are read through short-lived signed URLs too.
+
+The local driver imitates this with `PUT` and `GET /api/v1/storage/local?token=…`. They answer 404 unless the driver is `local`. The token is the whole authorisation (no cookies): a JWT signed with `AUTH_SECRET` under its own audience (`ua-storage`), so it is never accepted as an access token and vice versa. A `put` token carries the key, content type and size limit; a `get` token carries the key, disposition (inline or attachment) and filename. The upload is counted while streaming and refused with 413 over the limit, leaving nothing on disk. The R2 driver comes next.
+
 ## Alternatives considered
 
 - **Separate Express backend.** Rejected for now. It means two deployables, a second host, cross-origin setup and an endpoint for every screen, and it solves a problem (many independent clients) the project does not have yet.
