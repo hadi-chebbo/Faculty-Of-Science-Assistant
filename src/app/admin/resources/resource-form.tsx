@@ -14,12 +14,14 @@ import { EXAM_SESSIONS, LANGUAGES, RESOURCE_TITLE_MAX_LENGTH, RESOURCE_TYPES } f
 import type { ExamSession, Language, ResourceType } from "@/db/constants";
 import { adminFetch } from "@/lib/admin-fetch";
 import { EXAM_SESSION_LABELS, LANGUAGE_LABELS, RESOURCE_TYPE_LABELS } from "@/lib/labels";
+import type { ChapterOption } from "@/services/chapters/options";
 import type { CourseOption } from "@/services/courses/types";
 import type { ResourceForEdit } from "@/services/resources/types";
 
 const FIELD_MESSAGES: Record<string, string> = {
   isPublished: "Add a link before publishing.",
   examSession: "Choose a session for an exam.",
+  chapterId: "Choose a chapter of this course.",
 };
 
 const fieldClass = "h-11 md:h-9";
@@ -52,13 +54,18 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 // Creates a resource, or edits `resource` when given. Which solution a resource answers is not
 // editable here: an existing link is kept while the type stays "solution".
-export function ResourceForm({ courses, resource }: { courses: CourseOption[]; resource?: ResourceForEdit }) {
+// The chapter choice is kept in state when the type switches to "exam" (it is then hidden and not
+// sent) and is cleared when the course changes.
+export function ResourceForm({ courses, chapters, resource }: { courses: CourseOption[]; chapters: ChapterOption[]; resource?: ResourceForEdit }) {
   const router = useRouter();
   const [type, setType] = useState<ResourceType>(resource?.type ?? "lecture");
+  const [courseId, setCourseId] = useState(resource?.courseId ?? "");
+  const [chapterId, setChapterId] = useState(resource?.chapterId ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const hasFile = resource?.hasFile ?? false;
+  const courseChapters = chapters.filter((c) => c.courseId === courseId);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -74,8 +81,7 @@ export function ResourceForm({ courses, resource }: { courses: CourseOption[]; r
       language: text("language"),
       externalUrl: hasFile ? null : text("externalUrl"),
       solutionOfId: type === "solution" ? (resource?.solutionOf?.id ?? null) : null,
-      // There is no chapter field yet; keep the stored chapter while it is still valid.
-      chapterId: resource && resource.courseId === text("courseId") && type !== "exam" ? resource.chapterId : null,
+      chapterId: type !== "exam" && chapterId ? chapterId : null,
       isPublished: form.get("isPublished") === "on",
     };
 
@@ -118,7 +124,18 @@ export function ResourceForm({ courses, resource }: { courses: CourseOption[]; r
         <CardContent className="gap-8">
           <Section title="Basics">
             <Field id="courseId" label="Course" error={errors.courseId}>
-              <NativeSelect id="courseId" name="courseId" required defaultValue={resource?.courseId ?? ""} aria-invalid={invalid("courseId")} className={selectClass}>
+              <NativeSelect
+                id="courseId"
+                name="courseId"
+                required
+                value={courseId}
+                onChange={(e) => {
+                  setCourseId(e.target.value);
+                  setChapterId("");
+                }}
+                aria-invalid={invalid("courseId")}
+                className={selectClass}
+              >
                 {!resource && <NativeSelectOption value="" disabled>Choose a course</NativeSelectOption>}
                 {courses.map((c) => (
                   <NativeSelectOption key={c.id} value={c.id}>
@@ -137,6 +154,33 @@ export function ResourceForm({ courses, resource }: { courses: CourseOption[]; r
                 ))}
               </NativeSelect>
             </Field>
+
+            {type !== "exam" && (
+              <Field id="chapterId" label="Chapter" hint="Material with no chapter is listed under Other material." error={errors.chapterId}>
+                <NativeSelect
+                  id="chapterId"
+                  name="chapterId"
+                  value={chapterId}
+                  onChange={(e) => setChapterId(e.target.value)}
+                  disabled={courseChapters.length === 0}
+                  aria-invalid={invalid("chapterId")}
+                  className={selectClass}
+                >
+                  {courseChapters.length === 0 ? (
+                    <NativeSelectOption value="">{courseId ? "No chapters in this course" : "Choose a course first"}</NativeSelectOption>
+                  ) : (
+                    <>
+                      <NativeSelectOption value="">No chapter</NativeSelectOption>
+                      {courseChapters.map((c) => (
+                        <NativeSelectOption key={c.id} value={c.id}>
+                          {c.position}. {c.title}
+                        </NativeSelectOption>
+                      ))}
+                    </>
+                  )}
+                </NativeSelect>
+              </Field>
+            )}
 
             {resource?.solutionOf && type === "solution" && (
               <p className="text-sm text-muted-foreground">Solution of: {resource.solutionOf.title}</p>
