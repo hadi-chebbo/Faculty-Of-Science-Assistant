@@ -43,6 +43,9 @@ next-env.d.ts
 # keep the committed template
 !.env.example
 
+# local file storage (STORAGE_DRIVER=local)
+/.storage/
+
 # test output
 /test-results/
 /playwright-report/

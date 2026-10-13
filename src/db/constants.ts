@@ -21,3 +21,7 @@ export const CHAPTER_POSITION_MAX = 200;
 export const CHAPTER_TITLE_MAX_LENGTH = 200;
 // Renumbering moves chapters into 101..200 first, so a course must never hold more than 100.
 export const CHAPTER_COUNT_MAX = 100;
+
+// Uploaded resource files: PDF only, up to 50 MB. Checked again on the server after upload.
+export const UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
+export const UPLOAD_CONTENT_TYPE = "application/pdf";
