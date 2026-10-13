@@ -16,7 +16,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { ArrowDown, ArrowUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent, type KeyboardEvent } from "react";
+import { useId, useState, type FormEvent, type KeyboardEvent } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +59,8 @@ export function ChapterList({
   chapters: AdminChapterWithCount[];
 }) {
   const router = useRouter();
+  // A stable id for the drag context, so the ids it puts in the markup match on server and client.
+  const dndId = useId();
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
   const [addTitle, setAddTitle] = useState("");
@@ -179,6 +181,7 @@ export function ChapterList({
         <p className="rounded-lg border bg-card p-4">This course has no chapters yet.</p>
       ) : (
         <DndContext
+          id={dndId}
           sensors={sensors}
           collisionDetection={closestCenter}
           modifiers={[verticalOnly]}
