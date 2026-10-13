@@ -8,20 +8,22 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { EXAM_SESSIONS, LANGUAGES, RESOURCE_TITLE_MAX_LENGTH, RESOURCE_TYPES } from "@/db/constants";
 import type { ExamSession, Language, ResourceType } from "@/db/constants";
 import { adminFetch } from "@/lib/admin-fetch";
-import { EXAM_SESSION_LABELS, LANGUAGE_LABELS, RESOURCE_TYPE_LABELS } from "@/lib/labels";
+import { EXAM_SESSION_LABELS, LANGUAGE_LABELS, RESOURCE_TYPE_LABELS, formatAcademicYear } from "@/lib/labels";
 import type { ChapterOption } from "@/services/chapters/options";
 import type { CourseOption } from "@/services/courses/types";
+import type { SolutionTarget } from "@/services/resources/solution-targets";
 import type { ResourceForEdit } from "@/services/resources/types";
 
 const FIELD_MESSAGES: Record<string, string> = {
   isPublished: "Add a link before publishing.",
   examSession: "Choose a session for an exam.",
   chapterId: "Choose a chapter of this course.",
+  solutionOfId: "Choose an exercise or exam of this course.",
 };
 
 const fieldClass = "h-11 md:h-9";
@@ -52,20 +54,44 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-// Creates a resource, or edits `resource` when given. Which solution a resource answers is not
-// editable here: an existing link is kept while the type stays "solution".
+// "2024-2025 Final - Title" for an exam, the title for an exercise.
+function targetLabel(t: SolutionTarget): string {
+  if (t.type === "exercise") return t.title;
+  const when = [t.academicYearStart === null ? null : formatAcademicYear(t.academicYearStart), t.examSession ? EXAM_SESSION_LABELS[t.examSession] : null];
+  return `${when.filter(Boolean).join(" ")} - ${t.title}`.replace(/^ - /, "");
+}
+
+// Creates a resource, or edits `resource` when given.
 // The chapter choice is kept in state when the type switches to "exam" (it is then hidden and not
-// sent) and is cleared when the course changes.
-export function ResourceForm({ courses, chapters, resource }: { courses: CourseOption[]; chapters: ChapterOption[]; resource?: ResourceForEdit }) {
+// sent) and is cleared when the course changes. So is the "Solution of" choice, which is shown only
+// for type "solution" and offers the exercises and exams of the chosen course.
+export function ResourceForm({
+  courses,
+  chapters,
+  solutionTargets,
+  resource,
+}: {
+  courses: CourseOption[];
+  chapters: ChapterOption[];
+  solutionTargets: SolutionTarget[];
+  resource?: ResourceForEdit;
+}) {
   const router = useRouter();
   const [type, setType] = useState<ResourceType>(resource?.type ?? "lecture");
   const [courseId, setCourseId] = useState(resource?.courseId ?? "");
   const [chapterId, setChapterId] = useState(resource?.chapterId ?? "");
+  const [solutionOfId, setSolutionOfId] = useState(resource?.solutionOf?.id ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const hasFile = resource?.hasFile ?? false;
   const courseChapters = chapters.filter((c) => c.courseId === courseId);
+  const courseTargets = solutionTargets.filter((t) => t.courseId === courseId && t.id !== resource?.id);
+  const exerciseTargets = courseTargets.filter((t) => t.type === "exercise");
+  const examTargets = courseTargets.filter((t) => t.type === "exam");
+  // A stored link to something that is not an exercise or exam stays selectable, so saving keeps it.
+  const keptSolution = resource?.solutionOf && !courseTargets.some((t) => t.id === resource.solutionOf?.id) ? resource.solutionOf : null;
+  const keptSelected = keptSolution !== null && solutionOfId === keptSolution.id;
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -80,7 +106,7 @@ export function ResourceForm({ courses, chapters, resource }: { courses: CourseO
       examSession: type === "exam" ? text("examSession") : null,
       language: text("language"),
       externalUrl: hasFile ? null : text("externalUrl"),
-      solutionOfId: type === "solution" ? (resource?.solutionOf?.id ?? null) : null,
+      solutionOfId: type === "solution" && solutionOfId ? solutionOfId : null,
       chapterId: type !== "exam" && chapterId ? chapterId : null,
       isPublished: form.get("isPublished") === "on",
     };
@@ -132,6 +158,7 @@ export function ResourceForm({ courses, chapters, resource }: { courses: CourseO
                 onChange={(e) => {
                   setCourseId(e.target.value);
                   setChapterId("");
+                  setSolutionOfId("");
                 }}
                 aria-invalid={invalid("courseId")}
                 className={selectClass}
@@ -182,8 +209,50 @@ export function ResourceForm({ courses, chapters, resource }: { courses: CourseO
               </Field>
             )}
 
-            {resource?.solutionOf && type === "solution" && (
-              <p className="text-sm text-muted-foreground">Solution of: {resource.solutionOf.title}</p>
+            {type === "solution" && (
+              <Field
+                id="solutionOfId"
+                label="Solution of"
+                hint="The exercise or exam this solution answers. Students see it as a Solution link on that row."
+                error={errors.solutionOfId}
+              >
+                <NativeSelect
+                  id="solutionOfId"
+                  name="solutionOfId"
+                  value={solutionOfId}
+                  onChange={(e) => setSolutionOfId(e.target.value)}
+                  disabled={courseTargets.length === 0 && !keptSelected}
+                  aria-invalid={invalid("solutionOfId")}
+                  className={selectClass}
+                >
+                  {courseTargets.length === 0 && !keptSelected ? (
+                    <NativeSelectOption value="">{courseId ? "No exercises or exams in this course" : "Choose a course first"}</NativeSelectOption>
+                  ) : (
+                    <>
+                      <NativeSelectOption value="">Not linked</NativeSelectOption>
+                      {keptSelected && <NativeSelectOption value={keptSolution.id}>{keptSolution.title}</NativeSelectOption>}
+                      {exerciseTargets.length > 0 && (
+                        <NativeSelectOptGroup label="Exercises">
+                          {exerciseTargets.map((t) => (
+                            <NativeSelectOption key={t.id} value={t.id}>
+                              {targetLabel(t)}
+                            </NativeSelectOption>
+                          ))}
+                        </NativeSelectOptGroup>
+                      )}
+                      {examTargets.length > 0 && (
+                        <NativeSelectOptGroup label="Exams">
+                          {examTargets.map((t) => (
+                            <NativeSelectOption key={t.id} value={t.id}>
+                              {targetLabel(t)}
+                            </NativeSelectOption>
+                          ))}
+                        </NativeSelectOptGroup>
+                      )}
+                    </>
+                  )}
+                </NativeSelect>
+              </Field>
             )}
 
             <Field id="title" label="Title" error={errors.title}>
