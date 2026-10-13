@@ -12,8 +12,10 @@ test("a visitor browses from home to a semester to a course", async ({ page }) =
   // DEMO301 has chapters: its exams are in the "Previous exams" area.
   await page.getByRole("link", { name: "Previous exams" }).click();
   await expect(page).toHaveURL(/\?tab=exams$/);
-  await expect(page.getByText("Sample partial exam 2023")).toBeVisible();
-  await expect(page.getByText("2023-2024")).toBeVisible();
+  // The home page (still in the DOM after client navigation) has a decorative preview with the same
+  // sample text, so these look only at what is visible on the course page.
+  await expect(page.getByText("Sample partial exam 2023").locator("visible=true")).toBeVisible();
+  await expect(page.getByText("2023-2024").locator("visible=true")).toBeVisible();
 
   // A course without chapters (DEMO401) shows one tab per resource type. The first tab is
   // selected and lists its resources.
