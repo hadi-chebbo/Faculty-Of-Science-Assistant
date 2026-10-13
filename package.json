@@ -18,6 +18,7 @@
     "db:migration:create": "node --env-file-if-exists=.env ./node_modules/sequelize-cli/lib/sequelize migration:generate --name",
     "db:seed": "node --env-file-if-exists=.env ./node_modules/sequelize-cli/lib/sequelize db:seed:all",
     "db:seed:undo": "node --env-file-if-exists=.env ./node_modules/sequelize-cli/lib/sequelize db:seed:undo:all",
+    "storage:check": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-storage.mjs",
     "db:test:prepare": "node --env-file-if-exists=.env scripts/prepare-test-db.mjs"
   },
   "dependencies": {
@@ -25,6 +26,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@node-rs/argon2": "^2.2.2",
+    "aws4fetch": "^1.0.20",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "jose": "^6.2.12",

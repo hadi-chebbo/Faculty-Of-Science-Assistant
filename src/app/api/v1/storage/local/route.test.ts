@@ -109,6 +109,23 @@ describe("local storage route", () => {
     expect((await read(url)).status).toBe(404);
   });
 
+  it("answers 404, not an error, when the driver is r2 and its settings are missing", async () => {
+    const url = await getStorage().createReadUrl("resources/r1.pdf", { expiresInSeconds: 60, disposition: "inline" });
+    const names = ["R2_ACCOUNT_ID", "R2_BUCKET", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"];
+    const saved = names.map((name) => process.env[name]);
+    for (const name of names) delete process.env[name];
+    process.env.STORAGE_DRIVER = "r2";
+    try {
+      expect((await read(url)).status).toBe(404);
+      expect((await PUT(new Request(ORIGIN + url, { method: "PUT", body: bytes }))).status).toBe(404);
+    } finally {
+      delete process.env.STORAGE_DRIVER;
+      names.forEach((name, i) => {
+        if (saved[i] !== undefined) process.env[name] = saved[i];
+      });
+    }
+  });
+
   it("answers 404 when the driver is not local", async () => {
     const url = await getStorage().createReadUrl("resources/r1.pdf", { expiresInSeconds: 60, disposition: "inline" });
     process.env.STORAGE_DRIVER = "r2";

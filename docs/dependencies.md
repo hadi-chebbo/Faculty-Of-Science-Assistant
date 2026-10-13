@@ -45,6 +45,12 @@ shadcn/ui is not a package you import. Its CLI copies component source files int
 | `@dnd-kit/utilities` | Small helpers for dnd-kit, such as turning a transform into a CSS string. | Same reason as `@dnd-kit/core`; peer-level helper of `@dnd-kit/sortable`. | `src/app/admin/chapters/sortable-chapter-item.tsx`. | `^3.2.2` / 3.2.2 | Yes, runtime |
 | `next-themes` | Switches between light and dark mode and remembers the choice. | Added with the light/dark palette (commit cedc1e7). | `src/app/layout.tsx`, `src/components/site/theme-toggle.tsx`. | `^0.4.6` / 0.4.6 | Yes, runtime |
 
+## File storage
+
+| Package | What it is | Why we have it | Where used | Declared / installed | Section OK? |
+|---|---|---|---|---|---|
+| `aws4fetch` | A tiny signer for the S3 request-signing scheme (SigV4) that works with `fetch`. No dependencies of its own. | The Cloudflare R2 driver needs six plain HTTP calls and presigned URLs. The AWS SDK would be two large packages for that; Cloudflare's own R2 documentation uses this library for signed URLs. | `src/lib/storage/r2.ts`. | `^1.0.20` / 1.0.20 | Yes, runtime |
+
 ## Database
 
 | Package | What it is | Why we have it | Where used | Declared / installed | Section OK? |
