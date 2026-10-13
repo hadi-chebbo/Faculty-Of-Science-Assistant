@@ -64,3 +64,23 @@ export function ExamsListSkeleton() {
     </div>
   );
 }
+
+// Home page: the numbers strip and the semester cards, which are read together.
+export function StatsAndSemestersSkeleton() {
+  return (
+    <div className="contents" role="status" aria-label="Loading semesters">
+      <Skeleton className="-mt-4 h-[7.5rem] w-full rounded-lg sm:h-[4.75rem] md:-mt-8" />
+      <div>
+        <div className="mb-4">
+          <Skeleton className="h-8 w-56" />
+          <Skeleton className="mt-2.5 h-1 w-12" />
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <Skeleton key={i} className="h-36 w-full rounded-xl" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
