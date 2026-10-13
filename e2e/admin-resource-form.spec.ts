@@ -14,6 +14,8 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
 const COURSE = "DEMO502";
 const COURSE_LABEL = "DEMO502 - Sample Course F";
+// Six chapters, "Sample chapter 1" to "Sample chapter 6"; no other spec opens this course.
+const CHAPTER_COURSE_LABEL = "DEMO510 - Sample Full Course C";
 
 test.beforeAll(() => {
   expect(ADMIN_EMAIL && ADMIN_PASSWORD, "ADMIN_EMAIL and ADMIN_PASSWORD must be set").toBeTruthy();
@@ -38,6 +40,22 @@ async function idsByTitle(title: string): Promise<string[]> {
   try {
     const result = await client.query("SELECT id FROM resources WHERE title = $1", [title]);
     return result.rows.map((row) => row.id as string);
+  } finally {
+    await client.end();
+  }
+}
+
+// Test-only lookup of a resource's chapter position (null when it has no chapter).
+async function chapterPositionOf(title: string): Promise<number | null> {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    const result = await client.query(
+      "SELECT c.position FROM resources r LEFT JOIN chapters c ON c.id = r.chapter_id WHERE r.title = $1",
+      [title],
+    );
+    expect(result.rows).toHaveLength(1);
+    return (result.rows[0].position as number | null) ?? null;
   } finally {
     await client.end();
   }
@@ -162,5 +180,73 @@ test.describe("admin resource form", () => {
     } finally {
       await cleanup(request, origin, title);
     }
+  });
+
+  test("choose a chapter on create, change it on edit, and clear it", async ({ page, request }) => {
+    const title = uniqueTitle();
+    try {
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await expect(page.getByLabel("Chapter")).toBeDisabled();
+      await expect(page.getByLabel("Chapter")).toContainText("Choose a course first");
+
+      await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
+      await page.getByLabel("Title", { exact: true }).fill(title);
+      await expect(page.getByLabel("Chapter")).toBeEnabled();
+      await page.getByLabel("Chapter").selectOption({ label: "2. Sample chapter 2" });
+      await page.getByRole("button", { name: "Save" }).click();
+      await page.waitForURL(/\/admin$/);
+      expect(await chapterPositionOf(title)).toBe(2);
+
+      const [id] = await idsByTitle(title);
+      await page.goto(`/admin/resources/${id}/edit`);
+      const chapter = page.getByLabel("Chapter");
+      await expect(chapter.locator("option:checked")).toHaveText("2. Sample chapter 2");
+
+      await chapter.selectOption({ label: "No chapter" });
+      await page.getByRole("button", { name: "Save" }).click();
+      await page.waitForURL(/\/admin$/);
+      expect(await chapterPositionOf(title)).toBeNull();
+
+      await page.goto(`/admin/resources/${id}/edit`);
+      await expect(chapter.locator("option:checked")).toHaveText("No chapter");
+      await chapter.selectOption({ label: "3. Sample chapter 3" });
+      await page.getByRole("button", { name: "Save" }).click();
+      await page.waitForURL(/\/admin$/);
+      expect(await chapterPositionOf(title)).toBe(3);
+    } finally {
+      await cleanup(request, origin, title);
+    }
+  });
+
+  test("changing the course resets the chapter; a course without chapters disables the field", async ({ page, request }) => {
+    const title = uniqueTitle();
+    try {
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
+      await page.getByLabel("Title", { exact: true }).fill(title);
+      await page.getByLabel("Chapter").selectOption({ label: "4. Sample chapter 4" });
+
+      await page.locator("#courseId").selectOption({ label: COURSE_LABEL });
+      await expect(page.getByLabel("Chapter")).toBeDisabled();
+      await expect(page.getByLabel("Chapter")).toContainText("No chapters in this course");
+      await page.getByRole("button", { name: "Save" }).click();
+      await page.waitForURL(/\/admin$/);
+      expect(await chapterPositionOf(title)).toBeNull();
+    } finally {
+      await cleanup(request, origin, title);
+    }
+  });
+
+  test("the Chapter field is hidden for exams", async ({ page }) => {
+    await signInAsAdmin(page);
+    await page.goto("/admin/resources/new");
+    await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
+    await expect(page.getByLabel("Chapter")).toBeVisible();
+    await page.getByLabel("Type", { exact: true }).selectOption("exam");
+    await expect(page.getByLabel("Chapter")).toHaveCount(0);
+    await page.getByLabel("Type", { exact: true }).selectOption("lecture");
+    await expect(page.getByLabel("Chapter")).toBeVisible();
   });
 });
