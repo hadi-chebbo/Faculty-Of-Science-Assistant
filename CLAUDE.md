@@ -136,8 +136,11 @@ mock exam generation, personalization.
   breadcrumb trail on inner pages. Items without a page yet are shown disabled. The top bar
   also shows a "Sign in" link or, when signed in, an account button with the user's name
   (never the email) and a menu with Admin (admins only) and Sign out.
-- Home is a landing page: headline, short description, "Browse courses" button, three
-  benefit points, then the semester cards. No claims about features that do not exist.
+- Home is a landing page: a hero (headline, description, "Browse courses" and "Previous exams"
+  buttons, three facts, and a decorative course preview), a numbers strip (only from 5 courses), the
+  semester cards (an empty semester is a muted card, not a link), how it works, what you will find,
+  an "Exams coming up?" band with a link per session, and four questions. Only the strip and the
+  cards read the database. No claims about features that do not exist.
 - Course page: for a course with chapters, three areas, one visible at a time and chosen by
   links that live in the URL: Chapters (default), Previous exams (`?tab=exams`) and Other
   material (`?tab=other`, only when there is material with no chapter). Chapters are cards, each
