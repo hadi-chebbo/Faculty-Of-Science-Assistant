@@ -16,9 +16,12 @@ export const metadata: Metadata = { title: "New resource", robots: { index: fals
 export default function NewResourcePage() {
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
-      <FormBreadcrumb current="New resource" />
-      <PageTitle>New resource</PageTitle>
-      <Suspense fallback={<Skeleton className="h-64 w-full max-w-2xl" />}>
+      <Suspense fallback={<div className="space-y-4" aria-hidden>
+          <Skeleton className="h-11 w-full max-w-sm md:h-9" />
+          <Skeleton className="h-5 w-48" />
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-64 w-full max-w-2xl" />
+        </div>}>
         <NewResourceContent />
       </Suspense>
     </main>
@@ -34,7 +37,9 @@ async function NewResourceContent() {
   ]);
   return (
     <>
-      <AdminBar />
+      <AdminBar current="resources" />
+      <FormBreadcrumb current="New resource" />
+      <PageTitle>New resource</PageTitle>
       <ResourceForm courses={courses} chapters={chapters} solutionTargets={solutionTargets} />
     </>
   );
