@@ -15,7 +15,7 @@ async function checkAgainstDatabase(
   resource: { id: string; courseId: string; fileKey: string | null } | null,
   transaction: Transaction,
 ): Promise<void> {
-  const { Course, Resource } = getDb();
+  const { Chapter, Course, Resource } = getDb();
   const fields: string[] = [];
 
   if (!(await Course.findByPk(input.courseId, { attributes: ["id"], transaction }))) fields.push("courseId");
@@ -25,6 +25,11 @@ async function checkAgainstDatabase(
     const valid =
       target && target.courseId === input.courseId && target.type !== "solution" && target.id !== resource?.id;
     if (!valid) fields.push("solutionOfId");
+  }
+
+  if (input.chapterId) {
+    const chapter = await Chapter.findByPk(input.chapterId, { attributes: ["id", "courseId"], transaction });
+    if (!chapter || chapter.courseId !== input.courseId) fields.push("chapterId");
   }
 
   const hasFile = resource?.fileKey != null;
@@ -68,6 +73,7 @@ export async function getResourceForEdit(viewer: Viewer, id: string): Promise<Re
     externalUrl: row.externalUrl ?? null,
     isPublished: row.isPublished,
     hasFile: row.fileKey != null,
+    chapterId: row.chapterId ?? null,
     solutionOf: target ? { id: target.id, title: target.title } : null,
   };
 }

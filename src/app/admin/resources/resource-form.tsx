@@ -74,6 +74,8 @@ export function ResourceForm({ courses, resource }: { courses: CourseOption[]; r
       language: text("language"),
       externalUrl: hasFile ? null : text("externalUrl"),
       solutionOfId: type === "solution" ? (resource?.solutionOf?.id ?? null) : null,
+      // There is no chapter field yet; keep the stored chapter while it is still valid.
+      chapterId: resource && resource.courseId === text("courseId") && type !== "exam" ? resource.chapterId : null,
       isPublished: form.get("isPublished") === "on",
     };
 
