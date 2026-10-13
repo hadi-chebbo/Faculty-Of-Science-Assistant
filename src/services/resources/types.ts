@@ -58,4 +58,6 @@ export interface ResourceForEdit {
   hasFile: boolean;
   chapterId: string | null;
   solutionOf: { id: string; title: string } | null;
+  // How many resources, drafts included, are a solution of this one.
+  solutionCount: number;
 }

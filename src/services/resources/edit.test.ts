@@ -52,6 +52,7 @@ describe("getResourceForEdit", () => {
       id: f.exam.id, courseId: f.course.id, type: "exam", title: "Final 2024", description: "Old exam",
       academicYearStart: 2024, examSession: "final", language: "fr", externalUrl: "https://example.com/a",
       isPublished: true, hasFile: false, chapterId: null, solutionOf: null,
+      solutionCount: 0,
     });
   });
 
@@ -73,5 +74,16 @@ describe("getResourceForEdit", () => {
     });
     const result = await getResourceForEdit(f.admin, solution.id);
     expect(result.solutionOf).toEqual({ id: f.exam.id, title: "Final 2024" });
+  });
+
+  it("counts the resources that are a solution of it, drafts included", async () => {
+    const f = await setup();
+    const { Resource } = getDb();
+    await Resource.create({
+      courseId: f.course.id, type: "solution", title: "Solution A", solutionOfId: f.exam.id,
+      externalUrl: "https://example.com/s", isPublished: true,
+    });
+    await Resource.create({ courseId: f.course.id, type: "solution", title: "Solution B (draft)", solutionOfId: f.exam.id });
+    expect((await getResourceForEdit(f.admin, f.exam.id)).solutionCount).toBe(2);
   });
 });
