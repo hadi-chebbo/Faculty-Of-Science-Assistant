@@ -31,8 +31,18 @@ const TYPE_ICONS: Record<ResourceType, LucideIcon> = {
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 // One resource in a list: opens in a new tab, with its solutions (if any) as links below.
-// `showCourse` adds the course code, for lists that mix courses.
-export function ResourceRow({ resource, showCourse = false }: { resource: ResourceListItem; showCourse?: boolean }) {
+// `showCourse` adds the course code, for lists that mix courses. `lead` becomes the main text and
+// the title moves to a smaller muted line; the year and session badges are then left out, because
+// the surrounding list already says them.
+export function ResourceRow({
+  resource,
+  showCourse = false,
+  lead,
+}: {
+  resource: ResourceListItem;
+  showCourse?: boolean;
+  lead?: string;
+}) {
   const TypeIcon = TYPE_ICONS[resource.type];
   return (
     <li className="group/row overflow-hidden rounded-lg border bg-card transition-colors hover:border-primary/40">
@@ -48,14 +58,15 @@ export function ResourceRow({ resource, showCourse = false }: { resource: Resour
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-medium text-heading">
             {showCourse && <span className="mr-2 font-mono text-xs font-medium text-link">{resource.courseCode}</span>}
-            {resource.title}
+            {lead ?? resource.title}
           </span>
+          {lead !== undefined && <span className="mt-0.5 block text-xs text-muted-foreground">{resource.title}</span>}
           <span className="mt-1.5 flex flex-wrap gap-1.5">
             <Badge variant="outline">{LANGUAGE_LABELS[resource.language]}</Badge>
-            {resource.academicYearStart !== null && (
+            {lead === undefined && resource.academicYearStart !== null && (
               <Badge variant="secondary">{formatAcademicYear(resource.academicYearStart)}</Badge>
             )}
-            {resource.examSession && <Badge variant="secondary">{EXAM_SESSION_LABELS[resource.examSession]}</Badge>}
+            {lead === undefined && resource.examSession && <Badge variant="secondary">{EXAM_SESSION_LABELS[resource.examSession]}</Badge>}
           </span>
         </span>
         <ExternalLink
