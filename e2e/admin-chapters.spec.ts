@@ -57,6 +57,51 @@ async function addChapter(page: Page, title: string) {
   await page.getByRole("button", { name: "Add", exact: true }).click();
 }
 
+const handle = (page: Page, title: string) => page.getByRole("button", { name: `Reorder ${title}` });
+const orderRoute = "**/api/v1/courses/*/chapters/order";
+
+async function addThree(page: Page) {
+  await page.goto("/admin/chapters?course=DEMO402");
+  for (const letter of ["A", "B", "C"]) {
+    await addChapter(page, `${PREFIX} ${letter}`);
+    await expect(rows(page)).toHaveCount(["A", "B", "C"].indexOf(letter) + 1);
+  }
+}
+
+// Space, arrows, Space; each step waits for dnd-kit's own announcement so keys are never too early.
+async function dragByKeyboard(page: Page, arrows: string[]) {
+  const announced = page.locator("[id^=DndLiveRegion]");
+  await page.keyboard.press("Space");
+  await expect(announced).toContainText(/Picked up|is over/);
+  await page.waitForTimeout(250);
+  for (const arrow of arrows) {
+    await page.keyboard.press(arrow);
+    await page.waitForTimeout(250);
+  }
+  await page.keyboard.press("Space");
+  await expect(announced).toContainText("Dropped");
+}
+
+// Visible order, position numbers and stored order must all say C, A, B.
+async function expectCAB(page: Page, courseId: string) {
+  const expected = ["C", "A", "B"].map((letter) => `${PREFIX} ${letter}`);
+  const check = async () => {
+    for (const [i, title] of expected.entries()) {
+      await expect(rows(page).nth(i)).toContainText(title);
+      await expect(rows(page).nth(i)).toContainText(new RegExp(`^\\s*${i + 1}`));
+    }
+  };
+  await check();
+  await expect
+    .poll(async () =>
+      (await query<{ title: string }>("SELECT title FROM chapters WHERE course_id = $1 ORDER BY position", [courseId])).map((r) => r.title),
+    )
+    .toEqual(expected);
+  await page.reload();
+  await expect(rows(page)).toHaveCount(3);
+  await check();
+}
+
 test("a signed-out visitor to /admin/chapters ends on /sign-in", async ({ page }) => {
   await page.goto("/admin/chapters");
   await expect(page).toHaveURL(/\/sign-in$/);
@@ -84,6 +129,15 @@ test("a course with chapters lists them with their item counts", async ({ page }
   await expect(rows(page).nth(5)).toContainText("Sample chapter 6");
   await expect(rows(page).nth(5)).toContainText("Empty");
   await expect(page.getByRole("link", { name: /View the course page/ })).toHaveAttribute("href", "/courses/DEMO310");
+});
+
+test("every chapter row has a reorder handle", async ({ page }) => {
+  await signInAsAdmin(page);
+  await page.goto("/admin/chapters?course=DEMO310");
+  await expect(rows(page)).toHaveCount(6);
+  for (let i = 1; i <= 6; i++) {
+    await expect(rows(page).nth(i - 1).getByRole("button", { name: `Reorder Sample chapter ${i}` })).toBeVisible();
+  }
 });
 
 test.describe("managing chapters", () => {
@@ -201,6 +255,77 @@ test.describe("managing chapters", () => {
         `${PREFIX} item`,
       ]);
       expect(left).toEqual([{ chapter_id: null }]);
+    } finally {
+      await cleanUp(courseId);
+    }
+  });
+  test("dragging a handle with the mouse reorders the chapters", async ({ page }) => {
+    try {
+      await addThree(page);
+      const from = await handle(page, `${PREFIX} C`).boundingBox();
+      const to = await handle(page, `${PREFIX} A`).boundingBox();
+      if (!from || !to) throw new Error("handles not found");
+      await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+      await page.mouse.down();
+      const startY = from.y + from.height / 2;
+      const endY = to.y + 2;
+      for (let step = 1; step <= 12; step++) {
+        await page.mouse.move(from.x + from.width / 2, startY + ((endY - startY) * step) / 12);
+      }
+      await page.mouse.up();
+      await expectCAB(page, courseId);
+    } finally {
+      await cleanUp(courseId);
+    }
+  });
+
+  test("dragging a handle with the keyboard reorders the chapters", async ({ page }) => {
+    try {
+      await addThree(page);
+      await handle(page, `${PREFIX} C`).focus();
+      await dragByKeyboard(page, ["ArrowUp", "ArrowUp"]);
+      await expectCAB(page, courseId);
+    } finally {
+      await cleanUp(courseId);
+    }
+  });
+
+  test("dropping a chapter where it was sends nothing", async ({ page }) => {
+    try {
+      await addThree(page);
+      let sent = 0;
+      page.on("request", (request) => {
+        if (request.url().includes("/chapters/order")) sent++;
+      });
+      await handle(page, `${PREFIX} B`).focus();
+      await dragByKeyboard(page, []);
+      const box = await handle(page, `${PREFIX} A`).boundingBox();
+      if (!box) throw new Error("handle not found");
+      await page.mouse.move(box.x + 20, box.y + 20);
+      await page.mouse.down();
+      await page.mouse.move(box.x + 20, box.y + 30, { steps: 5 });
+      await page.mouse.move(box.x + 20, box.y + 20, { steps: 5 });
+      await page.mouse.up();
+      await page.waitForTimeout(500);
+      expect(sent).toBe(0);
+      await expect(rows(page).nth(0)).toContainText(`${PREFIX} A`);
+    } finally {
+      await cleanUp(courseId);
+    }
+  });
+
+  test("a failed save puts the chapters back in their old order", async ({ page }) => {
+    try {
+      await addThree(page);
+      await page.route(orderRoute, (route) => route.fulfill({ status: 500, body: "{}" }), { times: 1 });
+      await handle(page, `${PREFIX} C`).focus();
+      await dragByKeyboard(page, ["ArrowUp", "ArrowUp"]);
+      await expect(page.getByText("Something went wrong. Please try again.")).toBeVisible();
+      for (const [i, letter] of ["A", "B", "C"].entries()) {
+        await expect(rows(page).nth(i)).toContainText(`${PREFIX} ${letter}`);
+      }
+      const stored = await query<{ title: string }>("SELECT title FROM chapters WHERE course_id = $1 ORDER BY position", [courseId]);
+      expect(stored.map((r) => r.title)).toEqual(["A", "B", "C"].map((l) => `${PREFIX} ${l}`));
     } finally {
       await cleanUp(courseId);
     }
