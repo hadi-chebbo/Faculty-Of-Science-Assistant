@@ -23,10 +23,12 @@ async function askMe(): Promise<{ user: Account | null; renewable: boolean }> {
   return response.json();
 }
 
-async function findAccount(): Promise<Account | null> {
+// Admin pages renew an expired session themselves (through /api/v1/auth/restore, while this
+// control is already on screen), so there this control must not rotate the same refresh token.
+async function findAccount(mayRefresh: boolean): Promise<Account | null> {
   try {
     const first = await askMe();
-    if (first.user || !first.renewable) return first.user;
+    if (first.user || !first.renewable || !mayRefresh) return first.user;
     const refreshed = await fetch("/api/v1/auth/refresh", { method: "POST" });
     return refreshed.ok ? (await askMe()).user : null;
   } catch {
@@ -47,9 +49,10 @@ export function AccountControl() {
   const pathname = usePathname();
   const [account, setAccount] = useState<State>(undefined);
 
+  const mayRefresh = !pathname.startsWith("/admin");
   const load = useCallback(() => {
-    void findAccount().then(setAccount);
-  }, []);
+    void findAccount(mayRefresh).then(setAccount);
+  }, [mayRefresh]);
 
   useEffect(() => {
     load();

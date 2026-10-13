@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { connection, NextResponse, type NextRequest } from "next/server";
 import { readRefreshCookie } from "@/lib/auth/cookies";
 import { NO_STORE } from "@/lib/auth/request";
 import { getViewer } from "@/lib/auth/viewer";
@@ -8,6 +8,8 @@ import { getAccount } from "@/services/auth/auth";
 // `renewable` tells the browser whether a refresh could bring the session back (expired access
 // cookie, refresh cookie still present), so an anonymous visitor costs exactly one request.
 export async function GET(request: NextRequest) {
+  // Per-request answer: never prerendered at build time.
+  await connection();
   let account = null;
   try {
     account = await getAccount(await getViewer());
