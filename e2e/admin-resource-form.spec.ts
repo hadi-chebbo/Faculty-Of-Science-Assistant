@@ -16,6 +16,10 @@ const COURSE = "DEMO502";
 const COURSE_LABEL = "DEMO502 - Sample Course F";
 // Six chapters, "Sample chapter 1" to "Sample chapter 6"; no other spec opens this course.
 const CHAPTER_COURSE_LABEL = "DEMO510 - Sample Full Course C";
+// Real rows of DEMO510 to link a solution to, and how the exam is labelled in the dropdown.
+const LINKED_EXERCISE = "Sample exercise sheet 1.1";
+const LINKED_EXAM = "Sample partial exam 2022";
+const LINKED_EXAM_LABEL = `2022-2023 Partial - ${LINKED_EXAM}`;
 
 test.beforeAll(() => {
   expect(ADMIN_EMAIL && ADMIN_PASSWORD, "ADMIN_EMAIL and ADMIN_PASSWORD must be set").toBeTruthy();
@@ -56,6 +60,22 @@ async function chapterPositionOf(title: string): Promise<number | null> {
     );
     expect(result.rows).toHaveLength(1);
     return (result.rows[0].position as number | null) ?? null;
+  } finally {
+    await client.end();
+  }
+}
+
+// Test-only lookup of the title of the resource a solution answers (null when it answers none).
+async function solutionOfTitle(title: string): Promise<string | null> {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    const result = await client.query(
+      "SELECT t.title FROM resources r LEFT JOIN resources t ON t.id = r.solution_of_id WHERE r.title = $1",
+      [title],
+    );
+    expect(result.rows).toHaveLength(1);
+    return (result.rows[0].title as string | null) ?? null;
   } finally {
     await client.end();
   }
@@ -248,5 +268,95 @@ test.describe("admin resource form", () => {
     await expect(page.getByLabel("Chapter")).toHaveCount(0);
     await page.getByLabel("Type", { exact: true }).selectOption("lecture");
     await expect(page.getByLabel("Chapter")).toBeVisible();
+  });
+
+  test("the Solution of field appears only for type Solution", async ({ page }) => {
+    await signInAsAdmin(page);
+    await page.goto("/admin/resources/new");
+    await expect(page.getByLabel("Solution of", { exact: true })).toHaveCount(0);
+    await page.getByLabel("Type", { exact: true }).selectOption("solution");
+    await expect(page.getByLabel("Solution of", { exact: true })).toBeDisabled();
+    await expect(page.getByLabel("Solution of", { exact: true })).toContainText("Choose a course first");
+    await page.getByLabel("Type", { exact: true }).selectOption("lecture");
+    await expect(page.getByLabel("Solution of", { exact: true })).toHaveCount(0);
+  });
+
+  test("link a solution to an exercise, change it to an exam, and unlink it", async ({ page, request }) => {
+    const title = uniqueTitle();
+    try {
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
+      await page.getByLabel("Type", { exact: true }).selectOption("solution");
+      await page.getByLabel("Title", { exact: true }).fill(title);
+      const solutionOf = page.getByLabel("Solution of", { exact: true });
+      await expect(solutionOf).toBeEnabled();
+      await expect(solutionOf.locator("option:checked")).toHaveText("Not linked");
+      await solutionOf.selectOption({ label: LINKED_EXERCISE });
+      await page.getByRole("button", { name: "Save" }).click();
+      await page.waitForURL(/\/admin$/);
+      expect(await solutionOfTitle(title)).toBe(LINKED_EXERCISE);
+
+      const [id] = await idsByTitle(title);
+      await page.goto(`/admin/resources/${id}/edit`);
+      await expect(solutionOf.locator("option:checked")).toHaveText(LINKED_EXERCISE);
+      await expect(solutionOf.locator("optgroup")).toHaveCount(2);
+      await expect(solutionOf.locator("option", { hasText: title })).toHaveCount(0);
+
+      await solutionOf.selectOption({ label: LINKED_EXAM_LABEL });
+      await page.getByRole("button", { name: "Save" }).click();
+      await page.waitForURL(/\/admin$/);
+      expect(await solutionOfTitle(title)).toBe(LINKED_EXAM);
+
+      await page.goto(`/admin/resources/${id}/edit`);
+      await expect(solutionOf.locator("option:checked")).toHaveText(LINKED_EXAM_LABEL);
+      await solutionOf.selectOption({ label: "Not linked" });
+      await page.getByRole("button", { name: "Save" }).click();
+      await page.waitForURL(/\/admin$/);
+      expect(await solutionOfTitle(title)).toBeNull();
+    } finally {
+      await cleanup(request, origin, title);
+    }
+  });
+
+  test("changing the course resets Solution of and offers only that course's resources", async ({ page, request }) => {
+    const title = uniqueTitle();
+    try {
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
+      await page.getByLabel("Type", { exact: true }).selectOption("solution");
+      await page.getByLabel("Title", { exact: true }).fill(title);
+      const solutionOf = page.getByLabel("Solution of", { exact: true });
+      await solutionOf.selectOption({ label: LINKED_EXERCISE });
+
+      await page.locator("#courseId").selectOption({ label: COURSE_LABEL });
+      await expect(solutionOf.locator("option:checked")).toHaveText("Not linked");
+      await expect(solutionOf.locator("option", { hasText: LINKED_EXERCISE })).toHaveCount(0);
+      await expect(solutionOf.locator("option", { hasText: "Sample exercise sheet 1" })).toHaveCount(1);
+      await page.getByRole("button", { name: "Save" }).click();
+      await page.waitForURL(/\/admin$/);
+      expect(await solutionOfTitle(title)).toBeNull();
+    } finally {
+      await cleanup(request, origin, title);
+    }
+  });
+
+  test("changing the type from Solution to Lecture stores no link", async ({ page, request }) => {
+    const title = uniqueTitle();
+    try {
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
+      await page.getByLabel("Type", { exact: true }).selectOption("solution");
+      await page.getByLabel("Title", { exact: true }).fill(title);
+      await page.getByLabel("Solution of", { exact: true }).selectOption({ label: LINKED_EXERCISE });
+      await page.getByLabel("Type", { exact: true }).selectOption("lecture");
+      await page.getByRole("button", { name: "Save" }).click();
+      await page.waitForURL(/\/admin$/);
+      expect(await solutionOfTitle(title)).toBeNull();
+    } finally {
+      await cleanup(request, origin, title);
+    }
   });
 });
