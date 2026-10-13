@@ -2,6 +2,7 @@ import { Op, Sequelize, type Order, type WhereOptions } from "sequelize";
 import { EXAM_SESSIONS } from "@/db/constants";
 import type { ExamSession } from "@/db/constants";
 import { getDb } from "@/db/models";
+import { getStorage } from "@/lib/storage/config";
 import type { Resource } from "@/db/models";
 import { NotFoundError, UnavailableError } from "../errors";
 import type { Page } from "../types";
@@ -140,12 +141,17 @@ export async function getResourceLink(viewer: Viewer, id: string): Promise<Resou
   const { Resource } = getDb();
   const row = await Resource.findOne({
     where: { id, ...visibleResources(viewer) },
-    attributes: ["externalUrl"],
+    attributes: ["externalUrl", "fileKey"],
   });
   if (!row) throw new NotFoundError("Resource not found");
 
+  // The stored file wins; the link is the backup.
+  if (row.fileKey) {
+    const url = await getStorage().createReadUrl(row.fileKey, { expiresInSeconds: 5 * 60, disposition: "inline" });
+    return { url };
+  }
   if (row.externalUrl) return { url: row.externalUrl };
-  // Stored files need object storage, which does not exist yet; a draft may have no source at all.
+  // A draft may have no source at all.
   throw new UnavailableError("This resource is not available yet");
 }
 

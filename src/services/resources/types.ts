@@ -28,7 +28,7 @@ export interface ResourceDetail extends ResourceListItem {
   solutionOf: ResourceRef | null;
 }
 
-// Where opening a resource leads. Only a URL for now; stored files will bring signed URLs.
+// Where opening a resource leads. A link, or a short-lived signed URL for a stored file.
 export interface ResourceLink {
   url: string;
 }
