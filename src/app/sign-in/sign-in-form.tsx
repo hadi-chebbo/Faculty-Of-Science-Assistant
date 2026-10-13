@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { announceSessionChange } from "@/lib/auth/session-events";
 
 // The route sets the session cookies; this page never sees a token.
 export function SignInForm() {
@@ -24,7 +25,9 @@ export function SignInForm() {
         body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
       });
       if (response.ok) {
-        router.replace("/admin");
+        const body: { user?: { role?: string } } | null = await response.json().catch(() => null);
+        announceSessionChange();
+        router.replace(body?.user?.role === "admin" ? "/admin" : "/");
         return;
       }
       if (response.status === 429) {
