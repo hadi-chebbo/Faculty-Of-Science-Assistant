@@ -1,20 +1,12 @@
 import type { Transaction } from "sequelize";
 import { getDb } from "@/db/models";
-import { getAccount } from "../auth/auth";
-import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
+import { requireCurrentAdmin } from "../auth/require-admin";
+import { NotFoundError, ValidationError } from "../errors";
 import { parseInput } from "../validation";
 import type { Viewer } from "../viewer";
 import { getResource } from "./resources";
 import { idSchema, resourceInputSchema, type ResourceInput, type ResourceInputData } from "./schemas";
 import type { ResourceDetail, ResourceForEdit } from "./types";
-
-// The token's role can be up to 15 minutes old, so a write checks the role in the database.
-// Runs before input validation: an anonymous caller learns nothing about the input rules.
-async function requireCurrentAdmin(viewer: Viewer): Promise<NonNullable<Viewer>> {
-  const account = await getAccount(viewer);
-  if (!viewer || !account || account.role !== "admin") throw new ForbiddenError();
-  return { id: account.id, role: account.role };
-}
 
 // The checks that need the database. `resource` is the row being edited, or null when creating.
 // All problems are collected so the form can mark every offending field at once.
@@ -23,7 +15,7 @@ async function checkAgainstDatabase(
   resource: { id: string; courseId: string; fileKey: string | null } | null,
   transaction: Transaction,
 ): Promise<void> {
-  const { Course, Resource } = getDb();
+  const { Chapter, Course, Resource } = getDb();
   const fields: string[] = [];
 
   if (!(await Course.findByPk(input.courseId, { attributes: ["id"], transaction }))) fields.push("courseId");
@@ -33,6 +25,11 @@ async function checkAgainstDatabase(
     const valid =
       target && target.courseId === input.courseId && target.type !== "solution" && target.id !== resource?.id;
     if (!valid) fields.push("solutionOfId");
+  }
+
+  if (input.chapterId) {
+    const chapter = await Chapter.findByPk(input.chapterId, { attributes: ["id", "courseId"], transaction });
+    if (!chapter || chapter.courseId !== input.courseId) fields.push("chapterId");
   }
 
   const hasFile = resource?.fileKey != null;
@@ -76,6 +73,7 @@ export async function getResourceForEdit(viewer: Viewer, id: string): Promise<Re
     externalUrl: row.externalUrl ?? null,
     isPublished: row.isPublished,
     hasFile: row.fileKey != null,
+    chapterId: row.chapterId ?? null,
     solutionOf: target ? { id: target.id, title: target.title } : null,
   };
 }

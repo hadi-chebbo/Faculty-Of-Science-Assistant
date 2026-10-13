@@ -56,5 +56,6 @@ export interface ResourceForEdit {
   externalUrl: string | null;
   isPublished: boolean;
   hasFile: boolean;
+  chapterId: string | null;
   solutionOf: { id: string; title: string } | null;
 }

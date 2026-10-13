@@ -73,6 +73,7 @@ export const resourceInputSchema = z
     language: z.preprocess(blankOrNullToUndefined, z.enum(LANGUAGES).default("en")),
     externalUrl: given(httpsUrl).transform((value) => value ?? null),
     solutionOfId: given(idSchema).transform((value) => value ?? null),
+    chapterId: given(idSchema).transform((value) => value ?? null),
     isPublished: z.boolean().default(false),
   })
   .superRefine((input, ctx) => {
@@ -81,6 +82,9 @@ export const resourceInputSchema = z
     }
     if (input.type !== "exam" && input.examSession !== null) {
       ctx.addIssue({ code: "custom", path: ["examSession"] });
+    }
+    if (input.type === "exam" && input.chapterId !== null) {
+      ctx.addIssue({ code: "custom", path: ["chapterId"] });
     }
     if (input.type !== "solution" && input.solutionOfId !== null) {
       ctx.addIssue({ code: "custom", path: ["solutionOfId"] });
@@ -100,5 +104,6 @@ export interface ResourceInput {
   language?: Language;
   externalUrl?: string | null;
   solutionOfId?: string | null;
+  chapterId?: string | null;
   isPublished?: boolean;
 }

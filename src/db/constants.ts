@@ -19,3 +19,5 @@ export const RESOURCE_TITLE_MAX_LENGTH = 200;
 export const CHAPTER_POSITION_MIN = 1;
 export const CHAPTER_POSITION_MAX = 200;
 export const CHAPTER_TITLE_MAX_LENGTH = 200;
+// Renumbering moves chapters into 101..200 first, so a course must never hold more than 100.
+export const CHAPTER_COUNT_MAX = 100;
