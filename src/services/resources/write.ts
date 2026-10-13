@@ -77,6 +77,7 @@ export async function getResourceForEdit(viewer: Viewer, id: string): Promise<Re
     chapterId: row.chapterId ?? null,
     solutionOf: target ? { id: target.id, title: target.title } : null,
     solutionCount,
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 

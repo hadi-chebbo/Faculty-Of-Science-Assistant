@@ -60,4 +60,6 @@ export interface ResourceForEdit {
   solutionOf: { id: string; title: string } | null;
   // How many resources, drafts included, are a solution of this one.
   solutionCount: number;
+  // When it was last saved, as an ISO date-time.
+  updatedAt: string;
 }
