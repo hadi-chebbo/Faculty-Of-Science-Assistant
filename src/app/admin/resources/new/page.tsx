@@ -5,6 +5,7 @@ import { FormBreadcrumb } from "@/components/admin/form-breadcrumb";
 import { PageTitle } from "@/components/site/page-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readForPage } from "@/lib/page-errors";
+import { listChapterOptions } from "@/services/chapters/options";
 import { listCourses } from "@/services/courses/courses";
 import { requireAdminPage } from "../../guard";
 import { ResourceForm } from "../resource-form";
@@ -25,11 +26,14 @@ export default function NewResourcePage() {
 
 async function NewResourceContent() {
   const { admin } = await requireAdminPage("/admin/resources/new");
-  const courses = await readForPage(() => listCourses(admin));
+  const [courses, chapters] = await Promise.all([
+    readForPage(() => listCourses(admin)),
+    readForPage(() => listChapterOptions(admin)),
+  ]);
   return (
     <>
       <AdminBar />
-      <ResourceForm courses={courses} />
+      <ResourceForm courses={courses} chapters={chapters} />
     </>
   );
 }

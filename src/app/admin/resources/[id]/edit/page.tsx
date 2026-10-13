@@ -5,6 +5,7 @@ import { FormBreadcrumb } from "@/components/admin/form-breadcrumb";
 import { PageTitle } from "@/components/site/page-title";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readForPage } from "@/lib/page-errors";
+import { listChapterOptions } from "@/services/chapters/options";
 import { listCourses } from "@/services/courses/courses";
 import { getResourceForEdit } from "@/services/resources/write";
 import { requireAdminPage } from "../../../guard";
@@ -28,14 +29,15 @@ export default function EditResourcePage({ params }: PageProps<"/admin/resources
 
 async function EditResourceContent({ id }: { id: string }) {
   const { admin } = await requireAdminPage(`/admin/resources/${encodeURIComponent(id)}/edit`);
-  const [courses, resource] = await Promise.all([
+  const [courses, chapters, resource] = await Promise.all([
     readForPage(() => listCourses(admin)),
+    readForPage(() => listChapterOptions(admin)),
     readForPage(() => getResourceForEdit(admin, id)),
   ]);
   return (
     <>
       <AdminBar />
-      <ResourceForm courses={courses} resource={resource} />
+      <ResourceForm courses={courses} chapters={chapters} resource={resource} />
     </>
   );
 }
