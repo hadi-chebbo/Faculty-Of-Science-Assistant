@@ -162,6 +162,9 @@ test.describe("managing chapters", () => {
 
       await page.getByRole("button", { name: `Delete ${PREFIX} empty` }).click();
       await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
+      // While the dialog is open the list behind it is hidden from the accessibility tree, so the
+      // rows would count as 0 at once. The dialog closes only after the delete has been saved.
+      await expect(page.getByRole("alertdialog")).toBeHidden();
       await expect(rows(page)).toHaveCount(0);
       await expect(page.getByText("This course has no chapters yet.")).toBeVisible();
     } finally {
@@ -190,6 +193,7 @@ test.describe("managing chapters", () => {
       const dialog = page.getByRole("alertdialog");
       await expect(dialog).toContainText("Its 1 item is kept.");
       await dialog.getByRole("button", { name: "Delete" }).click();
+      await expect(dialog).toBeHidden();
       await expect(rows(page)).toHaveCount(0);
 
       const left = await query<{ chapter_id: string | null }>("SELECT chapter_id FROM resources WHERE course_id = $1 AND title = $2", [
