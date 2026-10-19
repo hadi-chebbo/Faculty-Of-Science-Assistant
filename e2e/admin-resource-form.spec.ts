@@ -106,6 +106,19 @@ async function academicYearStartOf(title: string): Promise<number | null> {
   }
 }
 
+// Test-only lookup of the stored file key (null when the resource has no file).
+async function fileKeyOf(title: string): Promise<string | null> {
+  const client = new Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  try {
+    const result = await client.query("SELECT file_key FROM resources WHERE title = $1", [title]);
+    expect(result.rows).toHaveLength(1);
+    return (result.rows[0].file_key as string | null) ?? null;
+  } finally {
+    await client.end();
+  }
+}
+
 // Deletes through the API as a separate signed-in admin client, so a test that tampers with the
 // browser's cookies cannot break its own cleanup.
 async function cleanup(request: APIRequestContext, origin: string, title: string) {
@@ -176,7 +189,7 @@ test.describe("admin resource form", () => {
 
       await setVisibility(page, "Published");
       await save(page);
-      await expect(page.getByText("Add a link before publishing.")).toBeVisible();
+      await expect(page.getByText("Add a file or link before publishing.")).toBeVisible();
       await expect(page.getByText("The resource was not saved.")).toBeVisible();
       await expect(page).toHaveURL(/\/admin\/resources\/new$/);
 
@@ -198,7 +211,7 @@ test.describe("admin resource form", () => {
       await signInAsAdmin(page);
       await page.goto("/admin/resources/new");
       await fillBasics(page, title);
-      await page.getByLabel("Link", { exact: true }).fill("https://example.com/e2e");
+      await page.getByLabel("Backup link").fill("https://example.com/e2e");
       await setVisibility(page, "Published");
       await save(page);
       await page.waitForURL(/\/admin$/);
@@ -547,7 +560,7 @@ test.describe("admin resource form", () => {
       await expect(header).toContainText("Draft");
       await expect(header).not.toContainText("Published");
 
-      await page.getByLabel("Link", { exact: true }).fill("https://example.com/e2e");
+      await page.getByLabel("Backup link").fill("https://example.com/e2e");
       await save(page);
       await page.waitForURL(/\/admin$/);
       await page.goto(`/admin/resources/${id}/edit`);
@@ -594,5 +607,153 @@ test.describe("admin resource form", () => {
       await cleanup(request, origin, title);
       await cleanup(request, origin, old);
     }
+  });
+});
+
+const pdfFile = (name = "lecture.pdf") => ({
+  name,
+  mimeType: "application/pdf",
+  buffer: Buffer.from(`%PDF-1.4\n% E2E ${randomBytes(8).toString("hex")}\n%%EOF\n`),
+});
+const fileInput = (page: Page) => page.getByLabel("File", { exact: true });
+
+// Deleting a resource through the API also removes its stored file.
+test.describe("admin resource form: PDF upload", () => {
+  let origin: string;
+
+  test.beforeEach(({ baseURL }) => {
+    origin = new URL(baseURL!).origin;
+  });
+
+  // The signed read URL of a resource's stored file, as the admin's own session gets it.
+  async function readUrl(page: Page, id: string): Promise<string> {
+    const open = await page.request.get(`/api/v1/resources/${id}/open`, { maxRedirects: 0 });
+    expect(open.status()).toBe(307);
+    return open.headers()["location"];
+  }
+
+  test("a chosen PDF uploads, is saved with the resource and opens from the edit page", async ({ page, request }) => {
+    const title = uniqueTitle();
+    try {
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await fillBasics(page, title);
+      await fileInput(page).setInputFiles(pdfFile("my lecture.pdf"));
+      await expect(page.getByText("Ready. It is saved with the resource.")).toBeVisible();
+      await expect(page.getByText("my lecture.pdf")).toBeVisible();
+      await save(page);
+      await page.waitForURL(/\/admin$/);
+      expect(await fileKeyOf(title)).toMatch(/^resources\/.+\.pdf$/);
+
+      const [id] = await idsByTitle(title);
+      await page.goto(`/admin/resources/${id}/edit`);
+      await expect(page.getByText("A PDF is stored.")).toBeVisible();
+      const link = page.getByRole("link", { name: "View current file" });
+      await expect(link).toHaveAttribute("href", `/api/v1/resources/${id}/open`);
+      await expect(link).toHaveAttribute("target", "_blank");
+      const opened = await page.request.get(await readUrl(page, id));
+      expect(opened.status()).toBe(200);
+      expect(opened.headers()["content-type"]).toBe("application/pdf");
+    } finally {
+      await cleanup(request, origin, title);
+    }
+  });
+
+  test("replacing the stored file changes the key and the old file is gone", async ({ page, request }) => {
+    const title = uniqueTitle();
+    try {
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await fillBasics(page, title);
+      await fileInput(page).setInputFiles(pdfFile());
+      await expect(page.getByText("Ready. It is saved with the resource.")).toBeVisible();
+      await save(page);
+      await page.waitForURL(/\/admin$/);
+      const firstKey = await fileKeyOf(title);
+      const [id] = await idsByTitle(title);
+      await page.goto(`/admin/resources/${id}/edit`);
+      const oldUrl = await readUrl(page, id);
+      expect((await page.request.get(oldUrl)).status()).toBe(200);
+
+      await expect(page.getByText("A PDF is stored.")).toBeVisible();
+      await fileInput(page).setInputFiles(pdfFile("second.pdf"));
+      await expect(page.getByText("Ready. It is saved with the resource.")).toBeVisible();
+      await expect(page.getByText("Replaces the stored file when you save.")).toBeVisible();
+      await save(page);
+      await page.waitForURL(/\/admin$/);
+
+      const secondKey = await fileKeyOf(title);
+      expect(secondKey).toMatch(/^resources\/.+\.pdf$/);
+      expect(secondKey).not.toBe(firstKey);
+      expect((await page.request.get(oldUrl)).status()).not.toBe(200);
+      expect((await page.request.get(await readUrl(page, id))).status()).toBe(200);
+    } finally {
+      await cleanup(request, origin, title);
+    }
+  });
+
+  test("a file that is not a PDF is refused in the browser with no upload request", async ({ page }) => {
+    await signInAsAdmin(page);
+    await page.goto("/admin/resources/new");
+    await fillBasics(page, uniqueTitle()); // also waits for the form to be interactive
+    const uploadRequests: string[] = [];
+    page.on("request", (r) => {
+      if (r.url().includes("/api/v1/uploads") || r.url().includes("/api/v1/storage")) uploadRequests.push(r.url());
+    });
+    await fileInput(page).setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("not a pdf") });
+    await expect(page.getByText("Choose a PDF file.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Choose PDF" })).toBeVisible();
+    expect(uploadRequests).toEqual([]);
+  });
+
+  test("Remove after an upload leaves the resource without a file", async ({ page, request }) => {
+    const title = uniqueTitle();
+    try {
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await fillBasics(page, title);
+      await fileInput(page).setInputFiles(pdfFile());
+      await expect(page.getByText("Ready. It is saved with the resource.")).toBeVisible();
+      await page.getByRole("button", { name: "Remove" }).click();
+      await expect(page.getByRole("button", { name: "Choose PDF" })).toBeVisible();
+      await save(page);
+      await page.waitForURL(/\/admin$/);
+      expect(await fileKeyOf(title)).toBeNull();
+    } finally {
+      await cleanup(request, origin, title);
+    }
+  });
+
+  test("the save button reads Uploading... and is disabled while the upload runs; Cancel returns to the empty box", async ({ page }) => {
+    await signInAsAdmin(page);
+    await page.goto("/admin/resources/new");
+    await fillBasics(page, uniqueTitle());
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    await page.route("**/api/v1/storage/local*", async (route) => {
+      await gate;
+      await route.continue();
+    });
+
+    await fileInput(page).setInputFiles(pdfFile());
+    const button = page.getByRole("button", { name: "Uploading..." });
+    await expect(button).toBeVisible();
+    await expect(button).toBeDisabled();
+    await expect(page.getByRole("progressbar", { name: "Upload progress" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByRole("button", { name: "Choose PDF" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Save draft$/ })).toBeEnabled();
+    release();
+  });
+
+  test("a failed upload shows an error and the picker stays usable", async ({ page }) => {
+    await signInAsAdmin(page);
+    await page.goto("/admin/resources/new");
+    await fillBasics(page, uniqueTitle());
+    await page.route("**/api/v1/storage/local*", (route) => route.fulfill({ status: 500 }));
+    await fileInput(page).setInputFiles(pdfFile());
+    await expect(page.getByText("The upload failed. Try again.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Choose PDF" })).toBeVisible();
   });
 });
