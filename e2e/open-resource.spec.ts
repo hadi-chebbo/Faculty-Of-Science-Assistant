@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 
@@ -12,6 +12,8 @@ if (!process.env.DATABASE_URL) {
   }
 }
 
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
 const UNKNOWN_ID = "33333333-3333-4333-8333-333333333333";
 
 // Ids are read straight from the database; there is deliberately no API that lists them.
@@ -31,7 +33,8 @@ async function resourceId(courseCode: string, title: string): Promise<{ id: stri
   }
 }
 
-// A published resource with a link and no file, made for one test and always removed again.
+// A link-only DRAFT, made for one test and always removed again. A published resource needs a file,
+// so the link redirect can only be reached for a draft, which the admin may open.
 // (Every seeded resource has a stored file, which wins over its link.)
 async function withLinkOnlyResource<T>(run: (resource: { id: string; externalUrl: string }) => Promise<T>): Promise<T> {
   const externalUrl = "https://example.com/e2e/link-only";
@@ -41,7 +44,7 @@ async function withLinkOnlyResource<T>(run: (resource: { id: string; externalUrl
   try {
     const { rows } = await client.query(
       `INSERT INTO resources (course_id, type, title, language, external_url, is_published)
-       SELECT id, 'other', $2, 'en', $3, true FROM courses WHERE code = $1 RETURNING id`,
+       SELECT id, 'other', $2, 'en', $3, false FROM courses WHERE code = $1 RETURNING id`,
       ["DEMO301", `E2E link-only ${randomUUID()}`, externalUrl],
     );
     id = rows[0].id as string;
@@ -50,6 +53,17 @@ async function withLinkOnlyResource<T>(run: (resource: { id: string; externalUrl
     if (id) await client.query("DELETE FROM resources WHERE id = $1", [id]);
     await client.end();
   }
+}
+
+// Signs the request context in as the admin (its cookies are kept for the next requests).
+async function signInAsAdmin(request: APIRequestContext, baseURL: string | undefined) {
+  expect(ADMIN_EMAIL && ADMIN_PASSWORD, "ADMIN_EMAIL and ADMIN_PASSWORD must be set").toBeTruthy();
+  const octet = () => Math.floor(Math.random() * 256);
+  const response = await request.post("/api/v1/auth/sign-in", {
+    headers: { origin: new URL(baseURL!).origin, "x-forwarded-for": `10.${octet()}.${octet()}.${octet()}` },
+    data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+  });
+  expect(response.status()).toBe(200);
 }
 
 test.describe("GET /api/v1/resources/[id]/open", () => {
@@ -64,8 +78,11 @@ test.describe("GET /api/v1/resources/[id]/open", () => {
     expect((await served.body()).subarray(0, 5).toString("latin1")).toBe("%PDF-");
   });
 
-  test("redirects a link-only resource to its link, uncached", async ({ request }) => {
+  test("redirects a link-only draft to its link for the admin, uncached", async ({ request, baseURL }) => {
     await withLinkOnlyResource(async ({ id, externalUrl }) => {
+      const anonymous = await request.get(`/api/v1/resources/${id}/open`, { maxRedirects: 0 });
+      expect(anonymous.status()).toBe(404);
+      await signInAsAdmin(request, baseURL);
       const response = await request.get(`/api/v1/resources/${id}/open`, { maxRedirects: 0 });
       expect(response.status()).toBe(307);
       expect(response.headers()["location"]).toBe(externalUrl);
@@ -108,8 +125,9 @@ test.describe("GET /api/v1/resources/[id]/open for a browser", () => {
     expect((await served.body()).subarray(0, 5).toString("latin1")).toBe("%PDF-");
   });
 
-  test("still redirects a link-only resource to its link", async ({ request }) => {
+  test("still redirects a link-only draft to its link for the admin", async ({ request, baseURL }) => {
     await withLinkOnlyResource(async ({ id, externalUrl }) => {
+      await signInAsAdmin(request, baseURL);
       const response = await request.get(`/api/v1/resources/${id}/open`, { maxRedirects: 0, headers: HTML });
       expect(response.status()).toBe(307);
       expect(response.headers()["location"]).toBe(externalUrl);

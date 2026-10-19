@@ -27,7 +27,7 @@ async function setup() {
   const course = await Course.create({ code: "TEST301", title: "Course A", semester: 3 });
   const exam = await Resource.create({
     courseId: course.id, type: "exam", title: "Final 2024", description: "Old exam", academicYearStart: 2024,
-    examSession: "final", language: "fr", externalUrl: "https://example.com/a", isPublished: true,
+    examSession: "final", language: "fr", externalUrl: "https://example.com/a", fileKey: "resources/final.pdf", isPublished: true,
   });
   return { admin, course, exam };
 }
@@ -46,13 +46,24 @@ describe("getResourceForEdit", () => {
     await expect(getResourceForEdit(f.admin, "not-a-uuid")).rejects.toBeInstanceOf(NotFoundError);
   });
 
-  it("returns every editable field of a link resource", async () => {
+  it("returns every editable field of a resource with a file and a backup link", async () => {
     const f = await setup();
     expect(await getResourceForEdit(f.admin, f.exam.id)).toEqual({
       id: f.exam.id, courseId: f.course.id, type: "exam", title: "Final 2024", description: "Old exam",
       academicYearStart: 2024, examSession: "final", language: "fr", externalUrl: "https://example.com/a",
-      isPublished: true, hasFile: false, chapterId: null, solutionOf: null,
+      isPublished: true, hasFile: true, chapterId: null, solutionOf: null,
       solutionCount: 0, updatedAt: expect.any(String),
+    });
+  });
+
+  it("reports no file for a link-only draft", async () => {
+    const f = await setup();
+    const { Resource } = getDb();
+    const draft = await Resource.create({
+      courseId: f.course.id, type: "lecture", title: "Link only", externalUrl: "https://example.com/l",
+    });
+    expect(await getResourceForEdit(f.admin, draft.id)).toMatchObject({
+      externalUrl: "https://example.com/l", isPublished: false, hasFile: false,
     });
   });
 
@@ -88,7 +99,7 @@ describe("getResourceForEdit", () => {
     const { Resource } = getDb();
     await Resource.create({
       courseId: f.course.id, type: "solution", title: "Solution A", solutionOfId: f.exam.id,
-      externalUrl: "https://example.com/s", isPublished: true,
+      externalUrl: "https://example.com/s", fileKey: "resources/sol.pdf", isPublished: true,
     });
     await Resource.create({ courseId: f.course.id, type: "solution", title: "Solution B (draft)", solutionOfId: f.exam.id });
     expect((await getResourceForEdit(f.admin, f.exam.id)).solutionCount).toBe(2);

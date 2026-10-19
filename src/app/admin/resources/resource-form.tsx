@@ -34,7 +34,7 @@ import { VisibilityCard } from "./visibility-card";
 
 const FIELD_MESSAGES: Record<string, string> = {
   file: `The file could not be checked. Upload a PDF of at most ${MAX_SIZE_LABEL}.`,
-  isPublished: "Add a file or link before publishing.",
+  isPublished: "Add a file before publishing.",
   examSession: "Choose a session for an exam.",
   chapterId: "Choose a chapter of this course.",
   solutionOfId: "Choose an exercise or exam of this course.",

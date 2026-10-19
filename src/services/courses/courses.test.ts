@@ -6,6 +6,7 @@ import type { Viewer } from "../viewer";
 import { getChapterPage, getCourseByCode, listCourses, listCoursesBySemester } from "./courses";
 
 const SAMPLE_URL = "https://example.com/sample";
+const SAMPLE_KEY = "resources/sample.pdf";
 const admin: Viewer = { id: "11111111-1111-4111-8111-111111111111", role: "admin" };
 const student: Viewer = { id: "22222222-2222-4222-8222-222222222222", role: "student" };
 
@@ -22,8 +23,8 @@ async function seed() {
   const a = await Course.create({ code: "TEST301", title: "Course A", semester: 3 });
   const b = await Course.create({ code: "TEST302", title: "Course B", semester: 3 });
   await Course.create({ code: "TEST501", title: "Course C", semester: 5 });
-  await Resource.create({ courseId: a.id, type: "lecture", title: "Published lecture", isPublished: true, externalUrl: SAMPLE_URL });
-  await Resource.create({ courseId: a.id, type: "exam", title: "Published exam", academicYearStart: 2024, examSession: "final", isPublished: true, externalUrl: SAMPLE_URL });
+  await Resource.create({ courseId: a.id, type: "lecture", title: "Published lecture", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL });
+  await Resource.create({ courseId: a.id, type: "exam", title: "Published exam", academicYearStart: 2024, examSession: "final", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL });
   await Resource.create({ courseId: a.id, type: "lecture", title: "Draft lecture" });
   await Resource.create({ courseId: b.id, type: "notes", title: "Draft notes" });
   return { a, b };
@@ -119,8 +120,8 @@ describe("getCourseByCode", () => {
   it("orders exams newest year first, then partial before final", async () => {
     const { a } = await seed();
     const { Resource } = getDb();
-    await Resource.create({ courseId: a.id, type: "exam", title: "A partial", academicYearStart: 2024, examSession: "partial", isPublished: true, externalUrl: SAMPLE_URL });
-    await Resource.create({ courseId: a.id, type: "exam", title: "Newer second", academicYearStart: 2025, examSession: "second", isPublished: true, externalUrl: SAMPLE_URL });
+    await Resource.create({ courseId: a.id, type: "exam", title: "A partial", academicYearStart: 2024, examSession: "partial", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL });
+    await Resource.create({ courseId: a.id, type: "exam", title: "Newer second", academicYearStart: 2025, examSession: "second", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL });
     const exams = (await getCourseByCode(null, "TEST301")).groups.find((g) => g.type === "exam");
     expect(exams?.resources.map((r) => r.title)).toEqual(["Newer second", "A partial", "Published exam"]);
   });
@@ -130,7 +131,7 @@ describe("getCourseByCode", () => {
     const { Resource } = getDb();
     const exam = (await Resource.findOne({ where: { courseId: a.id, title: "Published exam" } }))!;
     for (const [title, isPublished] of [["Solution one", true], ["Solution two", true], ["Draft solution", false]] as const) {
-      await Resource.create({ courseId: a.id, type: "solution", title, solutionOfId: exam.id, isPublished, externalUrl: SAMPLE_URL });
+      await Resource.create({ courseId: a.id, type: "solution", title, solutionOfId: exam.id, isPublished, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL });
     }
     const titlesOf = async (viewer: Viewer) => {
       const course = await getCourseByCode(viewer, "TEST301");
@@ -166,7 +167,7 @@ describe("getCourseByCode outline", () => {
     await Chapter.create({ courseId: course.id, position: 3, title: "Empty" });
     const foreign = await Chapter.create({ courseId: other.id, position: 1, title: "Foreign" });
     const make = (title: string, type: string, extra: Record<string, unknown> = {}) =>
-      Resource.create({ courseId: course.id, type, title, isPublished: true, externalUrl: SAMPLE_URL, ...extra } as never);
+      Resource.create({ courseId: course.id, type, title, isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL, ...extra } as never);
     return { one, foreign, make };
   }
   const titles = (groups: { resources: { title: string }[] }[]) => groups.map((g) => g.resources.map((r) => r.title));
@@ -266,7 +267,7 @@ describe("getChapterPage", () => {
       [1, 2, 3, 4].map((position) => Chapter.create({ courseId: course.id, position, title: `Chapter title ${position}` })),
     );
     const make = (chapterId: string, title: string, type: string, extra: Record<string, unknown> = {}) =>
-      Resource.create({ courseId: course.id, chapterId, type, title, isPublished: true, externalUrl: SAMPLE_URL, ...extra } as never);
+      Resource.create({ courseId: course.id, chapterId, type, title, isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL, ...extra } as never);
     // Chapter 2 is empty and chapter 3 only has a draft.
     await make(one.id, "Exercise A", "exercise");
     await make(one.id, "Lecture A", "lecture");

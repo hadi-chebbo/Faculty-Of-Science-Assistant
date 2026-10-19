@@ -32,6 +32,7 @@ async function setup() {
   const other = await Course.create({ code: "TEST302", title: "Course B", semester: 3 });
   const exam = await Resource.create({
     courseId: course.id, type: "exam", title: "Final 2024", academicYearStart: 2024, examSession: "final", isPublished: true, externalUrl: URL_A,
+    fileKey: "k/exam.pdf",
   });
   return { admin, student, course, other, exam };
 }
@@ -39,7 +40,7 @@ async function setup() {
 type Fixture = Awaited<ReturnType<typeof setup>>;
 
 const link = (f: Fixture, extra: Partial<ResourceInput> = {}): ResourceInput => ({
-  courseId: f.course.id, type: "lecture", title: "Lecture 1", externalUrl: URL_A, isPublished: true, ...extra,
+  courseId: f.course.id, type: "lecture", title: "Lecture 1", externalUrl: URL_A, isPublished: false, ...extra,
 });
 
 async function fieldsOf(promise: Promise<unknown>): Promise<string[]> {
@@ -79,12 +80,12 @@ describe("permission", () => {
 });
 
 describe("createResource", () => {
-  it("creates a published link resource and returns its detail", async () => {
+  it("creates a link resource as a draft and returns its detail", async () => {
     const f = await setup();
     const created = await createResource(f.admin, link(f, { description: "  Intro  " }));
     expect(created).toMatchObject({
       courseCode: "TEST301", courseTitle: "Course A", type: "lecture", title: "Lecture 1", description: "Intro",
-      academicYearStart: null, examSession: null, language: "en", isPublished: true, solutionOf: null, solutions: [],
+      academicYearStart: null, examSession: null, language: "en", isPublished: false, solutionOf: null, solutions: [],
     });
     const row = await getDb().Resource.findByPk(created.id);
     expect(row).toMatchObject({ externalUrl: URL_A, fileKey: null });
@@ -147,9 +148,16 @@ describe("createResource", () => {
     }
   });
 
-  it("refuses to publish without a link", async () => {
+  it("refuses to publish with only a link, with or without one", async () => {
     const f = await setup();
-    expect(await fieldsOf(createResource(f.admin, link(f, { externalUrl: null })))).toEqual(["isPublished"]);
+    expect(await fieldsOf(createResource(f.admin, link(f, { isPublished: true })))).toEqual(["isPublished"]);
+    expect(await fieldsOf(createResource(f.admin, link(f, { externalUrl: null, isPublished: true })))).toEqual(["isPublished"]);
+  });
+
+  it("creates a draft with no file and no link", async () => {
+    const f = await setup();
+    const created = await createResource(f.admin, link(f, { externalUrl: null }));
+    expect(created.isPublished).toBe(false);
   });
 });
 
@@ -181,7 +189,7 @@ describe("updateResource", () => {
     const f = await setup();
     const file = await getDb().Resource.create({ courseId: f.course.id, type: "lecture", title: "Stored", fileKey: "k/1.pdf" });
 
-    const updated = await updateResource(f.admin, file.id, link(f, { title: "Stored v2", externalUrl: null }));
+    const updated = await updateResource(f.admin, file.id, link(f, { title: "Stored v2", externalUrl: null, isPublished: true }));
     expect(updated).toMatchObject({ title: "Stored v2", isPublished: true });
     expect((await getDb().Resource.findByPk(file.id))).toMatchObject({ fileKey: "k/1.pdf", externalUrl: null });
   });
@@ -193,11 +201,17 @@ describe("updateResource", () => {
     expect(await getDb().Resource.findByPk(file.id)).toMatchObject({ externalUrl: URL_A, fileKey: "k/1.pdf" });
   });
 
-  it("refuses to publish once the link is removed", async () => {
+  it("publishes a row that has a stored file without a new ticket, even with a link", async () => {
     const f = await setup();
-    expect(await fieldsOf(updateResource(f.admin, f.exam.id, link(f, { type: "exam", examSession: "final", externalUrl: null })))).toEqual([
-      "isPublished",
-    ]);
+    const updated = await updateResource(f.admin, f.exam.id, link(f, { type: "exam", examSession: "final", isPublished: true }));
+    expect(updated.isPublished).toBe(true);
+  });
+
+  it("refuses to publish a link-only draft", async () => {
+    const f = await setup();
+    const draft = await getDb().Resource.create({ courseId: f.course.id, type: "lecture", title: "Link only", externalUrl: URL_A });
+    expect(await fieldsOf(updateResource(f.admin, draft.id, link(f, { isPublished: true })))).toEqual(["isPublished"]);
+    expect((await getDb().Resource.findByPk(draft.id))!.isPublished).toBe(false);
   });
 
   it("rejects pointing a solution at itself", async () => {

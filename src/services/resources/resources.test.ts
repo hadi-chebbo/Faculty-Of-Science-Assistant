@@ -14,6 +14,7 @@ import { getResource, getResourceLink, listExamFilterOptions, listResources } fr
 import { RESOURCE_PAGE_SIZE_DEFAULT, RESOURCE_PAGE_SIZE_MAX } from "./schemas";
 
 const SAMPLE_URL = "https://example.com/sample";
+const SAMPLE_KEY = "resources/sample.pdf";
 const admin: Viewer = { id: "11111111-1111-4111-8111-111111111111", role: "admin" };
 const student: Viewer = { id: "22222222-2222-4222-8222-222222222222", role: "student" };
 
@@ -50,19 +51,19 @@ async function seed() {
   const a = await Course.create({ code: "TEST301", title: "Course A", semester: 3 });
   const b = await Course.create({ code: "TEST302", title: "Course B", semester: 3 });
   const exam = await Resource.create({
-    courseId: a.id, type: "exam", title: "Final 2024", academicYearStart: 2024, examSession: "final", isPublished: true, externalUrl: SAMPLE_URL,
+    courseId: a.id, type: "exam", title: "Final 2024", academicYearStart: 2024, examSession: "final", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL,
   });
   const partial = await Resource.create({
-    courseId: a.id, type: "exam", title: "Partial 2024", academicYearStart: 2024, examSession: "partial", isPublished: true, externalUrl: SAMPLE_URL,
+    courseId: a.id, type: "exam", title: "Partial 2024", academicYearStart: 2024, examSession: "partial", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL,
   });
   const old = await Resource.create({
-    courseId: a.id, type: "exam", title: "Final 2022", academicYearStart: 2022, examSession: "final", isPublished: true, externalUrl: SAMPLE_URL, language: "fr",
+    courseId: a.id, type: "exam", title: "Final 2022", academicYearStart: 2022, examSession: "final", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL, language: "fr",
   });
   const solution = await Resource.create({
-    courseId: a.id, type: "solution", title: "Final 2024 solution", solutionOfId: exam.id, isPublished: true, externalUrl: SAMPLE_URL,
+    courseId: a.id, type: "solution", title: "Final 2024 solution", solutionOfId: exam.id, isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL,
   });
   const draft = await Resource.create({ courseId: a.id, type: "lecture", title: "Draft lecture" });
-  const other = await Resource.create({ courseId: b.id, type: "lecture", title: "Other lecture", isPublished: true, externalUrl: SAMPLE_URL });
+  const other = await Resource.create({ courseId: b.id, type: "lecture", title: "Other lecture", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL });
   return { a, b, exam, partial, old, solution, draft, other };
 }
 
@@ -124,7 +125,7 @@ describe("listResources", () => {
     const { a } = await seed();
     const { Resource } = getDb();
     await Resource.create({
-      courseId: a.id, type: "exam", title: "Final 1990", academicYearStart: ACADEMIC_YEAR_MIN, examSession: "final", isPublished: true, externalUrl: SAMPLE_URL,
+      courseId: a.id, type: "exam", title: "Final 1990", academicYearStart: ACADEMIC_YEAR_MIN, examSession: "final", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL,
     });
     const page = await listResources(null, { academicYearStart: ACADEMIC_YEAR_MIN });
     expect(page.items.map((r) => r.title)).toEqual(["Final 1990"]);
@@ -167,7 +168,7 @@ describe("listResources by semester", () => {
     const { Course, Resource } = getDb();
     const s5 = await Course.create({ code: "TEST501", title: "Course E", semester: 5 });
     const s5exam = await Resource.create({
-      courseId: s5.id, type: "exam", title: "S5 final 2024", academicYearStart: 2024, examSession: "final", isPublished: true, externalUrl: SAMPLE_URL,
+      courseId: s5.id, type: "exam", title: "S5 final 2024", academicYearStart: 2024, examSession: "final", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL,
     });
     await Resource.create({ courseId: s5.id, type: "exam", title: "S5 draft exam", academicYearStart: 2024, examSession: "final", externalUrl: SAMPLE_URL });
     return { ...data, s5, s5exam };
@@ -217,13 +218,13 @@ describe("listExamFilterOptions", () => {
     const s5 = await Course.create({ code: "TEST501", title: "Course E", semester: 5 });
     const s4 = await Course.create({ code: "TEST401", title: "Course D", semester: 4 });
     await Resource.create({
-      courseId: s5.id, type: "exam", title: "S5 second 2023", academicYearStart: 2023, examSession: "second", isPublished: true, externalUrl: SAMPLE_URL,
+      courseId: s5.id, type: "exam", title: "S5 second 2023", academicYearStart: 2023, examSession: "second", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL,
     });
     // Only drafts, and only non-exam resources: nothing of these may be offered to the public.
     await Resource.create({
       courseId: s4.id, type: "exam", title: "S4 draft 2025", academicYearStart: 2025, examSession: "partial", externalUrl: SAMPLE_URL,
     });
-    await Resource.create({ courseId: b.id, type: "notes", title: "Notes", academicYearStart: 2019, isPublished: true, externalUrl: SAMPLE_URL });
+    await Resource.create({ courseId: b.id, type: "notes", title: "Notes", academicYearStart: 2019, isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL });
 
     const expected = {
       semesters: [3, 5],
@@ -255,7 +256,7 @@ describe("listExamFilterOptions", () => {
   it("skips an exam without an academic year when listing years", async () => {
     const { b } = await seed();
     const { Resource } = getDb();
-    await Resource.create({ courseId: b.id, type: "exam", title: "Undated exam", examSession: "second", isPublished: true, externalUrl: SAMPLE_URL });
+    await Resource.create({ courseId: b.id, type: "exam", title: "Undated exam", examSession: "second", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL });
     const options = await listExamFilterOptions(null);
     expect(options.courses.map((c) => c.code)).toEqual(["TEST301", "TEST302"]);
     expect(options.years).toEqual([2024, 2022]);
@@ -287,7 +288,7 @@ describe("getResource", () => {
     const { Resource } = getDb();
     const draftExam = await Resource.create({ courseId: a.id, type: "exam", title: "Draft exam", examSession: "second" });
     const solution = await Resource.create({
-      courseId: a.id, type: "solution", title: "Solution of draft", solutionOfId: draftExam.id, isPublished: true, externalUrl: SAMPLE_URL,
+      courseId: a.id, type: "solution", title: "Solution of draft", solutionOfId: draftExam.id, isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL,
     });
     expect((await getResource(null, solution.id)).solutionOf).toBeNull();
     expect((await getResource(admin, solution.id)).solutionOf?.id).toBe(draftExam.id);
@@ -330,7 +331,7 @@ describe("solutions on list items", () => {
     const { exam } = await seed();
     const { Resource } = getDb();
     await Resource.create({
-      courseId: exam.courseId, type: "solution", title: "Second solution", solutionOfId: exam.id, isPublished: true, externalUrl: SAMPLE_URL,
+      courseId: exam.courseId, type: "solution", title: "Second solution", solutionOfId: exam.id, isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL,
     });
     const first = await listResources(null, { pageSize: 2 });
     const second = await listResources(null, { pageSize: 2, page: 2 });
@@ -345,9 +346,9 @@ describe("solutions on list items", () => {
 });
 
 describe("getResourceLink", () => {
-  it("returns the url of a published resource", async () => {
+  it("returns a signed read URL, not the backup link, for a published resource", async () => {
     const { exam } = await seed();
-    expect(await getResourceLink(null, exam.id)).toEqual({ url: SAMPLE_URL });
+    expect((await getResourceLink(null, exam.id)).url).toContain("/api/v1/storage/local");
   });
 
   it("treats a draft as not found for non-admins, and returns it to an admin", async () => {

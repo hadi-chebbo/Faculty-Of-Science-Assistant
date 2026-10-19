@@ -229,11 +229,11 @@ describe("sources", () => {
     expect(await rowOf(created.id)).toMatchObject({ fileKey: key, externalUrl: URL_A });
   });
 
-  it("publishes with only a file, or only a link, but not with neither", async () => {
+  it("publishes with a file, but not with only a link or with neither", async () => {
     const f = await setup();
     const { ticket } = await upload();
     await createResource(f.admin, input(f, { fileTicket: ticket, isPublished: true }));
-    await createResource(f.admin, input(f, { externalUrl: URL_A, isPublished: true }));
+    expect(await fieldsOf(createResource(f.admin, input(f, { externalUrl: URL_A, isPublished: true })))).toEqual(["isPublished"]);
     expect(await fieldsOf(createResource(f.admin, input(f, { isPublished: true })))).toEqual(["isPublished"]);
 
     const draft = await createResource(f.admin, input(f));
