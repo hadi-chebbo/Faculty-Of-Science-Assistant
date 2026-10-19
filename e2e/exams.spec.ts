@@ -8,10 +8,10 @@ import { expect, test } from "@playwright/test";
 const TOTAL_EXAMS = 43;
 const PAGE_SIZE = 20;
 
-// Rows are the list items that open a resource. (Pages visited earlier in the session can stay
+// Rows are the list items that open a resource (on its reader page). (Pages visited earlier in the session can stay
 // in the DOM hidden, so a plain "ul > li" would also count their lists.)
 function rows(page: import("@playwright/test").Page) {
-  return page.locator("li").filter({ has: page.locator('a[href$="/open"]') });
+  return page.locator("li").filter({ has: page.locator('a[href^="/resources/"]') });
 }
 
 async function expectTitles(page: import("@playwright/test").Page, titles: string[]) {
@@ -50,8 +50,8 @@ test("the Exams nav item leads to the full list, newest year first", async ({ pa
   await expect(rows(page).first()).toContainText("2025-2026");
   await expect(rows(page).first()).toContainText("Partial");
   await expect(rows(page).first()).toContainText("EN");
-  await expect(rows(page).first().getByRole("link").first()).toHaveAttribute("target", "_blank");
-  await expect(rows(page).first().getByRole("link").first()).toHaveAttribute("href", /^\/api\/v1\/resources\/[0-9a-f-]{36}\/open$/);
+  await expect(rows(page).first().getByRole("link").first()).not.toHaveAttribute("target", /.+/);
+  await expect(rows(page).first().getByRole("link").first()).toHaveAttribute("href", /^\/resources\/[0-9a-f-]{36}$/);
   // No pager for a single page.
   await expect(page.getByRole("link", { name: "Next" })).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Exam pages" })).toHaveCount(0);
@@ -169,8 +169,8 @@ test("an exam with a solution shows a Solution link", async ({ page }) => {
   const row = rows(page).filter({ hasText: "Sample partial exam 2023" });
   const solution = row.getByRole("link", { name: /^Solution/ });
   await expect(solution).toHaveCount(1);
-  await expect(solution).toHaveAttribute("target", "_blank");
-  await expect(solution).toHaveAttribute("href", /^\/api\/v1\/resources\/[0-9a-f-]{36}\/open$/);
+  await expect(solution).not.toHaveAttribute("target", /.+/);
+  await expect(solution).toHaveAttribute("href", /^\/resources\/[0-9a-f-]{36}$/);
   await expect(rows(page).filter({ hasText: "Sample final exam 2022" }).getByRole("link", { name: /^Solution/ })).toHaveCount(0);
 });
 
