@@ -48,6 +48,8 @@ export interface SearchOutcome {
   query: string;
   // The chip in effect: the one chosen, else the one the words of the query imply.
   chip: SearchChip;
+  // The chip the words of the query ask for ("exam" asks for Exams); All when they ask for none.
+  impliedChip: SearchChip;
   // The folded words to mark in the results.
   highlight: string[];
   // What the words of the query filter files by.

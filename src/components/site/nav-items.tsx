@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 interface NavItem {
   label: string;
   icon: LucideIcon;
-  // Search has no page yet: no href means a disabled item.
+  // No href means a disabled item (a page that does not exist yet).
   href?: string;
   isActive?: (pathname: string) => boolean;
 }
@@ -21,7 +21,7 @@ const ITEMS: NavItem[] = [
     isActive: (p) => p === "/" || p.startsWith("/semesters") || p.startsWith("/courses"),
   },
   { label: "Exams", icon: FileText, href: "/exams", isActive: (p) => p.startsWith("/exams") },
-  { label: "Search", icon: Search },
+  { label: "Search", icon: Search, href: "/search", isActive: (p) => p.startsWith("/search") },
 ];
 
 // "bottom" is the phone tab bar, "top" the inline desktop items.

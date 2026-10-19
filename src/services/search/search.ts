@@ -68,11 +68,13 @@ export async function searchCatalog(query: string, options: Omit<SearchInput, "q
   const input = parseInput(searchInputSchema, { query, ...options });
   const parsed = parseSearchQuery(input.query);
   const wordTypes = filterTypes(parsed);
-  const chip: SearchChip = input.type ?? chipForTypes(wordTypes);
+  const impliedChip = chipForTypes(wordTypes);
+  const chip: SearchChip = input.type ?? impliedChip;
   const outcome: SearchOutcome = {
     state: "results",
     query: input.query,
     chip,
+    impliedChip,
     highlight: highlightTerms(parsed.words),
     filters: { types: wordTypes, sessions: parsed.sessions, year: parsed.year },
     show: null,
@@ -91,8 +93,10 @@ export async function searchCatalog(query: string, options: Omit<SearchInput, "q
 
   // The chip and the words both say which kinds of file; a file must satisfy both.
   const chipTypes = CHIP_TYPES[chip];
-  const fileTypes: string[] | null =
-    wordTypes.length > 0 && chipTypes ? wordTypes.filter((type) => chipTypes.includes(type)) : (chipTypes ?? (wordTypes.length > 0 ? wordTypes : null));
+  let fileTypes: string[] | null = null;
+  if (wordTypes.length > 0 && chipTypes) fileTypes = wordTypes.filter((type) => chipTypes.includes(type));
+  else if (chipTypes) fileTypes = [...chipTypes];
+  else if (wordTypes.length > 0) fileTypes = wordTypes;
 
   const plan: Plan = {
     parsed,

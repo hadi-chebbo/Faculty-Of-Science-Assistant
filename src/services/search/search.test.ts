@@ -1,10 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { getDb } from "@/db/models";
+import type { CreationAttributes } from "sequelize";
+import { getDb, type Resource } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { ValidationError } from "../errors";
 import { searchCatalog } from "./search";
 
 const KEY = "resources/sample.pdf";
+
 
 beforeEach(async () => {
   await truncateAllTables();
@@ -19,7 +21,7 @@ afterAll(async () => {
 async function seed() {
   const { Course, Chapter, Resource } = getDb();
   const c301 = await Course.create({ code: "DEMO301", title: "Théorie des graphes", semester: 3 });
-  const c3011 = await Course.create({ code: "DEMO3011", title: "Other course", semester: 3 });
+  await Course.create({ code: "DEMO3011", title: "Other course", semester: 3 });
   const c302 = await Course.create({ code: "DEMO302", title: "Algorithms", semester: 3 });
   const c401 = await Course.create({ code: "DEMO401", title: "Databases", semester: 4 });
   await Course.create({ code: "EMPTY999", title: "Nothing here", semester: 6 });
@@ -31,7 +33,8 @@ async function seed() {
   const ch401a = await Chapter.create({ courseId: c401.id, position: 1, title: "The relational model" });
 
   const published = { isPublished: true, fileKey: KEY } as const;
-  const resource = (values: Parameters<typeof Resource.create>[0]) => Resource.create({ ...published, ...values });
+  // A published file unless the values say otherwise.
+  const resource = (values: CreationAttributes<Resource>) => Resource.create({ ...published, ...values });
 
   const ch301b = await getDb().Chapter.findOne({ where: { courseId: c301.id, position: 2 } });
   await resource({ courseId: c301.id, chapterId: ch301a.id, type: "lecture", title: "Graph lecture", description: "Introduction" });
@@ -364,6 +367,9 @@ describe("filter words", () => {
     expect(outcome.courses?.total).toBe(0);
     const only = await searchCatalog("exam", { type: "all" });
     expect(only.chip).toBe("all");
+    // The page needs to know that "all" has to be written into the address to stay All.
+    expect(only.impliedChip).toBe("exam");
+    expect((await searchCatalog("graph")).impliedChip).toBe("all");
     expect(only.filters.types).toEqual(["exam"]);
     expect(titles(only)).toHaveLength(3);
   });

@@ -86,3 +86,18 @@ export function StatsAndSemestersSkeleton() {
     </div>
   );
 }
+
+// Search page: the box and a few result rows.
+export function SearchSkeleton() {
+  return (
+    <div role="status" aria-label="Loading search">
+      <TitleSkeleton />
+      <Skeleton className="h-12 w-full rounded-lg" />
+      <div className="mt-4 space-y-2">
+        {Array.from({ length: 3 }, (_, i) => (
+          <Skeleton key={i} className="h-[4.5rem] w-full" />
+        ))}
+      </div>
+    </div>
+  );
+}
