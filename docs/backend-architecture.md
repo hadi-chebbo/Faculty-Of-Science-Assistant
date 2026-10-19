@@ -70,11 +70,35 @@ Server pages must not call the app's own API over HTTP. If an endpoint must be p
 
 ## File storage
 
-Every resource will have one stored PDF. All code reaches files through one interface, `FileStorage` (`src/lib/storage/types.ts`), with two drivers chosen by `STORAGE_DRIVER`: a local folder (development, tests, CI, so none of them needs the cloud) and Cloudflare R2 (production, a later change). `getStorage()` builds the driver lazily, so importing it reads no environment and the build needs no storage configuration. Keys are generated (`resources/<uuid>.pdf`) and every driver rejects any key outside lower-case letters, digits, `-`, `_`, `.` and `/` before touching the disk.
+Every resource will have one stored PDF. All code reaches files through one interface, `FileStorage` (`src/lib/storage/types.ts`), with two drivers chosen by `STORAGE_DRIVER`: a local folder (development, tests, CI, so none of them needs the cloud) and Cloudflare R2 (production). `getStorage()` builds the driver lazily, so importing it reads no environment and the build needs no storage configuration. Keys are generated (`resources/<uuid>.pdf`) and every driver rejects any key outside lower-case letters, digits, `-`, `_`, `.` and `/` before touching the disk.
 
 Browsers upload straight to storage through a short-lived signed URL, because a Vercel function cannot receive a large request body; the server afterwards checks what arrived (size, and `looksLikePdf` on the first bytes). Files are read through short-lived signed URLs too.
 
-The local driver imitates this with `PUT` and `GET /api/v1/storage/local?token=…`. They answer 404 unless the driver is `local`. The token is the whole authorisation (no cookies): a JWT signed with `AUTH_SECRET` under its own audience (`ua-storage`), so it is never accepted as an access token and vice versa. A `put` token carries the key, content type and size limit; a `get` token carries the key, disposition (inline or attachment) and filename. The upload is counted while streaming and refused with 413 over the limit, leaving nothing on disk. The R2 driver comes next.
+The local driver imitates this with `PUT` and `GET /api/v1/storage/local?token=…`. They answer 404 unless the driver is `local`. The token is the whole authorisation (no cookies): a JWT signed with `AUTH_SECRET` under its own audience (`ua-storage`), so it is never accepted as an access token and vice versa. A `put` token carries the key, content type and size limit; a `get` token carries the key, disposition (inline or attachment) and filename. The upload is counted while streaming and refused with 413 over the limit, leaving nothing on disk.
+
+### Cloudflare R2 driver
+
+`src/lib/storage/r2.ts` implements the same interface against R2's S3 API with `aws4fetch` (a small SigV4 signer; the AWS SDK would be far more code for six HTTP calls). It is chosen by `STORAGE_DRIVER=r2` (the default on Vercel) and needs four variables, checked lazily and reported by name only: `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` (see `.env.example`). The endpoint is `https://<account id>.r2.cloudflarestorage.com`, path-style (`/<bucket>/<key>`), region `auto`. Server-side calls (`put`, `stat`, `readStart`, `delete`) are signed requests; `createReadUrl` and `createUploadUrl` return query-signed (presigned) URLs. The read URL sets `response-content-disposition` and, for `.pdf` keys, `response-content-type`. The upload URL signs the `Content-Type` header, so R2 refuses an upload sent with another type.
+
+**Upload size is not enforced by R2.** A signed `PUT` URL cannot carry a maximum size, so `maxBytes` is ignored by this driver. The server-side check after the upload (size via `stat`, content via `readStart`) is what enforces size and content, and it must delete a file that fails it. Errors from the driver name the operation and the HTTP status only, never a key, a URL or a response body.
+
+Bucket settings the owner applies in the Cloudflare dashboard (R2 → the bucket → Settings):
+
+- Public access off: no `r2.dev` URL and no custom domain. Every read goes through a signed URL.
+- A CORS policy so browsers can upload to and read from signed URLs. Replace `YOUR-DOMAIN` with the production domain:
+
+```json
+[
+  {
+    "AllowedOrigins": ["http://localhost:3000", "https://YOUR-DOMAIN"],
+    "AllowedMethods": ["PUT", "GET", "HEAD"],
+    "AllowedHeaders": ["Content-Type"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+`npm run storage:check` exercises the driver against the real bucket (with `STORAGE_DRIVER=r2` and the four variables in `.env`): it uploads, reads, uploads through an upload URL, deletes and confirms, printing one line per step. Run it once after creating the bucket and the API token. It needs Node 22.18 or newer, which runs the TypeScript driver directly.
 
 ## Alternatives considered
 

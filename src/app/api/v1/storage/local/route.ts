@@ -1,5 +1,6 @@
 import { NO_STORE } from "@/lib/auth/request";
 import { getStorage, getStorageConfig } from "@/lib/storage/config";
+import { safeFilename } from "@/lib/storage/filename";
 import { verifyStorageToken } from "@/lib/storage/token";
 
 // Stand-in for the cloud's signed URLs when STORAGE_DRIVER=local. The token is the whole
@@ -7,13 +8,15 @@ import { verifyStorageToken } from "@/lib/storage/token";
 const respond = (status: number, headers: Record<string, string> = {}) =>
   new Response(null, { status, headers: { ...NO_STORE, ...headers } });
 
-const isLocal = () => getStorageConfig().driver === "local";
-
-// Quotes, slashes, control characters and line breaks are dropped so the header cannot be broken.
-function safeFilename(name: string | undefined): string {
-  const cleaned = (name ?? "").replace(/[\u0000-\u001f\u007f"\\/;]/g, "").trim().slice(0, 150);
-  return cleaned || "file.pdf";
-}
+// Any configuration that is not a usable local driver (R2, or R2 with its settings missing) means
+// this route does not exist.
+const isLocal = () => {
+  try {
+    return getStorageConfig().driver === "local";
+  } catch {
+    return false;
+  }
+};
 
 export async function PUT(request: Request) {
   if (!isLocal()) return respond(404);
