@@ -1,14 +1,29 @@
 "use client";
 
-import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
+import type { PDFDocumentProxy, PDFPageProxy, RenderTask, TextLayer } from "pdfjs-dist";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { applyHighlights } from "./reader-highlight";
+import type { PageMatch } from "./reader-search";
 import { MAX_CANVAS_PIXELS_SMALL, canvasPixelRatio } from "./reader-zoom";
 
 // Pages within this distance of the viewport are drawn; the rest are empty placeholders.
 const RENDER_MARGIN = "150% 0px";
 
-// One page: a white sheet of the size it is shown at, with a canvas drawn only while it is near
-// the screen. `root` is the element that scrolls the pages, or null when the window does.
+// The search matches of one page: all of them, and which one is the current match, if it is here.
+export interface PageHits {
+  matches: PageMatch[];
+  current: number | null;
+}
+
+// The page's text as the text layer holds it: one element and one string per PDF text item.
+interface LayerText {
+  elements: HTMLElement[];
+  strings: string[];
+}
+
+// One page: a white sheet of the size it is shown at, with a canvas and a text layer (so the text
+// can be selected, and search matches shown) drawn only while it is near the screen. `root` is the
+// element that scrolls the pages, or null when the window does.
 export function PageCanvas({
   pdf,
   number,
@@ -18,6 +33,7 @@ export function PageCanvas({
   cssHeight,
   root,
   ready,
+  hits,
 }: {
   pdf: PDFDocumentProxy;
   number: number;
@@ -27,10 +43,20 @@ export function PageCanvas({
   cssHeight: number;
   root: Element | null;
   ready: boolean;
+  hits?: PageHits;
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
   const [near, setNear] = useState(false);
+  const [layerText, setLayerText] = useState<LayerText | null>(null);
+  // The text layer and its page, kept so a zoom change can lay the text out again.
+  const layerRef = useRef<{ layer: TextLayer; page: PDFPageProxy } | null>(null);
+  // The size the text layer is laid out for, in CSS pixels per PDF point.
+  const scaleRef = useRef(cssWidth / pointsWidth);
+  useEffect(() => {
+    scaleRef.current = cssWidth / pointsWidth;
+  }, [cssWidth, pointsWidth]);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -83,6 +109,56 @@ export function PageCanvas({
     };
   }, [near, ready, draw, number, pdf]);
 
+  // The text layer is built once when the page comes near and freed when it goes far; zooming only
+  // changes --scale-factor (see the next effect), so a selection or a match survives it. A scanned
+  // page has no text: the layer is simply empty.
+  useEffect(() => {
+    const container = textRef.current;
+    if (!container || !near || !ready) return;
+    let cancelled = false;
+    let layer: TextLayer | undefined;
+    (async () => {
+      const [{ TextLayer: Layer }, page] = await Promise.all([import("pdfjs-dist"), pdf.getPage(number)]);
+      if (cancelled) return;
+      container.style.setProperty("--scale-factor", String(scaleRef.current));
+      layer = new Layer({ textContentSource: page.streamTextContent(), container, viewport: page.getViewport({ scale: scaleRef.current }) });
+      // PDF.js sizes the layer with variables of its own page box; this box already has the size.
+      container.style.width = "100%";
+      container.style.height = "100%";
+      layerRef.current = { layer, page };
+      await layer.render();
+      if (cancelled) return;
+      setLayerText({ elements: layer.textDivs, strings: layer.textContentItemsStr });
+    })().catch((error: unknown) => {
+      if (cancelled || (error instanceof Error && error.name === "AbortException")) return;
+      console.error(`reader failed to build the text of page ${number}`, error);
+    });
+    return () => {
+      cancelled = true;
+      layer?.cancel();
+      layerRef.current = null;
+      container.replaceChildren();
+      setLayerText(null);
+    };
+  }, [near, ready, pdf, number]);
+
+  useEffect(() => {
+    const container = textRef.current;
+    if (!container) return;
+    const scale = cssWidth / pointsWidth;
+    container.style.setProperty("--scale-factor", String(scale));
+    const built = layerRef.current;
+    if (built && layerText) built.layer.update({ viewport: built.page.getViewport({ scale }) });
+  }, [cssWidth, pointsWidth, layerText]);
+
+  // Search matches go on the text layer once it exists, and come off again when they change.
+  const matches = hits?.matches;
+  const current = hits?.current ?? null;
+  useEffect(() => {
+    if (!layerText || !matches || matches.length === 0) return;
+    return applyHighlights(layerText.elements, layerText.strings, matches, current);
+  }, [layerText, matches, current]);
+
   return (
     <div
       ref={wrapperRef}
@@ -96,6 +172,8 @@ export function PageCanvas({
         aria-label={`Page ${number} of ${total}`}
         className="absolute inset-0 size-full"
       />
+      {/* Text only to select and copy: the canvas already shows it. */}
+      <div ref={textRef} aria-hidden className="reader-text" />
     </div>
   );
 }

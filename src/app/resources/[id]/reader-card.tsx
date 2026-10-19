@@ -1,14 +1,18 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Minus, Plus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minus, PanelLeft, Plus, Search, X } from "lucide-react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { PageCanvas } from "./page-canvas";
+import { PageCanvas, type PageHits } from "./page-canvas";
+import { ReaderContents, useOutline } from "./reader-contents";
 import { ReaderMenu } from "./reader-menu";
+import { readContentsOpen, writeContentsOpen } from "./reader-panel";
 import { pageToOffer, readLastPage, writeLastPage } from "./reader-position";
+import { ReaderSearchBar } from "./reader-search-bar";
 import { createTapTracker } from "./reader-tap";
 import {
   clampPage,
@@ -21,6 +25,7 @@ import {
   type ZoomMode,
 } from "./reader-zoom";
 import { useAutoHide } from "./use-auto-hide";
+import { useDocumentSearch } from "./use-document-search";
 
 export interface PageSize {
   // In PDF points.
@@ -35,6 +40,13 @@ const PADDING = 16;
 // On a phone the window scrolls: the site header, the document's top row and the tab bar take this much.
 const PHONE_CHROME = 56 + 52 + 56;
 const PHONE_TAB_BAR = 56;
+// The search bar under the top row (a 40px box and its padding, and a border).
+const SEARCH_BAR_HEIGHT = 49;
+// Typing pauses this long before the search runs.
+const SEARCH_DEBOUNCE_MS = 250;
+// A search match is looked for on its page for this many animation frames (the page's text layer
+// may still be on its way) before the reader gives up on centring it.
+const REVEAL_FRAMES = 180;
 const PAGE_GAP_ABOVE = 8;
 // Longer than a smooth scroll to any page takes.
 const JUMP_SETTLE_MS = 900;
@@ -126,6 +138,11 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
   const [offer, setOffer] = useState<number | null>(() => pageToOffer(readLastPage(resourceId), total));
   const [menuOpen, setMenuOpen] = useState(false);
   const menuOpenRef = useRef(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  // Contents: on a wide screen a panel beside the pages (remembered); on a phone a sheet.
+  const [contentsOpen, setContentsOpen] = useState(() => readContentsOpen());
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const panelShown = desktop && contentsOpen;
 
   // ---- Zoom -------------------------------------------------------------------------------
   const maxWidth = Math.max(...sizes.map((s) => s.width));
@@ -138,6 +155,9 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
       : fitWidthPercent(available.width, maxWidth);
   const percent = mode.kind === "zoom" ? mode.percent : fitPercent;
 
+  // On a phone the window scrolls and the search bar takes room from the pages' view.
+  const phoneSearch = !inner && searchOpen;
+
   const zoomBy = useCallback((direction: 1 | -1) => setMode({ kind: "zoom", percent: stepZoom(percent, direction) }), [percent]);
 
   // The reading area's size, debounced so dragging a window edge does not redraw every page at
@@ -147,7 +167,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     let timer: ReturnType<typeof setTimeout> | undefined;
     let first = true;
     const measure = () => {
-      const height = inner ? scroller.clientHeight : window.innerHeight - PHONE_CHROME;
+      const height = inner ? scroller.clientHeight : window.innerHeight - PHONE_CHROME - (phoneSearch ? SEARCH_BAR_HEIGHT : 0);
       setAvailable({
         width: fitAreaWidth(scroller.clientWidth, desktop),
         height: Math.max(1, height - 2 * PADDING),
@@ -170,7 +190,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
       observer.disconnect();
       window.removeEventListener("resize", schedule);
     };
-  }, [scroller, inner, desktop]);
+  }, [scroller, inner, desktop, phoneSearch]);
 
   // ---- Where the reader is ----------------------------------------------------------------
   // The part of the screen the pages are seen through.
@@ -192,6 +212,8 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
   // While the reader is being taken to a page (a smooth scroll), the pages passing by do not
   // change the current page: it is the one asked for.
   const jumpUntil = useRef(0);
+  // The page that scroll is taking the reader to.
+  const jumpPage = useRef(0);
   const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(settleTimer.current), []);
 
@@ -275,9 +297,14 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     const key = `${ready}|${Math.round(percent * 100)}|${inner}`;
     const before = lastLayout.current;
     lastLayout.current = key;
-    const anchor = anchorRef.current;
+    let anchor = anchorRef.current;
     // Nothing to keep before the first layout, or when only the first measurement arrived.
     if (!scroller || !anchor || before === null || !before.startsWith("true")) return;
+    // The layout changed while the reader was being taken to a page (the Contents panel opening
+    // narrows the pages a moment after it is used): stay on the way to that page, not on the old one.
+    if (performance.now() < jumpUntil.current && jumpPage.current > 0) {
+      anchor = { page: jumpPage.current, fraction: 0, gap: PAGE_GAP_ABOVE, centre: anchor.centre };
+    }
     const element = scroller.querySelector<HTMLElement>(`[data-page="${anchor.page}"]`);
     if (!element) return;
     const area = scrollerRef.current;
@@ -306,6 +333,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
       // Settle on what is really in view once the scroll is over.
       const duration = behavior === "smooth" ? JUMP_SETTLE_MS : 50;
       jumpUntil.current = performance.now() + duration;
+      jumpPage.current = page;
       pokeBar();
       clearTimeout(settleTimer.current);
       settleTimer.current = setTimeout(update, duration + 50);
@@ -419,10 +447,144 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     [],
   );
 
+  // ---- Contents ---------------------------------------------------------------------------
+  const outline = useOutline(pdf, panelShown || sheetOpen);
+  const toggleContents = () => {
+    const next = !contentsOpen;
+    setContentsOpen(next);
+    writeContentsOpen(next);
+  };
+  const chooseContents = (page: number) => {
+    if (desktop) {
+      goTo(page);
+      return;
+    }
+    // The sheet closes first; the scroll lock it puts on the page is gone a moment later.
+    setSheetOpen(false);
+    setTimeout(() => goTo(page), 60);
+  };
+
+  // ---- Search -----------------------------------------------------------------------------
+  const [query, setQuery] = useState("");
+  const [term, setTerm] = useState("");
+  const [focusSearch, setFocusSearch] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchButtonRef = useRef<HTMLButtonElement>(null);
+  const { status: search, step: stepSearch } = useDocumentSearch(pdf, searchOpen ? term : "", () => currentRef.current);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    const timer = setTimeout(() => setTerm(query), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query, searchOpen]);
+  useEffect(() => {
+    if (focusSearch === 0) return;
+    searchInputRef.current?.focus();
+    searchInputRef.current?.select();
+  }, [focusSearch]);
+
+  const openSearch = useCallback(() => {
+    setSearchOpen(true);
+    setFocusSearch((n) => n + 1);
+  }, []);
+  const closeSearch = useCallback((returnFocus: boolean) => {
+    setSearchOpen(false);
+    setQuery("");
+    setTerm("");
+    if (returnFocus) searchButtonRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  // Taking the reader to a search match: the match's page first, then the match itself near the
+  // middle of the reading area once the page's text layer has marked it.
+  const revealFrame = useRef(0);
+  const reveal = useCallback(
+    (page: number) => {
+      const area = scrollerRef.current;
+      if (!area) return;
+      cancelAnimationFrame(revealFrame.current);
+      let frames = 0;
+      let cancelled = false;
+      const stop = () => {
+        cancelled = true;
+        area.removeEventListener("wheel", stop);
+        area.removeEventListener("touchstart", stop);
+      };
+      // The reader taking over with the wheel or a finger wins.
+      area.addEventListener("wheel", stop, { passive: true });
+      area.addEventListener("touchstart", stop, { passive: true });
+      jumpUntil.current = performance.now() + 1000;
+      jumpPage.current = page;
+      setCurrent(page);
+
+      const pageElement = area.querySelector<HTMLElement>(`[data-page="${page}"]`);
+      if (pageElement) {
+        const delta = pageElement.getBoundingClientRect().top - viewport().top - PAGE_GAP_ABOVE;
+        if (inner) area.scrollBy({ top: delta, behavior: "instant" });
+        else window.scrollBy({ top: delta, behavior: "instant" });
+      }
+
+      const attempt = () => {
+        if (cancelled) return;
+        const mark = area.querySelector<HTMLElement>(`[data-page="${page}"] mark.reader-hit-current`);
+        if (mark) {
+          const box = mark.getBoundingClientRect();
+          const view = viewport();
+          const delta = box.top + box.height / 2 - (view.top + view.bottom) / 2;
+          if (inner) area.scrollBy({ top: delta, behavior: "instant" });
+          else window.scrollBy({ top: delta, behavior: "instant" });
+          if (area.scrollWidth > area.clientWidth + 1) {
+            const areaBox = area.getBoundingClientRect();
+            area.scrollLeft += box.left + box.width / 2 - (areaBox.left + areaBox.width / 2);
+          }
+          stop();
+          jumpUntil.current = performance.now() + 100;
+          clearTimeout(settleTimer.current);
+          settleTimer.current = setTimeout(update, 150);
+        } else if (++frames < REVEAL_FRAMES) {
+          revealFrame.current = requestAnimationFrame(attempt);
+        } else {
+          stop();
+          clearTimeout(settleTimer.current);
+          settleTimer.current = setTimeout(update, 50);
+        }
+      };
+      revealFrame.current = requestAnimationFrame(attempt);
+    },
+    [viewport, inner, update],
+  );
+  const revealRef = useRef(reveal);
+  useEffect(() => {
+    revealRef.current = reveal;
+  });
+  useEffect(() => () => cancelAnimationFrame(revealFrame.current), []);
+  // A new search result, or a step to another match.
+  useEffect(() => {
+    if (!searchOpen || search.kind !== "done") return;
+    const match = search.result.flat[search.current];
+    if (match) revealRef.current(match.page);
+  }, [searchOpen, search]);
+
+  const hitsOf = (page: number): PageHits | undefined => {
+    if (!searchOpen || search.kind !== "done") return undefined;
+    const matches = search.result.byPage.get(page);
+    if (!matches) return undefined;
+    const match = search.result.flat[search.current];
+    return { matches, current: match?.page === page ? match.index : null };
+  };
+
   // ---- Keyboard ---------------------------------------------------------------------------
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.defaultPrevented) return;
+      // Ctrl+F / Cmd+F opens our search instead of the browser's, which cannot see the page's text
+      // while it is drawn on canvases. Menus and sheets keep the browser's.
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "f") {
+        if (menuOpenRef.current || (event.target instanceof Element && event.target.closest('[role="menu"], [role="dialog"]'))) return;
+        event.preventDefault();
+        openSearch();
+        return;
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (isTyping(event.target)) return;
       // Menus and sheets have their own keys.
       if (event.target instanceof Element && event.target.closest('[role="menu"], [role="dialog"]')) return;
@@ -459,8 +621,10 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
           setMode({ kind: "width" });
           break;
         case "Escape":
-          if (!focus) return;
-          exitFocus();
+          // Esc closes the search first, then leaves focus mode.
+          if (searchOpen) closeSearch(false);
+          else if (focus) exitFocus();
+          else return;
           break;
         default:
           return;
@@ -469,7 +633,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [goTo, zoomBy, exitFocus, current, total, focus]);
+  }, [goTo, zoomBy, exitFocus, current, total, focus, searchOpen, openSearch, closeSearch]);
 
   // ---- Render -----------------------------------------------------------------------------
   const barHidden = !bar.shown;
@@ -490,35 +654,92 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
         desktop && !focus && "h-[max(30rem,calc(100dvh-13rem))] overflow-hidden",
       )}
     >
-      <div
-        ref={topRowRef}
-        className={cn(
-          "z-20 flex shrink-0 items-center gap-1 border-b bg-card px-2",
-          desktop ? "h-12" : "h-[52px]",
-          !focus && "rounded-t-xl",
-          !inner && "sticky top-14",
+      {/* The top row holds only Contents (left) and Search and More actions (right). The search bar,
+          when open, hangs under it inside the same sticky box. */}
+      <div ref={topRowRef} className={cn("z-20 shrink-0 border-b bg-card", !focus && "rounded-t-xl", !inner && "sticky top-14")}>
+        <div className={cn("flex items-center gap-1 px-2", desktop ? "h-12" : "h-[52px]")}>
+          {desktop ? (
+            <Button
+              variant="ghost"
+              className={cn("h-10 gap-2 px-3", contentsOpen && "bg-accent text-accent-foreground")}
+              aria-expanded={contentsOpen}
+              aria-controls="reader-contents"
+              onClick={toggleContents}
+            >
+              <PanelLeft aria-hidden />
+              Contents
+            </Button>
+          ) : (
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className={cn("size-10", sheetOpen && "bg-accent text-accent-foreground")} aria-label="Contents">
+                  <PanelLeft aria-hidden />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="gap-0 pb-[env(safe-area-inset-bottom)]">
+                <SheetHeader>
+                  <SheetTitle>Contents</SheetTitle>
+                  <SheetDescription className="sr-only">Go to a part of the document.</SheetDescription>
+                </SheetHeader>
+                <ReaderContents pdf={pdf} sizes={sizes} outline={outline} current={current} onSelect={chooseContents} />
+              </SheetContent>
+            </Sheet>
+          )}
+          <div className="flex-1" />
+          <Button
+            ref={searchButtonRef}
+            variant="ghost"
+            size="icon"
+            className={cn("size-10", searchOpen && "bg-accent text-accent-foreground")}
+            aria-label="Search in document"
+            aria-expanded={searchOpen}
+            onClick={() => (searchOpen ? closeSearch(false) : openSearch())}
+          >
+            <Search aria-hidden />
+          </Button>
+          <ReaderMenu
+            id={resourceId}
+            sheet={!desktop}
+            fit={mode.kind === "zoom" ? null : mode.kind}
+            focus={focus}
+            open={menuOpen}
+            onOpenChange={(open) => {
+              menuOpenRef.current = open;
+              setMenuOpen(open);
+              if (!open) pokeBar();
+            }}
+            onFit={(fit) => setMode({ kind: fit })}
+            onFocus={() => (focus ? exitFocus() : enterFocus())}
+            triggerRef={menuButtonRef}
+          />
+        </div>
+        {searchOpen && (
+          <ReaderSearchBar
+            query={query}
+            onQueryChange={(value) => {
+              setQuery(value);
+              if (!value.trim()) setTerm("");
+            }}
+            status={search}
+            onStep={stepSearch}
+            onFlush={() => setTerm(query)}
+            pending={query !== term}
+            onClose={() => closeSearch(true)}
+            inputRef={searchInputRef}
+          />
         )}
-      >
-        {/* Room for the Contents button on the left and Search on the right, which come later. */}
-        <div className="flex-1" />
-        <ReaderMenu
-          id={resourceId}
-          sheet={!desktop}
-          fit={mode.kind === "zoom" ? null : mode.kind}
-          focus={focus}
-          open={menuOpen}
-          onOpenChange={(open) => {
-            menuOpenRef.current = open;
-            setMenuOpen(open);
-            if (!open) pokeBar();
-          }}
-          onFit={(fit) => setMode({ kind: fit })}
-          onFocus={() => (focus ? exitFocus() : enterFocus())}
-          triggerRef={menuButtonRef}
-        />
       </div>
 
-      <div className={cn("relative", inner && "min-h-0 flex-1")}>
+      <div className={cn(inner && "flex min-h-0 flex-1")}>
+        {panelShown && (
+          <aside id="reader-contents" className="flex w-[200px] shrink-0 flex-col border-r bg-card pt-3">
+            <p aria-hidden className="px-4 pb-2 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              Contents
+            </p>
+            <ReaderContents pdf={pdf} sizes={sizes} outline={outline} current={current} onSelect={chooseContents} />
+          </aside>
+        )}
+      <div className={cn("relative", inner && "min-h-0 min-w-0 flex-1")}>
         <div
           ref={setScroller}
           onPointerDown={(event) => {
@@ -555,6 +776,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
                   cssHeight={css.height}
                   root={inner ? scroller : null}
                   ready={ready}
+                  hits={hitsOf(i + 1)}
                 />
               );
             })}
@@ -694,6 +916,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
             </div>
           </div>
         </div>
+      </div>
       </div>
     </section>
   );
