@@ -3,6 +3,11 @@
 // DEVELOPMENT ONLY. All data is obviously fake; the real course list is loaded in a later phase.
 // Runs only when SEED_DEMO_DATA=true.
 
+/* eslint-disable @typescript-eslint/no-require-imports */
+const path = require('node:path');
+const { pathToFileURL } = require('node:url');
+/* eslint-enable @typescript-eslint/no-require-imports */
+
 const SKIP_MESSAGE = 'demo-courses-and-resources: skipped (SEED_DEMO_DATA is not "true")';
 
 const COURSES = [
@@ -181,7 +186,66 @@ async function deleteDemoData(queryInterface, transaction) {
   await sequelize.query("DELETE FROM courses WHERE code LIKE 'DEMO%'", { transaction });
 }
 
-function toRow(r, courseIds, now, solutionOfId) {
+// Everything about the stored files goes through the app's own storage driver (local folder, or R2
+// when STORAGE_DRIVER=r2). The storage code is TypeScript, so a small helper loads it.
+async function loadStorage() {
+  const helper = pathToFileURL(path.join(__dirname, 'lib', 'storage.mjs')).href;
+  return (await import(helper)).loadStorage();
+}
+
+const TYPE_LABELS = {
+  lecture: 'Lecture',
+  notes: 'Notes',
+  exercise: 'Exercise',
+  exam: 'Exam',
+  solution: 'Solution',
+  other: 'Other',
+};
+const SESSION_LABELS = { partial: 'partial', final: 'final', second: 'second session' };
+
+function pdfLines(r, courseTitles) {
+  const type = r.solutionOf ? 'solution' : r.type;
+  const details = [TYPE_LABELS[type]];
+  if (type === 'exam' && r.session) details.push(SESSION_LABELS[r.session]);
+  if (r.year) details.push(String(r.year));
+  return [
+    'SAMPLE FILE',
+    r.title,
+    `${r.course} - ${courseTitles.get(r.course)}`,
+    details.join(', '),
+    'Placeholder for development. Not university material.',
+  ];
+}
+
+// Stores one placeholder PDF per resource that has a source and returns the keys by resource object.
+// If storing fails part way, the files already stored are removed again.
+async function storeFiles(resources, courseTitles) {
+  const { getStorage, newResourceFileKey, samplePdf, contentType } = await loadStorage();
+  const storage = getStorage();
+  const keys = new Map();
+  try {
+    for (const r of resources) {
+      if (r.noSource) continue;
+      const key = newResourceFileKey();
+      await storage.put(key, samplePdf(pdfLines(r, courseTitles)), contentType);
+      keys.set(r, key);
+    }
+  } catch (error) {
+    await Promise.allSettled([...keys.values()].map((key) => storage.delete(key)));
+    throw error;
+  }
+  return { keys, storage };
+}
+
+async function demoFileKeys(queryInterface, transaction) {
+  const [rows] = await queryInterface.sequelize.query(
+    "SELECT file_key FROM resources WHERE file_key IS NOT NULL AND course_id IN (SELECT id FROM courses WHERE code LIKE 'DEMO%')",
+    { transaction },
+  );
+  return rows.map((row) => row.file_key);
+}
+
+function toRow(r, courseIds, now, solutionOfId, fileKey) {
   const published = !r.draft;
   return {
     course_id: courseIds.get(r.course),
@@ -191,7 +255,7 @@ function toRow(r, courseIds, now, solutionOfId) {
     academic_year_start: r.year ?? null,
     exam_session: r.session ?? null,
     language: r.language ?? 'en',
-    file_key: null,
+    file_key: fileKey ?? null,
     external_url: r.noSource ? null : url(r.path),
     solution_of_id: solutionOfId ?? null,
     is_published: published,
@@ -207,94 +271,120 @@ module.exports = {
       return;
     }
 
-    await queryInterface.sequelize.transaction(async (transaction) => {
-      const now = new Date();
-      await deleteDemoData(queryInterface, transaction);
+    // Files first, then the rows that point at them. If the insert fails, the files are removed.
+    const courseTitles = new Map(COURSES.map((c) => [c.code, c.title]));
+    const allResources = [
+      ...RESOURCES,
+      ...SOLUTIONS.map((s) => ({ ...s, type: 'solution', solutionOf: true })),
+    ];
+    const { keys, storage } = await storeFiles(allResources, courseTitles);
+    const solutionKeys = new Map(SOLUTIONS.map((s, i) => [s, keys.get(allResources[RESOURCES.length + i])]));
 
-      await queryInterface.bulkInsert(
-        'courses',
-        COURSES.map((c) => ({ ...c, created_at: now, updated_at: now })),
-        { transaction },
-      );
+    // The previous demo files are removed once the new rows are committed (below).
+    let previousKeys = [];
+    try {
+      await queryInterface.sequelize.transaction(async (transaction) => {
+        const now = new Date();
+        previousKeys = await demoFileKeys(queryInterface, transaction);
+        await deleteDemoData(queryInterface, transaction);
 
-      const [courseRows] = await queryInterface.sequelize.query(
-        "SELECT id, code FROM courses WHERE code LIKE 'DEMO%'",
-        { transaction },
-      );
-      const courseIds = new Map(courseRows.map((row) => [row.code, row.id]));
+        await queryInterface.bulkInsert(
+          'courses',
+          COURSES.map((c) => ({ ...c, created_at: now, updated_at: now })),
+          { transaction },
+        );
 
-      await queryInterface.bulkInsert(
-        'resources',
-        RESOURCES.map((r) => toRow(r, courseIds, now)),
-        { transaction },
-      );
+        const [courseRows] = await queryInterface.sequelize.query(
+          "SELECT id, code FROM courses WHERE code LIKE 'DEMO%'",
+          { transaction },
+        );
+        const courseIds = new Map(courseRows.map((row) => [row.code, row.id]));
 
-      // Look up the ids of the resources that solutions point at.
-      const loadResourceRows = async () =>
-        (
+        await queryInterface.bulkInsert(
+          'resources',
+          RESOURCES.map((r) => toRow(r, courseIds, now, undefined, keys.get(r))),
+          { transaction },
+        );
+
+        // Look up the ids of the resources that solutions point at.
+        const loadResourceRows = async () =>
+          (
+            await queryInterface.sequelize.query(
+              'SELECT id, course_id, title FROM resources WHERE course_id IN (:ids)',
+              { transaction, replacements: { ids: [...courseIds.values()] } },
+            )
+          )[0];
+        let resourceRows = await loadResourceRows();
+        const idFor = (courseCode, title) => {
+          const row = resourceRows.find(
+            (x) => x.course_id === courseIds.get(courseCode) && x.title === title,
+          );
+          if (!row) throw new Error(`demo seed: missing resource "${title}" in ${courseCode}`);
+          return row.id;
+        };
+        const byKey = new Map(
+          RESOURCES.filter((r) => r.key).map((r) => [r.key, idFor(r.course, r.title)]),
+        );
+
+        await queryInterface.bulkInsert(
+          'resources',
+          SOLUTIONS.map((s) => {
+            const solutionOfId = byKey.get(s.of);
+            return toRow({ ...s, type: 'solution', solutionOf: true }, courseIds, now, solutionOfId, solutionKeys.get(s));
+          }),
+          { transaction },
+        );
+
+        resourceRows = await loadResourceRows(); // Now including the solutions.
+
+        // Chapters. The demo data is deleted and re-created above, so this is safe to run again
+        // on a database that already has the demo courses and resources.
+        await queryInterface.bulkInsert(
+          'chapters',
+          [...CHAPTERS].flatMap(([code, titles]) =>
+            titles.map((title, i) => ({
+              course_id: courseIds.get(code),
+              position: i + 1,
+              title,
+              created_at: now,
+              updated_at: now,
+            })),
+          ),
+          { transaction },
+        );
+
+        for (const { course, title, chapter } of IN_CHAPTER) {
           await queryInterface.sequelize.query(
-            'SELECT id, course_id, title FROM resources WHERE course_id IN (:ids)',
-            { transaction, replacements: { ids: [...courseIds.values()] } },
-          )
-        )[0];
-      let resourceRows = await loadResourceRows();
-      const idFor = (courseCode, title) => {
-        const row = resourceRows.find(
-          (x) => x.course_id === courseIds.get(courseCode) && x.title === title,
-        );
-        if (!row) throw new Error(`demo seed: missing resource "${title}" in ${courseCode}`);
-        return row.id;
-      };
-      const byKey = new Map(
-        RESOURCES.filter((r) => r.key).map((r) => [r.key, idFor(r.course, r.title)]),
-      );
-
-      await queryInterface.bulkInsert(
-        'resources',
-        SOLUTIONS.map((s) => {
-          const solutionOfId = byKey.get(s.of);
-          return toRow({ ...s, type: 'solution', solutionOf: true }, courseIds, now, solutionOfId);
-        }),
-        { transaction },
-      );
-
-      resourceRows = await loadResourceRows(); // Now including the solutions.
-
-      // Chapters. The demo data is deleted and re-created above, so this is safe to run again
-      // on a database that already has the demo courses and resources.
-      await queryInterface.bulkInsert(
-        'chapters',
-        [...CHAPTERS].flatMap(([code, titles]) =>
-          titles.map((title, i) => ({
-            course_id: courseIds.get(code),
-            position: i + 1,
-            title,
-            created_at: now,
-            updated_at: now,
-          })),
-        ),
-        { transaction },
-      );
-
-      for (const { course, title, chapter } of IN_CHAPTER) {
-        await queryInterface.sequelize.query(
-          'UPDATE resources SET chapter_id = (SELECT id FROM chapters WHERE course_id = :courseId AND position = :position) WHERE id = :resourceId',
-          {
-            transaction,
-            replacements: {
-              courseId: courseIds.get(course),
-              position: chapter,
-              resourceId: idFor(course, title),
+            'UPDATE resources SET chapter_id = (SELECT id FROM chapters WHERE course_id = :courseId AND position = :position) WHERE id = :resourceId',
+            {
+              transaction,
+              replacements: {
+                courseId: courseIds.get(course),
+                position: chapter,
+                resourceId: idFor(course, title),
+              },
             },
-          },
-        );
-      }
-    });
+          );
+        }
+      });
+    } catch (error) {
+      await Promise.allSettled([...keys.values()].map((key) => storage.delete(key)));
+      throw error;
+    }
+    await Promise.allSettled(previousKeys.map((key) => storage.delete(key)));
   },
 
   async down(queryInterface) {
+    let keys = [];
     await queryInterface.sequelize.transaction(async (transaction) => {
+      keys = await demoFileKeys(queryInterface, transaction);
       await deleteDemoData(queryInterface, transaction);
     });
+    // Remove the stored files once the rows are gone (a missing object is fine).
+    if (keys.length > 0) {
+      const { getStorage } = await loadStorage();
+      const storage = getStorage();
+      await Promise.all(keys.map((key) => storage.delete(key)));
+    }
   },
 };
