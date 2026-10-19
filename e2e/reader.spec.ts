@@ -51,8 +51,25 @@ async function tapPage(page: Page) {
   await page.touchscreen.tap(view.width / 2, view.height * 0.45);
 }
 
+// Always reveals the bar with a full delay ahead of it, so a test never depends on how long ago it
+// was shown: a press on the bar (dispatched, so it also works while the bar is hidden or fading)
+// shows it and restarts its timer, exactly as a real press on it does.
+// Waits for a smooth scroll to come to rest. Needed before a fast-forward of the page's clock,
+// which would otherwise run the reader's "scroll is over" timer while the scroll is still moving.
+async function scrollRest(page: Page) {
+  let last = -1;
+  await expect
+    .poll(async () => {
+      const y = await page.evaluate(() => window.scrollY);
+      const rest = y === last;
+      last = y;
+      return rest;
+    })
+    .toBe(true);
+}
+
 async function showBar(page: Page) {
-  if (isPhone(page) && !(await bar(page).isVisible())) await tapPage(page);
+  if (isPhone(page)) await barElement(page).dispatchEvent("pointerdown");
   await expect(bar(page)).toBeVisible();
 }
 
@@ -449,6 +466,8 @@ test.describe("reading a long file", () => {
       })
       .toBe(true);
     expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe("hidden");
+    // Desktop: the bar is there on entering focus mode without any tap.
+    if (!isMobile) await expect(bar(page)).toBeVisible();
     await showBar(page);
     await expect(page.getByRole("button", { name: MENU_BUTTON })).toBeVisible();
 
@@ -611,8 +630,8 @@ test.describe("reading a long file", () => {
       await openWithClock(page);
       await page.clock.fastForward(5000);
       await expect(bar(page)).toBeHidden();
-      // Hidden means out of reach: not clickable and not in the accessibility tree.
-      expect(await barElement(page).evaluate((el) => [getComputedStyle(el).pointerEvents, getComputedStyle(el).visibility])).toEqual(["none", "hidden"]);
+      // Hidden means out of reach: not focusable, not hit by a press, not in the accessibility tree.
+      expect(await barElement(page).evaluate((el) => getComputedStyle(el).visibility)).toBe("hidden");
       await expect(page.getByRole("button", { name: "Next page" })).toHaveCount(0);
 
       await tapPage(page);
@@ -662,11 +681,13 @@ test.describe("reading a long file", () => {
       await page.clock.fastForward(3000);
       await page.getByRole("button", { name: "Next page" }).click();
       await expectPageNumber(page, true, 2, PAGES);
+      await scrollRest(page);
       // 3 s + 3 s later: past the delay from the tap, but not from the click.
       await page.clock.fastForward(3000);
       await expect(bar(page)).toBeVisible();
       await page.getByRole("button", { name: "Previous page" }).click();
       await expectPageNumber(page, true, 1, PAGES);
+      await scrollRest(page);
 
       await page.clock.fastForward(5000);
       await expect(bar(page)).toBeHidden();

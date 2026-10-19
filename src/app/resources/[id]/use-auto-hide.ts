@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AUTO_HIDE_MS, createHideTimer, INITIAL_SHOW_MS, type HideTimer } from "./reader-tap";
 
 // Whether the reader's floating bar is showing. While enabled it shows for a few seconds when it
@@ -54,5 +54,7 @@ export function useAutoHide(enabled: boolean, isHeld: () => boolean) {
     }
   }, [set, show]);
 
-  return { shown: enabled ? shown : true, show, poke, toggle };
+  const visible = enabled ? shown : true;
+  // Stable between renders (until the bar shows or hides), so callers can depend on it.
+  return useMemo(() => ({ shown: visible, show, poke, toggle }), [visible, show, poke, toggle]);
 }

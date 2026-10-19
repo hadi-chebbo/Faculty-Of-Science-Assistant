@@ -40,6 +40,10 @@ const PAGE_GAP_ABOVE = 8;
 const JUMP_SETTLE_MS = 900;
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 300;
+// A touch this soon after the page last scrolled is stopping a momentum scroll, not tapping.
+const MOMENTUM_MS = 150;
+
+const toPoint = (event: { clientX: number; clientY: number; timeStamp: number }) => ({ x: event.clientX, y: event.clientY, time: event.timeStamp });
 
 function useMediaQuery(query: string): boolean {
   // Stable functions per query: a new subscribe on every render would re-subscribe every time.
@@ -192,11 +196,30 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
   useEffect(() => () => clearTimeout(settleTimer.current), []);
 
   // On a phone the floating bar hides while reading and a tap on the pages brings it back. It is
-  // held open while a menu is open, the page box is being edited, keyboard focus is inside it or a
-  // scroll to a page is still moving.
-  const focusInBar = useRef(false);
-  const bar = useAutoHide(!desktop, () => menuOpenRef.current || draftRef.current !== null || focusInBar.current || performance.now() < jumpUntil.current);
+  // held open while a menu is open, keyboard focus is inside it or a scroll to a page is still
+  // moving. (There is no page box on a phone; on desktop the bar never hides.)
+  const barRef = useRef<HTMLDivElement>(null);
+  // Keyboard focus is on a usable control of the bar. A tap that merely focuses a button does not
+  // count (:focus-visible), and neither does a button that became disabled while focused.
+  const keyboardInBar = useCallback(() => {
+    const active = document.activeElement;
+    return (
+      active instanceof HTMLElement &&
+      barRef.current?.contains(active) === true &&
+      active.matches(":focus-visible") &&
+      !(active instanceof HTMLButtonElement && active.disabled)
+    );
+  }, []);
+  const barHeld = useCallback(
+    () => menuOpenRef.current || keyboardInBar() || performance.now() < jumpUntil.current,
+    [keyboardInBar],
+  );
+  const bar = useAutoHide(!desktop, barHeld);
+  const { poke: pokeBar } = bar;
   const tapTracker = useRef(createTapTracker());
+  // The last time anything scrolled: a touch that lands within a moment of it stops a momentum
+  // scroll, it is not a tap.
+  const lastScroll = useRef(0);
 
   // The current page is the one with the most of itself on screen; the ends win at the ends.
   const update = useCallback(() => {
@@ -231,6 +254,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     if (!scroller) return;
     let frame = 0;
     const onScroll = () => {
+      lastScroll.current = performance.now();
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(update);
     };
@@ -282,11 +306,11 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
       // Settle on what is really in view once the scroll is over.
       const duration = behavior === "smooth" ? JUMP_SETTLE_MS : 50;
       jumpUntil.current = performance.now() + duration;
-      bar.poke();
+      pokeBar();
       clearTimeout(settleTimer.current);
       settleTimer.current = setTimeout(update, duration + 50);
     },
-    [scroller, viewport, inner, total, update, bar],
+    [scroller, viewport, inner, total, update, pokeBar],
   );
 
   // ---- The page box -----------------------------------------------------------------------
@@ -457,7 +481,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
       tabIndex={-1}
       aria-label="Document"
       onKeyDownCapture={(event) => {
-        // Tab from the top row reaches a hidden bar: show it first so it can take the focus.
+        // Any forward Tab inside the card reaches a hidden bar: show it first so it can take the focus.
         if (event.key === "Tab" && !event.shiftKey && barHidden && event.currentTarget.contains(event.target as Node)) bar.show();
       }}
       className={cn(
@@ -486,7 +510,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
           onOpenChange={(open) => {
             menuOpenRef.current = open;
             setMenuOpen(open);
-            if (!open) bar.poke();
+            if (!open) pokeBar();
           }}
           onFit={(fit) => setMode({ kind: fit })}
           onFocus={() => (focus ? exitFocus() : enterFocus())}
@@ -499,20 +523,23 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
           ref={setScroller}
           onPointerDown={(event) => {
             if (desktop || (event.pointerType === "mouse" && event.button !== 0)) return;
-            tapTracker.current.down(event.pointerId, { x: event.clientX, y: event.clientY, time: event.timeStamp });
+            if (performance.now() - lastScroll.current < MOMENTUM_MS) return;
+            tapTracker.current.down(event.pointerId, toPoint(event));
           }}
           onPointerMove={(event) => {
-            if (!desktop) tapTracker.current.move(event.pointerId, { x: event.clientX, y: event.clientY, time: event.timeStamp });
+            if (!desktop) tapTracker.current.move(event.pointerId, toPoint(event));
           }}
           onPointerCancel={(event) => tapTracker.current.cancel(event.pointerId)}
           onPointerUp={(event) => {
-            const tapped = tapTracker.current.up(event.pointerId, { x: event.clientX, y: event.clientY, time: event.timeStamp });
+            const tapped = tapTracker.current.up(event.pointerId, toPoint(event));
             if (!tapped || desktop) return;
             // A tap on a control is that control's, not the page's.
             if (event.target instanceof Element && event.target.closest("a, button, input, select, textarea, [role='button']")) return;
-            bar.toggle();
+            // Never take the bar away from someone using it with the keyboard.
+            if (keyboardInBar()) bar.show();
+            else bar.toggle();
           }}
-          className={cn("bg-reader-surface [overflow-anchor:none]", inner ? "absolute inset-0 overflow-auto" : "overflow-x-auto rounded-b-xl")}
+          className={cn("touch-manipulation bg-reader-surface [overflow-anchor:none]", inner ? "absolute inset-0 overflow-auto" : "overflow-x-auto rounded-b-xl")}
         >
           <div className={cn("flex w-max min-w-full flex-col items-center gap-3 p-4", !ready && "invisible")}>
             {sizes.map((size, i) => {
@@ -574,26 +601,18 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
             <div
               role="group"
               aria-label="Page and zoom"
-              onPointerDownCapture={bar.poke}
-              onKeyDownCapture={bar.poke}
-              onFocus={(event) => {
-                // Keyboard focus keeps the bar up; a tap that merely focuses a button does not.
-                if (!event.target.matches(":focus-visible")) return;
-                focusInBar.current = true;
-                bar.show();
-              }}
-              onBlur={() => {
-                focusInBar.current = false;
-                bar.poke();
-              }}
+              ref={barRef}
+              // A press during the fade-out still works and brings the bar back.
+              onPointerDownCapture={bar.show}
+              onKeyDownCapture={bar.show}
               className={cn(
                 "flex items-center gap-0.5 rounded-full border bg-card px-1.5 py-0.5 text-sm text-heading shadow-lg",
                 "duration-200 motion-reduce:transition-none",
-                // Hiding waits for the fade before the bar leaves the tab order; showing makes it
-                // focusable at once (a Tab that reveals it must be able to land on it).
-                barHidden
-                  ? "pointer-events-none invisible translate-y-2 opacity-0 transition-[opacity,transform,visibility]"
-                  : "pointer-events-auto transition-[opacity,transform]",
+                // Hiding waits for the fade before the bar leaves the tab order and stops taking
+                // presses (visibility: hidden does both); showing makes it focusable at once (a Tab
+                // that reveals it must be able to land on it).
+                "pointer-events-auto",
+                barHidden ? "invisible translate-y-2 opacity-0 transition-[opacity,transform,visibility]" : "transition-[opacity,transform]",
               )}
             >
               <Button
