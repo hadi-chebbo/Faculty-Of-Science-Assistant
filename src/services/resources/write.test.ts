@@ -186,11 +186,11 @@ describe("updateResource", () => {
     expect((await getDb().Resource.findByPk(file.id))).toMatchObject({ fileKey: "k/1.pdf", externalUrl: null });
   });
 
-  it("rejects a link on a row that has a stored file", async () => {
+  it("accepts a backup link on a row that has a stored file", async () => {
     const f = await setup();
     const file = await getDb().Resource.create({ courseId: f.course.id, type: "lecture", title: "Stored", fileKey: "k/1.pdf" });
-    expect(await fieldsOf(updateResource(f.admin, file.id, link(f, { isPublished: false })))).toEqual(["externalUrl"]);
-    expect((await getDb().Resource.findByPk(file.id))!.externalUrl).toBeNull();
+    await updateResource(f.admin, file.id, link(f, { isPublished: false }));
+    expect(await getDb().Resource.findByPk(file.id)).toMatchObject({ externalUrl: URL_A, fileKey: "k/1.pdf" });
   });
 
   it("refuses to publish once the link is removed", async () => {
