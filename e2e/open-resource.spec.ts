@@ -154,17 +154,16 @@ test.describe("GET /api/v1/resources/[id]/open for a browser", () => {
   });
 });
 
-test("resource rows on a course page open in a new tab through the API route", async ({ page }) => {
+test("resource rows on a course page open the reader page in the same tab", async ({ page }) => {
   // DEMO401 has no chapters, so its rows are on the by-type tabs.
   await page.goto("/courses/DEMO401");
   const row = page.getByRole("link", { name: /Sample lecture 1/ });
-  await expect(row).toHaveAttribute("target", "_blank");
-  await expect(row).toHaveAttribute("rel", /noopener/);
-  await expect(row).toHaveAttribute("href", /^\/api\/v1\/resources\/[0-9a-f-]{36}\/open$/);
+  await expect(row).not.toHaveAttribute("target", /.+/);
+  await expect(row).toHaveAttribute("href", /^\/resources\/[0-9a-f-]{36}$/);
 
   await page.getByRole("tab", { name: /Exams/ }).click();
   const solution = page.getByRole("link", { name: /^Solution/ });
   await expect(solution).toHaveCount(1);
-  await expect(solution).toHaveAttribute("target", "_blank");
-  await expect(solution).toHaveAttribute("href", /^\/api\/v1\/resources\/[0-9a-f-]{36}\/open$/);
+  await expect(solution).not.toHaveAttribute("target", /.+/);
+  await expect(solution).toHaveAttribute("href", /^\/resources\/[0-9a-f-]{36}$/);
 });

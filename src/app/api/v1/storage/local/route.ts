@@ -1,6 +1,6 @@
 import { NO_STORE } from "@/lib/auth/request";
 import { getStorage, getStorageConfig } from "@/lib/storage/config";
-import { safeFilename } from "@/lib/storage/filename";
+import { attachmentDisposition } from "@/lib/storage/filename";
 import { verifyStorageToken } from "@/lib/storage/token";
 
 // Stand-in for the cloud's signed URLs when STORAGE_DRIVER=local. The token is the whole
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
   const body = info ? await storage.readStart(grant.key, info.size) : null;
   if (!info || !body) return respond(404);
   const disposition =
-    grant.disposition === "inline" ? "inline" : `attachment; filename="${safeFilename(grant.filename)}"`;
+    grant.disposition === "inline" ? "inline" : attachmentDisposition(grant.filename);
   return new Response(body as BodyInit, {
     status: 200,
     headers: {

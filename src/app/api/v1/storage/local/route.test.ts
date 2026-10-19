@@ -51,12 +51,24 @@ describe("local storage route", () => {
       filename: 'a"b/c\r\n.pdf',
     });
     const res = await read(url);
-    expect(res.headers.get("content-disposition")).toBe('attachment; filename="abc.pdf"');
+    expect(res.headers.get("content-disposition")).toBe(`attachment; filename="abc.pdf"; filename*=UTF-8''abc.pdf`);
     const fallback = await getStorage().createReadUrl("resources/r2.pdf", {
       expiresInSeconds: 60,
       disposition: "attachment",
     });
-    expect((await read(fallback)).headers.get("content-disposition")).toBe('attachment; filename="file.pdf"');
+    expect((await read(fallback)).headers.get("content-disposition")).toBe(`attachment; filename="file.pdf"; filename*=UTF-8''file.pdf`);
+  });
+
+  it("downloads a French title without failing", async () => {
+    await upload("resources/french-title.pdf", bytes);
+    const url = await getStorage().createReadUrl("resources/french-title.pdf", {
+      expiresInSeconds: 60,
+      disposition: "attachment",
+      filename: "Examen l’été.pdf",
+    });
+    const res = await read(url);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-disposition")).toContain("filename*=UTF-8''Examen%20l%E2%80%99%C3%A9t%C3%A9.pdf");
   });
 
   it("answers 415 for a different content type", async () => {

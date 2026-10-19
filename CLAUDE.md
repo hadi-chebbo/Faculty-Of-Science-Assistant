@@ -58,9 +58,10 @@ mock exam generation, personalization.
   sending the student away: the file shown in the page, a Download action, an
   action to open the file outside the reader, and room for the AI assistant
   planned for after launch to help while they read. The reader is part of the
-  MVP. The current open route, which redirects to the material, is a stopgap
-  until the reader exists. "Open outside the reader" opens the file itself in a
-  new tab; the backup link, when there is one, is shown separately.
+  MVP. The reader exists (`/resources/ID`); the open route, which redirects to
+  the material, now serves "Open outside the reader". That action opens the
+  file itself in a new tab; the backup link, when there is one, is shown
+  separately.
 - When a requirement is ambiguous, ask; do not invent product behaviour.
 
 ## Domain model (proposed)
@@ -163,6 +164,16 @@ mock exam generation, personalization.
   JavaScript; with JavaScript a dropdown change submits automatically. Unusable URL values are
   ignored, not errors. Results are one flat list (newest year first), 20 per page, reusing the
   course-page resource row. Dropdowns only offer values that have a visible exam.
+- Reader page (`/resources/ID`, public, published resources only; anything else is the 404
+  page): PDF.js draws every page of the file on canvases in one vertical scroll, each fit to the
+  width and drawn lazily, with "Page N of M" kept in view. Toolbar: Download and Open outside the
+  reader. Phone: a back link (the course code) above the title, the file, then Details, Solutions
+  and the backup link below it. Desktop (md and up): breadcrumb ending at the course area that
+  lists the resource, and a details column beside the file. Back leads to Previous exams for an
+  exam, to the chapter page for a resource in a chapter, otherwise to the course (Other material
+  when the course has chapters). Resource rows and solution links on public pages open the reader
+  in the same tab. There is no AI panel yet and no text about one; the details column is where it
+  will go.
 - Branding is the plain text "University Assistant". No university logo, crest or name as
   branding. The footer says: "Independent student project. Not an official Lebanese
   University website."

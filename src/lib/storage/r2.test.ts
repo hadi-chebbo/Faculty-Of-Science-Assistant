@@ -168,7 +168,7 @@ describe("r2 signed URLs", () => {
     const url = new URL(
       await storage.createReadUrl(KEY, { expiresInSeconds: 60, disposition: "attachment", filename: 'a"b/c\r\nd.pdf' }),
     );
-    expect(url.searchParams.get("response-content-disposition")).toBe('attachment; filename="abcd.pdf"');
+    expect(url.searchParams.get("response-content-disposition")).toBe(`attachment; filename="abcd.pdf"; filename*=UTF-8''abcd.pdf`);
   });
 
   it("sets no response type for a key that is not a pdf", async () => {
