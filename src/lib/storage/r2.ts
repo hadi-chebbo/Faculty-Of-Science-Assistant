@@ -57,6 +57,9 @@ export function createR2Storage(
       // R2 answers 416 for a range on an empty object.
       if (response.status === 416) return new Uint8Array(0);
       if (!response.ok) fail("readStart", response);
+      // A 206 holds only the requested bytes: read it whole. Inside Next.js, awaiting cancel() on a
+      // response body hung until the socket timed out (about five minutes), so never await it.
+      if (response.status === 206) return new Uint8Array(await response.arrayBuffer()).subarray(0, want);
       // A 200 is the whole object: read only what was asked for, then stop the download.
       const out = new Uint8Array(want);
       let length = 0;
@@ -69,7 +72,8 @@ export function createR2Storage(
           out.set(value.subarray(0, take), length);
           length += take;
         }
-        await reader.cancel();
+        // Not awaited, for the reason above.
+        reader.cancel().catch(() => {});
       }
       return out.subarray(0, length);
     },
