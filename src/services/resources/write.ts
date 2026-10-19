@@ -80,9 +80,9 @@ async function checkAgainstDatabase(
     if (owners.some((owner) => owner.id !== resource?.id)) fields.push("file");
   }
 
-  // A file and a link may coexist; publishing needs at least one of them.
+  // Publishing needs a file (stored, or attached in this request). A link is only a backup.
   const hasFile = newFileKey != null || resource?.fileKey != null;
-  if (input.isPublished && !input.externalUrl && !hasFile) fields.push("isPublished");
+  if (input.isPublished && !hasFile) fields.push("isPublished");
 
   // While solutions point at a resource it cannot move to another course (they must share it)
   // or become a solution itself (a solution never answers a solution).

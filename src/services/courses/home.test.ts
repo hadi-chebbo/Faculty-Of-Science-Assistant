@@ -5,6 +5,7 @@ import type { Viewer } from "../viewer";
 import { getHomeStats } from "./home";
 
 const SAMPLE_URL = "https://example.com/sample";
+const SAMPLE_KEY = "resources/sample.pdf";
 const admin: Viewer = { id: "11111111-1111-4111-8111-111111111111", role: "admin" };
 
 beforeEach(async () => {
@@ -23,11 +24,11 @@ async function seed() {
   await Chapter.create({ courseId: a.id, position: 1, title: "Chapter 1" });
   await Chapter.create({ courseId: a.id, position: 2, title: "Chapter 2" });
   await Chapter.create({ courseId: c.id, position: 1, title: "Chapter 1" });
-  await Resource.create({ courseId: a.id, type: "lecture", title: "Published lecture", isPublished: true, externalUrl: SAMPLE_URL });
-  await Resource.create({ courseId: a.id, type: "exam", title: "Published exam", academicYearStart: 2024, examSession: "final", isPublished: true, externalUrl: SAMPLE_URL });
+  await Resource.create({ courseId: a.id, type: "lecture", title: "Published lecture", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL });
+  await Resource.create({ courseId: a.id, type: "exam", title: "Published exam", academicYearStart: 2024, examSession: "final", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL });
   await Resource.create({ courseId: a.id, type: "notes", title: "Draft notes" });
   await Resource.create({ courseId: c.id, type: "exam", title: "Draft exam", academicYearStart: 2024, examSession: "partial" });
-  await Resource.create({ courseId: c.id, type: "lecture", title: "Published lecture C", isPublished: true, externalUrl: SAMPLE_URL });
+  await Resource.create({ courseId: c.id, type: "lecture", title: "Published lecture C", isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL });
 }
 
 describe("getHomeStats", () => {

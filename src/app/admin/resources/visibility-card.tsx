@@ -41,7 +41,7 @@ export function VisibilityCard({
             <input type="radio" name="visibility" checked={isPublished} onChange={() => onChange(true)} className="mt-1 accent-primary" />
             <span>
               <b className="block text-sm font-medium text-heading">Published</b>
-              <small className="block text-[0.8125rem] leading-snug text-muted-foreground">Visible to students. Needs a file or link.</small>
+              <small className="block text-[0.8125rem] leading-snug text-muted-foreground">Visible to students. Needs a file.</small>
             </span>
           </label>
         </div>

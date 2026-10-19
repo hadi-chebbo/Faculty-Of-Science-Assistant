@@ -239,7 +239,7 @@ describe("listChaptersWithCounts", () => {
     const ids = await addChapters(f, 3);
     const { Resource } = getDb();
     await Resource.create({ courseId: f.course.id, chapterId: ids[0], type: "lecture", title: "Draft", isPublished: false });
-    await Resource.create({ courseId: f.course.id, chapterId: ids[0], type: "notes", title: "Published", isPublished: true, externalUrl: "https://example.com/a" });
+    await Resource.create({ courseId: f.course.id, chapterId: ids[0], type: "notes", title: "Published", isPublished: true, externalUrl: "https://example.com/a", fileKey: "resources/a.pdf" });
     await Resource.create({ courseId: f.course.id, chapterId: ids[1], type: "lecture", title: "Only" });
     await Resource.create({ courseId: f.course.id, type: "lecture", title: "No chapter" });
 

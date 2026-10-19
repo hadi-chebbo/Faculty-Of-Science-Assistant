@@ -26,6 +26,7 @@ async function seedGraph() {
     examSession: "final",
     academicYearStart: 2024,
     externalUrl: "https://example.com/exam",
+    fileKey: "resources/exam.pdf",
     isPublished: true,
   });
   const solution = await Resource.create({
@@ -90,6 +91,7 @@ describe("models: create and read back", () => {
       examSession: "partial",
       language: "fr",
       externalUrl: "https://example.com/x",
+      fileKey: "resources/x.pdf",
       isPublished: true,
     });
     const found = await Resource.findByPk(created.id);
@@ -99,11 +101,20 @@ describe("models: create and read back", () => {
     expect(found?.academicYearStart).toBe(2023);
     expect(found?.examSession).toBe("partial");
     expect(found?.language).toBe("fr");
-    expect(found?.fileKey).toBeNull();
+    expect(found?.fileKey).toBe("resources/x.pdf");
     expect(found?.externalUrl).toBe("https://example.com/x");
     expect(found?.solutionOfId).toBeNull();
     expect(found?.isPublished).toBe(true);
     expect(found?.createdAt).toBeInstanceOf(Date);
+  });
+
+  it("Resource cannot be published without a file, whatever its link", async () => {
+    const { Course, Resource } = getDb();
+    const course = await Course.create({ code: "TEST101", title: "Test Course", semester: 3 });
+    const draft = { courseId: course.id, type: "lecture" as const, title: "Link only", externalUrl: "https://example.com/x" };
+    await expect(Resource.create({ ...draft, isPublished: true })).rejects.toThrow(/resources_published_has_file_check/);
+    await Resource.create({ ...draft, isPublished: false });
+    await Resource.create({ ...draft, fileKey: "resources/x.pdf", isPublished: true });
   });
 
   it("Resource defaults to English and unpublished", async () => {

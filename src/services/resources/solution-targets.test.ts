@@ -29,11 +29,12 @@ describe("listSolutionTargets", () => {
     const admin = await createUser("admin", "admin@example.com");
     const course = await createCourse("TEST301");
     const base = { courseId: course.id, externalUrl: "https://example.com/x" };
+    const file = { fileKey: "resources/sheet.pdf" };
     await Resource.create({ ...base, type: "lecture", title: "Lecture" });
     await Resource.create({ ...base, type: "notes", title: "Notes" });
     await Resource.create({ ...base, type: "other", title: "Other" });
     await Resource.create({ ...base, type: "solution", title: "Solution" });
-    await Resource.create({ ...base, type: "exercise", title: "Published sheet", isPublished: true });
+    await Resource.create({ ...base, type: "exercise", title: "Published sheet", ...file, isPublished: true });
     await Resource.create({ ...base, type: "exercise", title: "Draft sheet", isPublished: false });
     await Resource.create({ ...base, type: "exam", title: "Draft exam", academicYearStart: 2024, examSession: "final", isPublished: false });
 
