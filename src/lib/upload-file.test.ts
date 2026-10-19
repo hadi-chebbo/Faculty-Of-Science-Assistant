@@ -1,6 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UPLOAD_MAX_BYTES } from "@/db/constants";
-import { BAD_SIZE_MESSAGE, NOT_A_PDF_MESSAGE, UPLOAD_FAILED_MESSAGE, UploadError, checkPdfFile, formatFileSize, uploadPdf } from "./upload-file";
+import {
+  BAD_SIZE_MESSAGE,
+  MAX_SIZE_LABEL,
+  NOT_A_PDF_MESSAGE,
+  SignedOutError,
+  UPLOAD_FAILED_MESSAGE,
+  UploadError,
+  checkPdfFile,
+  formatFileSize,
+  uploadPdf,
+} from "./upload-file";
 
 const adminFetch = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/admin-fetch", () => ({ adminFetch }));
@@ -32,9 +42,17 @@ describe("formatFileSize", () => {
   });
 });
 
-// A minimal XMLHttpRequest whose outcome the test chooses.
+describe("MAX_SIZE_LABEL", () => {
+  it("states the server's limit", () => {
+    expect(MAX_SIZE_LABEL).toBe("50 MB");
+    expect(BAD_SIZE_MESSAGE).toBe("The file must be a PDF of at most 50 MB.");
+  });
+});
+
+// A minimal XMLHttpRequest whose outcome the test chooses. Like the real one, abort() fires the
+// abort event only for a request that was sent.
 class FakeXhr {
-  static last: FakeXhr;
+  static last: FakeXhr | undefined;
   static outcome: "ok" | "fail" | "network" | "hang" = "ok";
   status = 0;
   headers: Record<string, string> = {};
@@ -64,7 +82,7 @@ class FakeXhr {
     });
   }
   abort() {
-    this.onabort?.();
+    if (this.sent !== null) this.onabort?.();
   }
 }
 
@@ -76,6 +94,7 @@ const options = (signal = new AbortController().signal) => ({ signal, onProgress
 describe("uploadPdf", () => {
   beforeEach(() => {
     FakeXhr.outcome = "ok";
+    FakeXhr.last = undefined;
     vi.stubGlobal("XMLHttpRequest", FakeXhr);
     adminFetch.mockReset();
   });
@@ -89,9 +108,9 @@ describe("uploadPdf", () => {
     const [url, init] = adminFetch.mock.calls[0];
     expect(url).toBe("/api/v1/uploads");
     expect(JSON.parse(init.body)).toEqual({ size: 8 });
-    expect(FakeXhr.last.opened).toEqual(["PUT", grant.upload.url]);
-    expect(FakeXhr.last.headers).toEqual(grant.upload.headers);
-    expect(FakeXhr.last.sent).toBeInstanceOf(File);
+    expect(FakeXhr.last!.opened).toEqual(["PUT", grant.upload.url]);
+    expect(FakeXhr.last!.headers).toEqual(grant.upload.headers);
+    expect(FakeXhr.last!.sent).toBeInstanceOf(File);
     expect(opts.onProgress).toHaveBeenCalledWith(50);
     expect(opts.onProgress).toHaveBeenLastCalledWith(100);
   });
@@ -123,8 +142,28 @@ describe("uploadPdf", () => {
     const controller = new AbortController();
     const promise = uploadPdf(pdf(), options(controller.signal));
     await vi.waitFor(() => expect(FakeXhr.last).toBeDefined());
-    await vi.waitFor(() => expect(FakeXhr.last.sent).not.toBeNull());
+    await vi.waitFor(() => expect(FakeXhr.last!.sent).not.toBeNull());
     controller.abort();
     await expect(promise).rejects.toMatchObject({ name: "AbortError" });
+  });
+
+  it("settles with an AbortError when cancelled after the grant but before the PUT is sent", async () => {
+    const controller = new AbortController();
+    adminFetch.mockImplementation(async () => {
+      controller.abort();
+      return jsonResponse(201, grant);
+    });
+    await expect(uploadPdf(pdf(), options(controller.signal))).rejects.toMatchObject({ name: "AbortError" });
+    expect(FakeXhr.last).toBeUndefined();
+  });
+
+  it("throws SignedOutError, not an upload error, when the session has ended", async () => {
+    adminFetch.mockResolvedValue(jsonResponse(401, { error: "Unauthorized" }));
+    await expect(uploadPdf(pdf(), options())).rejects.toBeInstanceOf(SignedOutError);
+  });
+
+  it("refuses a grant without a method", async () => {
+    adminFetch.mockResolvedValue(jsonResponse(201, { ...grant, upload: { url: grant.upload.url, headers: grant.upload.headers } }));
+    await expect(uploadPdf(pdf(), options())).rejects.toThrow(UPLOAD_FAILED_MESSAGE);
   });
 });

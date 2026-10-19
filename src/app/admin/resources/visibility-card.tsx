@@ -12,7 +12,7 @@ export function VisibilityCard({
   error,
   formError,
   pending,
-  uploading = false,
+  uploading,
   canDelete,
   onDelete,
 }: {
@@ -21,7 +21,7 @@ export function VisibilityCard({
   error?: string;
   formError: string | null;
   pending: boolean;
-  uploading?: boolean;
+  uploading: boolean;
   canDelete: boolean;
   onDelete: () => void;
 }) {

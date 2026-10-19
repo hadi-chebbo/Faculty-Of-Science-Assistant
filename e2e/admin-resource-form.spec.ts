@@ -1,4 +1,6 @@
 import { randomBytes } from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { Client } from "pg";
 
@@ -617,6 +619,39 @@ const pdfFile = (name = "lecture.pdf") => ({
 });
 const fileInput = (page: Page) => page.getByLabel("File", { exact: true });
 
+// Keys of the files the browser sends to local storage, read from each signed upload URL's token
+// (the test only decodes it). Lets a test remove uploads that were never saved with a resource.
+function recordUploads(page: Page): string[] {
+  const keys: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() !== "PUT" || !request.url().includes("/api/v1/storage/local")) return;
+    const token = new URL(request.url()).searchParams.get("token") ?? "";
+    const claims = JSON.parse(Buffer.from(token.split(".")[1] ?? "", "base64url").toString() || "{}");
+    if (typeof claims.key === "string" && /^resources\/[a-z0-9-]+\.pdf$/.test(claims.key)) keys.push(claims.key);
+  });
+  return keys;
+}
+
+async function removeStoredFiles(keys: string[]) {
+  const dir = path.resolve(process.env.STORAGE_LOCAL_DIR ?? ".storage");
+  for (const key of keys) {
+    await fs.rm(path.join(dir, key), { force: true });
+    await fs.rm(path.join(dir, `${key}.meta.json`), { force: true });
+  }
+}
+
+// Holds every PUT to local storage until `release`, which then drops it, so a cancelled upload
+// never reaches the server and leaves nothing to clean up.
+async function holdUploads(page: Page): Promise<() => void> {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  await page.route("**/api/v1/storage/local*", async (route) => {
+    await gate;
+    await route.abort().catch(() => {});
+  });
+  return release;
+}
+
 // Deleting a resource through the API also removes its stored file.
 test.describe("admin resource form: PDF upload", () => {
   let origin: string;
@@ -708,6 +743,7 @@ test.describe("admin resource form: PDF upload", () => {
 
   test("Remove after an upload leaves the resource without a file", async ({ page, request }) => {
     const title = uniqueTitle();
+    const uploaded = recordUploads(page);
     try {
       await signInAsAdmin(page);
       await page.goto("/admin/resources/new");
@@ -721,6 +757,7 @@ test.describe("admin resource form: PDF upload", () => {
       expect(await fileKeyOf(title)).toBeNull();
     } finally {
       await cleanup(request, origin, title);
+      await removeStoredFiles(uploaded);
     }
   });
 
@@ -728,14 +765,10 @@ test.describe("admin resource form: PDF upload", () => {
     await signInAsAdmin(page);
     await page.goto("/admin/resources/new");
     await fillBasics(page, uniqueTitle());
-    let release!: () => void;
-    const gate = new Promise<void>((resolve) => (release = resolve));
-    await page.route("**/api/v1/storage/local*", async (route) => {
-      await gate;
-      await route.continue();
-    });
+    const release = await holdUploads(page);
 
     await fileInput(page).setInputFiles(pdfFile());
+    await expect(page.getByText("0%")).toBeVisible();
     const button = page.getByRole("button", { name: "Uploading..." });
     await expect(button).toBeVisible();
     await expect(button).toBeDisabled();
@@ -747,7 +780,36 @@ test.describe("admin resource form: PDF upload", () => {
     release();
   });
 
+  test("cancelling a replacement goes back to the file that was ready, and saving stores that one", async ({ page, request }) => {
+    const title = uniqueTitle();
+    const uploaded = recordUploads(page);
+    try {
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await fillBasics(page, title);
+      await fileInput(page).setInputFiles(pdfFile("first.pdf"));
+      await expect(page.getByText("Ready. It is saved with the resource.")).toBeVisible();
+      expect(uploaded).toHaveLength(1);
+
+      const release = await holdUploads(page);
+      await fileInput(page).setInputFiles(pdfFile("second.pdf"));
+      await expect(page.getByRole("button", { name: "Uploading..." })).toBeDisabled();
+      await page.getByRole("button", { name: "Cancel" }).click();
+      release();
+
+      await expect(page.getByText("first.pdf")).toBeVisible();
+      await expect(page.getByText("second.pdf")).toHaveCount(0);
+      await expect(page.getByText("Ready. It is saved with the resource.")).toBeVisible();
+      await save(page);
+      await page.waitForURL(/\/admin$/);
+      expect(await fileKeyOf(title)).toBe(uploaded[0]);
+    } finally {
+      await cleanup(request, origin, title);
+    }
+  });
+
   test("a failed upload shows an error and the picker stays usable", async ({ page }) => {
+    // The PUT is answered by the test, so nothing is stored.
     await signInAsAdmin(page);
     await page.goto("/admin/resources/new");
     await fillBasics(page, uniqueTitle());

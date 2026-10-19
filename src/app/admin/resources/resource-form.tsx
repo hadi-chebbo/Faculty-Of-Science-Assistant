@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { EXAM_SESSIONS, RESOURCE_TITLE_MAX_LENGTH } from "@/db/constants";
 import type { ExamSession, Language, ResourceType } from "@/db/constants";
 import { adminFetch } from "@/lib/admin-fetch";
+import { MAX_SIZE_LABEL } from "@/lib/upload-file";
 import { EXAM_SESSION_LABELS, formatAcademicYear } from "@/lib/labels";
 import type { ChapterOption } from "@/services/chapters/options";
 import type { CourseOption } from "@/services/courses/types";
@@ -32,7 +33,7 @@ import { FormPreview } from "./form-preview";
 import { VisibilityCard } from "./visibility-card";
 
 const FIELD_MESSAGES: Record<string, string> = {
-  file: "The file could not be checked. Upload a PDF of at most 50 MB.",
+  file: `The file could not be checked. Upload a PDF of at most ${MAX_SIZE_LABEL}.`,
   isPublished: "Add a file or link before publishing.",
   examSession: "Choose a session for an exam.",
   chapterId: "Choose a chapter of this course.",
