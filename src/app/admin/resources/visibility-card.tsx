@@ -12,6 +12,7 @@ export function VisibilityCard({
   error,
   formError,
   pending,
+  uploading,
   canDelete,
   onDelete,
 }: {
@@ -20,6 +21,7 @@ export function VisibilityCard({
   error?: string;
   formError: string | null;
   pending: boolean;
+  uploading: boolean;
   canDelete: boolean;
   onDelete: () => void;
 }) {
@@ -52,8 +54,8 @@ export function VisibilityCard({
       )}
 
       <div className="mt-4 grid gap-2">
-        <Button type="submit" disabled={pending} className="h-11 w-full">
-          {pending ? "Saving..." : isPublished ? "Save and publish" : "Save draft"}
+        <Button type="submit" disabled={pending || uploading} className="h-11 w-full">
+          {pending ? "Saving..." : uploading ? "Uploading..." : isPublished ? "Save and publish" : "Save draft"}
         </Button>
         <div className={canDelete ? "grid grid-cols-2 gap-2" : "grid"}>
           <Link href="/admin" className={buttonVariants({ variant: "outline", className: "h-11" })}>
