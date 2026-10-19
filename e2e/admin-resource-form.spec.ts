@@ -182,7 +182,7 @@ test.describe("admin resource form", () => {
     }
   });
 
-  test("validation: publishing without a link, and the exam session field", async ({ page, request }) => {
+  test("validation: publishing without a file, and the exam session field", async ({ page, request }) => {
     const title = uniqueTitle();
     try {
       await signInAsAdmin(page);
@@ -191,7 +191,7 @@ test.describe("admin resource form", () => {
 
       await setVisibility(page, "Published");
       await save(page);
-      await expect(page.getByText("Add a file or link before publishing.")).toBeVisible();
+      await expect(page.getByText("Add a file before publishing.")).toBeVisible();
       await expect(page.getByText("The resource was not saved.")).toBeVisible();
       await expect(page).toHaveURL(/\/admin\/resources\/new$/);
 
@@ -213,7 +213,8 @@ test.describe("admin resource form", () => {
       await signInAsAdmin(page);
       await page.goto("/admin/resources/new");
       await fillBasics(page, title);
-      await page.getByLabel("Backup link").fill("https://example.com/e2e");
+      await fileInput(page).setInputFiles(pdfFile());
+      await expect(page.getByText("Ready. It is saved with the resource.")).toBeVisible();
       await setVisibility(page, "Published");
       await save(page);
       await page.waitForURL(/\/admin$/);
@@ -562,7 +563,8 @@ test.describe("admin resource form", () => {
       await expect(header).toContainText("Draft");
       await expect(header).not.toContainText("Published");
 
-      await page.getByLabel("Backup link").fill("https://example.com/e2e");
+      await fileInput(page).setInputFiles(pdfFile());
+      await expect(page.getByText("Ready. It is saved with the resource.")).toBeVisible();
       await save(page);
       await page.waitForURL(/\/admin$/);
       await page.goto(`/admin/resources/${id}/edit`);
