@@ -228,6 +228,44 @@ test.describe("text, search and contents", () => {
   });
 
   test.describe("search in the document", () => {
+    test("every match is clearly visible on the page, not only present in the DOM", async ({ page }) => {
+      await open(page);
+      await openSearchWithButton(page);
+      // "es" is twice on page 1 (TEST, pages): the current match and another one, both drawn.
+      await search(page, "es");
+      const other = page.locator("mark.reader-hit:not(.reader-hit-current)").first();
+      await expect(other).toBeVisible();
+      for (const mark of [currentHit(page, 1), other]) {
+        await mark.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(800);
+        const box = (await mark.boundingBox())!;
+        expect(box.width).toBeGreaterThan(5);
+        expect(box.height).toBeGreaterThan(5);
+        // What the reader sees: the lightest pixel well inside the mark is the page under it, and a
+        // white page (blue 255) loses a lot of blue where a highlight is drawn over it.
+        const inset = 2;
+        const clip = { x: box.x + inset, y: box.y + inset, width: box.width - 2 * inset, height: box.height - 2 * inset };
+        const shot = (await page.screenshot({ clip })).toString("base64");
+        const { lightestBlue, darkestRed } = await page.evaluate(async (data) => {
+          const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
+          const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+          const ctx = canvas.getContext("2d")!;
+          ctx.drawImage(bitmap, 0, 0);
+          const pixels = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data;
+          let lightestBlue = 0;
+          let darkestRed = 255;
+          for (let i = 0; i < pixels.length; i += 4) {
+            darkestRed = Math.min(darkestRed, pixels[i]);
+            lightestBlue = Math.max(lightestBlue, pixels[i + 2]);
+          }
+          return { lightestBlue, darkestRed };
+        }, shot);
+        expect(lightestBlue).toBeLessThan(180);
+        // And the highlight does not cover the word: its black letters still show through it.
+        expect(darkestRed).toBeLessThan(200);
+      }
+    });
+
     test("the button opens it, the count reads 1 of 3, and next and previous move between pages", async ({ page, isMobile }) => {
       await open(page);
       await expect(searchBar(page)).toHaveCount(0);
