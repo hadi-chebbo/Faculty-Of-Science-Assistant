@@ -45,6 +45,9 @@ const PHONE_TAB_BAR = 56;
 const SEARCH_BAR_HEIGHT = 49;
 // Longer than a smooth scroll to any page takes.
 const JUMP_SETTLE_MS = 900;
+// After that, the scroll position is looked at this often until it has stopped moving.
+const SETTLE_CHECK_MS = 80;
+const SETTLE_CHECKS = 25;
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 300;
 // A touch this soon after the page last scrolled is stopping a momentum scroll, not tapping.
@@ -320,12 +323,20 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
       jumpPage.current = page;
       pokeBar();
       clearTimeout(settleTimer.current);
-      settleTimer.current = setTimeout(() => {
+      // A long smooth scroll may still be moving then: wait until it has stopped, or the page
+      // would be put back in place only for the scroll to carry on past it.
+      const finish = (previous: number, checks: number) => {
+        const position = inner ? (scrollerRef.current?.scrollTop ?? 0) : window.scrollY;
+        if (position !== previous && checks < SETTLE_CHECKS) {
+          settleTimer.current = setTimeout(() => finish(position, checks + 1), SETTLE_CHECK_MS);
+          return;
+        }
         if (jumpPage.current === page) alignPage(page);
         update();
-      }, duration + 50);
+      };
+      settleTimer.current = setTimeout(() => finish(-1, 0), duration + 50);
     },
-    [scroller, viewport, total, update, pokeBar, scrollPagesBy, alignPage],
+    [scroller, viewport, inner, total, update, pokeBar, scrollPagesBy, alignPage],
   );
 
   // ---- The page box -----------------------------------------------------------------------
