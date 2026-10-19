@@ -414,7 +414,9 @@ describe("getResourceLink", () => {
       const { url } = await getResourceLink(null, stored.id, { disposition: "attachment" });
       const response = await serveFromStorage(url);
       expect(response.status).toBe(200);
-      expect(response.headers.get("content-disposition")).toBe('attachment; filename="Lecture 1 part2.pdf"');
+      expect(response.headers.get("content-disposition")).toBe(
+        `attachment; filename="Lecture 1 part2.pdf"; filename*=UTF-8''Lecture%201%20part2.pdf`,
+      );
       expect(new Uint8Array(await response.arrayBuffer())).toEqual(PDF_BYTES);
     });
 

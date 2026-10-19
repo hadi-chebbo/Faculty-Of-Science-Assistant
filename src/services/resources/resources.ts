@@ -158,7 +158,8 @@ export async function getResourceLink(
     const url = await getStorage().createReadUrl(row.fileKey, {
       expiresInSeconds: 5 * 60,
       disposition,
-      ...(disposition === "attachment" ? { filename: safeFilename(`${row.title}.pdf`) } : {}),
+      // The title is cut (by characters, never inside one) before ".pdf", so the extension survives.
+      ...(disposition === "attachment" ? { filename: safeFilename(`${Array.from(row.title).slice(0, 140).join("")}.pdf`) } : {}),
     });
     return { url };
   }

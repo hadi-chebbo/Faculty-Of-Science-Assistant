@@ -76,7 +76,7 @@ test.describe("the reader page", () => {
     expect(response.headers()["cache-control"]).toBe("no-store");
     const served = await request.get(response.headers()["location"]);
     expect(served.status()).toBe(200);
-    expect(served.headers()["content-disposition"]).toBe('attachment; filename="Sample lecture 1.pdf"');
+    expect(served.headers()["content-disposition"]).toBe(`attachment; filename="Sample lecture 1.pdf"; filename*=UTF-8''Sample%20lecture%201.pdf`);
     expect((await served.body()).subarray(0, 5).toString("latin1")).toBe("%PDF-");
   });
 
@@ -103,9 +103,15 @@ test.describe("the reader page", () => {
     const exam = await resourceId("DEMO301", "Sample partial exam 2023");
     const solution = await resourceId("DEMO301", "Sample partial exam 2023 solution");
     await page.goto(`/resources/${exam}`);
+    await expect(page.getByRole("img", { name: "Page 1 of 1" })).toBeVisible();
+    // The page is reused for the solution: its viewer must load the solution's own file, not keep
+    // showing the exam's document.
+    const solutionFile = page.waitForRequest((r) => r.url().endsWith(`/api/v1/resources/${solution}/open`));
     await page.getByRole("link", { name: /Solution: Sample partial exam 2023 solution/ }).click();
     await expect(page).toHaveURL(new RegExp(`/resources/${solution}$`));
     await expect(page.getByRole("heading", { level: 1, name: "Sample partial exam 2023 solution" })).toBeVisible();
+    await solutionFile;
+    await expect(page.getByRole("img", { name: "Page 1 of 1" })).toBeVisible();
     // And back from the solution to its exam.
     await page.getByRole("link", { name: /Solution of: Sample partial exam 2023$/ }).click();
     await expect(page).toHaveURL(new RegExp(`/resources/${exam}$`));

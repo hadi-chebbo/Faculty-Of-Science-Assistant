@@ -1,5 +1,5 @@
 import { AwsClient } from "aws4fetch";
-import { safeFilename } from "./filename";
+import { attachmentDisposition } from "./filename";
 import { assertStorageKey } from "./keys";
 import type { FileStorage } from "./types";
 
@@ -93,7 +93,7 @@ export function createR2Storage(
       url.searchParams.set("X-Amz-Expires", String(expiresInSeconds));
       url.searchParams.set(
         "response-content-disposition",
-        disposition === "inline" ? "inline" : `attachment; filename="${safeFilename(filename)}"`,
+        disposition === "inline" ? "inline" : attachmentDisposition(filename),
       );
       if (key.endsWith(".pdf")) url.searchParams.set("response-content-type", "application/pdf");
       const signed = await client.sign(url, { method: "GET", aws: { signQuery: true, datetime: datetime() } });

@@ -43,6 +43,8 @@ export function PdfViewer({ resourceId }: { resourceId: string }) {
 
     (async () => {
       const pdfjs = await loadPdfjs();
+      // Left the page while PDF.js was loading: do not start the download.
+      if (cancelled) return;
       const task = pdfjs.getDocument({
         url: new URL(`/api/v1/resources/${resourceId}/open`, window.location.origin).toString(),
         disableRange: true,
@@ -66,7 +68,10 @@ export function PdfViewer({ resourceId }: { resourceId: string }) {
       if (cancelled) return;
       setState({ status: "ready", pdf, ratios: Array<number>(pdf.numPages).fill(first) });
       if (pdf.numPages > 1) {
-        const rest = await Promise.all(Array.from({ length: pdf.numPages - 1 }, (_, i) => sizeOf(i + 2)));
+        // A page whose shape cannot be read keeps the first page's shape; the viewer stays up.
+        const rest = await Promise.all(
+          Array.from({ length: pdf.numPages - 1 }, (_, i) => sizeOf(i + 2).catch(() => first)),
+        );
         if (!cancelled) setState({ status: "ready", pdf, ratios: [first, ...rest] });
       }
     })().catch((error: unknown) => {
@@ -172,9 +177,9 @@ function Pages({ pdf, ratios }: { pdf: PDFDocumentProxy; ratios: number[] }) {
           <PageCanvas key={i} pdf={pdf} number={i + 1} total={total} ratio={ratios[i]} width={width} />
         ))}
       </div>
-      {/* Stays in view while reading; on phones it clears the fixed bottom tab bar. */}
+      {/* Stays in view while reading; on phones it clears the fixed bottom tab bar. Not a live
+          region: it changes on every scroll step, and each page canvas is already labelled. */}
       <p
-        aria-live="polite"
         className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.5rem)] z-10 mx-auto mt-3 w-fit rounded-full border bg-card px-3 py-1 text-sm text-heading shadow-xs md:bottom-4"
       >
         Page {current} of {total}
@@ -228,9 +233,11 @@ function PageCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return;
     if (!near || width === 0) {
-      // Far from the screen: give the pixels back. The wrapper keeps its height.
+      // Far from the screen: give the pixels back, and let PDF.js free the page's own data. The
+      // wrapper keeps its height.
       canvas.width = 0;
       canvas.height = 0;
+      if (width !== 0) void pdf.getPage(number).then((page) => page.cleanup(), () => {});
       return;
     }
     let cancelled = false;
@@ -243,7 +250,7 @@ function PageCanvas({
       cancelled = true;
       task?.cancel();
     };
-  }, [near, width, draw, number]);
+  }, [near, width, draw, number, pdf]);
 
   return (
     <div
