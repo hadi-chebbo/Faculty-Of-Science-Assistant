@@ -166,9 +166,19 @@ mock exam generation, personalization.
   course-page resource row. Dropdowns only offer values that have a visible exam.
 - Reader page (`/resources/ID`, public, published resources only; anything else is the 404
   page): PDF.js draws every page of the file on canvases in one vertical scroll, drawn lazily. The
-  document dominates the page: a card with a top row (only the "More actions" button for now; room
-  is left for Contents on the left and Search on the right, which come in a later change) and the
-  pages on a muted reading surface. One floating bar holds previous / next, the page number (a box
+  document dominates the page: a card with a top row (only Contents on the left and Search and
+  "More actions" on the right; nothing else goes there) and the pages on a muted reading surface.
+  Each drawn page also has PDF.js's own text layer over it (invisible text, so text can be
+  selected and copied; built only for pages near the screen, scaled with the zoom; a scanned page
+  simply has none). Search ("Search in document", or Ctrl+F / Cmd+F, which replaces the browser's
+  find on this page) opens a bar under the top row: a box, "3 of 17" or "No matches", previous /
+  next (Enter / Shift+Enter) and close (Esc). It matches ignoring case and accents ("ete" finds
+  "été") on the text PDF.js extracts, read lazily page by page the first time a search runs and
+  kept; typing is debounced; the current match is highlighted strongly and centred, the others
+  softly, on the pages that are drawn. Contents toggles a ~200px panel left of the pages on
+  desktop (open or closed is remembered in `localStorage`, `reader:contents-open`) and a sheet from
+  the left on a phone; it lists the PDF's outline (nested, with page numbers) and, for a file
+  without one, a thumbnail of every page; the entry for the page being read is marked. One floating bar holds previous / next, the page number (a box
   you can type into on desktop, plain "3 / 12" text on a phone) and zoom out / percentage / zoom in.
   On a phone this bar shows for a few seconds on load, then hides by itself; a tap on the pages
   (not a scroll, pinch or long-press) shows or hides it, and it hides a few seconds after its last
@@ -188,8 +198,8 @@ mock exam generation, personalization.
   card's top row sticky under the site bar with the window scrolling the pages, then the details
   below. Back leads to Previous exams for an exam, to the chapter page for a resource in a chapter,
   otherwise to the course (Other material when the course has chapters). Resource rows and solution
-  links on public pages open the reader in the same tab. There is no text layer, search, contents
-  panel or AI panel yet and no text about one.
+  links on public pages open the reader in the same tab. There is no AI panel yet and no text about
+  one.
 - Branding is the plain text "University Assistant". No university logo, crest or name as
   branding. The footer says: "Independent student project. Not an official Lebanese
   University website."
