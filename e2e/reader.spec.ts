@@ -39,6 +39,23 @@ async function expectPageNumber(page: Page, isMobile: boolean, current: number, 
   }
 }
 
+// On a phone the bar hides itself while reading and a tap on the pages brings it back; on desktop it
+// is always there. These reveal it before a test uses it.
+const bar = (page: Page) => page.getByRole("group", { name: "Page and zoom" });
+// The same element found without the accessibility tree, which leaves it out while it is hidden.
+const barElement = (page: Page) => page.locator('[role="group"][aria-label="Page and zoom"]');
+const isPhone = (page: Page) => page.viewportSize()!.width < 768;
+
+async function tapPage(page: Page) {
+  const view = page.viewportSize()!;
+  await page.touchscreen.tap(view.width / 2, view.height * 0.45);
+}
+
+async function showBar(page: Page) {
+  if (isPhone(page) && !(await bar(page).isVisible())) await tapPage(page);
+  await expect(bar(page)).toBeVisible();
+}
+
 const zoomPercent = async (page: Page) => Number.parseInt((await page.getByTestId("zoom-percent").textContent()) ?? "", 10);
 const canvasWidth = async (page: Page, number: number, total: number) =>
   (await page.getByRole("img", { name: `Page ${number} of ${total}` }).boundingBox())!.width;
@@ -236,6 +253,7 @@ test.describe("reading a long file", () => {
     await page.goto(`/resources/${id}`);
     await expect(page.getByRole("img", { name: `Page 1 of ${PAGES}` })).toBeVisible();
     await expect(page.getByTestId("zoom-percent")).toBeVisible();
+    await showBar(page);
   }
 
   const pageCanvas = (page: Page, n: number) => page.getByRole("img", { name: `Page ${n} of ${PAGES}` });
@@ -244,11 +262,14 @@ test.describe("reading a long file", () => {
     await open(page);
     await expectPageNumber(page, isMobile, 1, PAGES);
     await expect(page.getByRole("button", { name: "Previous page" })).toBeDisabled();
+    await showBar(page);
     await page.getByRole("button", { name: "Next page" }).click();
     await expectPageNumber(page, isMobile, 2, PAGES);
     await expect(pageCanvas(page, 2)).toBeInViewport();
+    await showBar(page);
     await page.getByRole("button", { name: "Next page" }).click();
     await expectPageNumber(page, isMobile, 3, PAGES);
+    await showBar(page);
     await page.getByRole("button", { name: "Previous page" }).click();
     await expectPageNumber(page, isMobile, 2, PAGES);
     await expect(page.getByRole("button", { name: "Previous page" })).toBeEnabled();
@@ -320,6 +341,7 @@ test.describe("reading a long file", () => {
     const fit = await zoomPercent(page);
     const fitWidth = await canvasWidth(page, 1, PAGES);
 
+    await showBar(page);
     await page.getByRole("button", { name: "Zoom in" }).click();
     const bigger = await zoomPercent(page);
     expect(bigger).toBe(ZOOM_LEVELS.find((level) => level > fit + 0.5));
@@ -328,9 +350,11 @@ test.describe("reading a long file", () => {
 
     // Two steps up, then one down: smaller than the second step (a phone starts below 50%, where
     // there is no way down).
+    await showBar(page);
     await page.getByRole("button", { name: "Zoom in" }).click();
     const biggest = await zoomPercent(page);
     const biggestWidth = await canvasWidth(page, 1, PAGES);
+    await showBar(page);
     await page.getByRole("button", { name: "Zoom out" }).click();
     await expect.poll(() => zoomPercent(page)).toBeLessThan(biggest);
     await expect.poll(() => canvasWidth(page, 1, PAGES)).toBeLessThan(biggestWidth);
@@ -341,7 +365,10 @@ test.describe("reading a long file", () => {
 
   test("zoom keeps the reader on the same page, and a wide page scrolls sideways", async ({ page, isMobile }) => {
     await open(page);
-    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Next page" }).click();
+    for (let i = 0; i < 3; i++) {
+      await showBar(page);
+      await page.getByRole("button", { name: "Next page" }).click();
+    }
     await expectPageNumber(page, isMobile, 4, PAGES);
     await expect(pageCanvas(page, 4)).toBeInViewport();
     // Let the smooth scroll to page 4 come to rest before zooming.
@@ -357,6 +384,7 @@ test.describe("reading a long file", () => {
     const zoomIn = page.getByRole("button", { name: "Zoom in" });
     for (let i = 0; i < 12 && (await zoomIn.isEnabled()); i++) {
       const before = await zoomPercent(page);
+      await showBar(page);
       await zoomIn.click();
       await expect.poll(() => zoomPercent(page)).toBeGreaterThan(before);
     }
@@ -421,7 +449,7 @@ test.describe("reading a long file", () => {
       })
       .toBe(true);
     expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe("hidden");
-    await expect(page.getByRole("group", { name: "Page and zoom" })).toBeVisible();
+    await showBar(page);
     await expect(page.getByRole("button", { name: MENU_BUTTON })).toBeVisible();
 
     await openMenu(page);
@@ -474,6 +502,7 @@ test.describe("reading a long file", () => {
   test("offers to continue where the reader left off, once", async ({ page, isMobile }) => {
     await open(page);
     await expect(page.getByRole("region", { name: "Continue reading" })).toHaveCount(0);
+    await showBar(page);
     await page.getByRole("button", { name: "Next page" }).click();
     await expectPageNumber(page, isMobile, 2, PAGES);
     await expect.poll(() => page.evaluate((k) => localStorage.getItem(k), `reader:last-page:${id}`)).toBe("2");
@@ -516,7 +545,10 @@ test.describe("reading a long file", () => {
   test("the arrow keys scroll sideways while the page is wider than the area", async ({ page, isMobile }) => {
     await open(page);
     const zoomIn = page.getByRole("button", { name: "Zoom in" });
-    for (let i = 0; i < 12 && (await zoomIn.isEnabled()); i++) await zoomIn.click();
+    for (let i = 0; i < 12 && (await zoomIn.isEnabled()); i++) {
+      await showBar(page);
+      await zoomIn.click();
+    }
     await expect.poll(() => zoomPercent(page)).toBe(300);
     await page.keyboard.press("ArrowRight");
     await page.keyboard.press("ArrowRight");
@@ -532,6 +564,7 @@ test.describe("reading a long file", () => {
 
   test("the place is saved when leaving by an in-app link straight away", async ({ page, isMobile }) => {
     await open(page);
+    await showBar(page);
     await page.getByRole("button", { name: "Next page" }).click();
     await expectPageNumber(page, isMobile, 2, PAGES);
     const toCourse = isMobile
@@ -553,11 +586,143 @@ test.describe("reading a long file", () => {
       });
     });
     await open(page);
+    await showBar(page);
     await page.getByRole("button", { name: "Next page" }).click();
     await expectPageNumber(page, isMobile, 2, PAGES);
     await page.waitForTimeout(800);
     await expect(page.getByRole("region", { name: "Continue reading" })).toHaveCount(0);
     expect(errors).toEqual([]);
+  });
+
+  test.describe("the bar on a phone", () => {
+    test.beforeEach(({ isMobile }) => {
+      test.skip(!isMobile, "the bar hides itself only on a phone");
+    });
+
+    // Time is controlled by the page's clock, so the delays are skipped instead of waited for.
+    async function openWithClock(page: Page) {
+      await page.clock.install();
+      await page.goto(`/resources/${id}`);
+      await expect(page.getByRole("img", { name: `Page 1 of ${PAGES}` })).toBeVisible();
+      await expect(bar(page)).toBeVisible();
+    }
+
+    test("shows at first, hides by itself, and a tap shows it and a second tap hides it", async ({ page }) => {
+      await openWithClock(page);
+      await page.clock.fastForward(5000);
+      await expect(bar(page)).toBeHidden();
+      // Hidden means out of reach: not clickable and not in the accessibility tree.
+      expect(await barElement(page).evaluate((el) => [getComputedStyle(el).pointerEvents, getComputedStyle(el).visibility])).toEqual(["none", "hidden"]);
+      await expect(page.getByRole("button", { name: "Next page" })).toHaveCount(0);
+
+      await tapPage(page);
+      await expect(bar(page)).toBeVisible();
+      await tapPage(page);
+      await expect(bar(page)).toBeHidden();
+    });
+
+    test("a tap on the page shows the bar, and it hides again after the delay", async ({ page }) => {
+      await openWithClock(page);
+      await page.clock.fastForward(5000);
+      await expect(bar(page)).toBeHidden();
+      await tapPage(page);
+      await expect(bar(page)).toBeVisible();
+      await page.clock.fastForward(3500);
+      await expect(bar(page)).toBeVisible();
+      await page.clock.fastForward(1000);
+      await expect(bar(page)).toBeHidden();
+    });
+
+    test("scrolling the page does not show it", async ({ page }) => {
+      await openWithClock(page);
+      await page.clock.fastForward(5000);
+      await expect(bar(page)).toBeHidden();
+
+      await page.mouse.wheel(0, 500);
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+      await expect(bar(page)).toBeHidden();
+
+      // A finger dragged over the page is a scroll, not a tap.
+      const cdp = await page.context().newCDPSession(page);
+      const x = page.viewportSize()!.width / 2;
+      const touch = (type: "touchStart" | "touchMove" | "touchEnd", y: number) =>
+        cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+      await touch("touchStart", 500);
+      for (let y = 500; y >= 380; y -= 20) await touch("touchMove", y);
+      await touch("touchEnd", 380);
+      await expect(bar(page)).toBeHidden();
+    });
+
+    test("using the bar keeps it visible, and it hides again after the delay", async ({ page }) => {
+      await openWithClock(page);
+      await page.clock.fastForward(5000);
+      await tapPage(page);
+      await expect(bar(page)).toBeVisible();
+
+      await page.clock.fastForward(3000);
+      await page.getByRole("button", { name: "Next page" }).click();
+      await expectPageNumber(page, true, 2, PAGES);
+      // 3 s + 3 s later: past the delay from the tap, but not from the click.
+      await page.clock.fastForward(3000);
+      await expect(bar(page)).toBeVisible();
+      await page.getByRole("button", { name: "Previous page" }).click();
+      await expectPageNumber(page, true, 1, PAGES);
+
+      await page.clock.fastForward(5000);
+      await expect(bar(page)).toBeHidden();
+    });
+
+    test("stays while the More actions sheet is open", async ({ page }) => {
+      await openWithClock(page);
+      const visibility = () => barElement(page).evaluate((el) => getComputedStyle(el).visibility);
+      await openMenu(page);
+      await page.clock.fastForward(10_000);
+      expect(await visibility()).toBe("visible");
+      await page.keyboard.press("Escape");
+      await expect(menuEntry(page, true, "Focus mode")).toHaveCount(0);
+      expect(await visibility()).toBe("visible");
+      await page.clock.fastForward(5000);
+      await expect(bar(page)).toBeHidden();
+    });
+
+    test("Tab from the top row reveals it and the focus stays inside", async ({ page }) => {
+      await openWithClock(page);
+      await page.clock.fastForward(5000);
+      await expect(bar(page)).toBeHidden();
+      await page.getByRole("button", { name: MENU_BUTTON }).focus();
+      await page.keyboard.press("Tab");
+      await expect(bar(page)).toBeVisible();
+      // The reading area itself may come first in the tab order (it scrolls sideways).
+      const next = page.getByRole("button", { name: "Next page" });
+      for (let i = 0; i < 2 && !(await next.evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press("Tab");
+      await expect(next).toBeFocused();
+      // Held open while the focus is inside.
+      await page.clock.fastForward(10_000);
+      await expect(bar(page)).toBeVisible();
+    });
+
+    test("works the same in focus mode", async ({ page }) => {
+      await openWithClock(page);
+      await openMenu(page);
+      await menuEntry(page, true, "Focus mode").click();
+      await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).toBe("hidden");
+      await page.clock.fastForward(10_000);
+      await expect(bar(page)).toBeHidden();
+      await tapPage(page);
+      await expect(bar(page)).toBeVisible();
+    });
+  });
+
+  test("on a wide screen the bar never hides", async ({ page, isMobile }) => {
+    test.skip(isMobile, "phones hide the bar");
+    await page.clock.install();
+    await page.goto(`/resources/${id}`);
+    await expect(bar(page)).toBeVisible();
+    await page.clock.fastForward(30_000);
+    await expect(bar(page)).toBeVisible();
+    // A click on the pages does not toggle it either.
+    await page.getByRole("img", { name: `Page 1 of ${PAGES}` }).click({ position: { x: 20, y: 20 } });
+    await expect(bar(page)).toBeVisible();
   });
 });
 
