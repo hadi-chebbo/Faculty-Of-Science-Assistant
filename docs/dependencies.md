@@ -50,6 +50,7 @@ shadcn/ui is not a package you import. Its CLI copies component source files int
 | Package | What it is | Why we have it | Where used | Declared / installed | Section OK? |
 |---|---|---|---|---|---|
 | `aws4fetch` | A tiny signer for the S3 request-signing scheme (SigV4) that works with `fetch`. No dependencies of its own. | The Cloudflare R2 driver needs six plain HTTP calls and presigned URLs. The AWS SDK would be two large packages for that; Cloudflare's own R2 documentation uses this library for signed URLs. | `src/lib/storage/r2.ts`. | `^1.0.20` / 1.0.20 | Yes, runtime |
+| `pdfjs-dist` | Mozilla's PDF.js: draws a PDF onto canvases in the browser and gives access to its text and pages. | The reader page shows files inside our own page. The owner chose PDF.js because Android Chrome cannot show embedded PDFs, and the AI assistant planned after launch needs the text and page of what the student is reading. Loaded only on the reader page (dynamic import, no server rendering). | `src/app/resources/[id]/pdf-viewer.tsx`. | `6.4.299` (exact) / 6.4.299 | Yes, runtime |
 
 ## Database
 
