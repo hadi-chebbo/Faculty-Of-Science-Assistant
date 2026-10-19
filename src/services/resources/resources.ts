@@ -3,6 +3,7 @@ import { EXAM_SESSIONS } from "@/db/constants";
 import type { ExamSession } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { getStorage } from "@/lib/storage/config";
+import { safeFilename } from "@/lib/storage/filename";
 import type { Resource } from "@/db/models";
 import { NotFoundError, UnavailableError } from "../errors";
 import type { Page } from "../types";
@@ -135,21 +136,33 @@ export async function getResource(viewer: Viewer, id: string): Promise<ResourceD
 }
 
 // Where to send a visitor who opens a resource. Same visibility rule as everything else.
-export async function getResourceLink(viewer: Viewer, id: string): Promise<ResourceLink> {
+// `attachment` is for the download action: only a stored file can be downloaded (a backup link
+// is somebody else's page), and the browser saves it under a name made from the title.
+export async function getResourceLink(
+  viewer: Viewer,
+  id: string,
+  options: { disposition?: "inline" | "attachment" } = {},
+): Promise<ResourceLink> {
   if (!idSchema.safeParse(id).success) throw new NotFoundError("Resource not found");
+  const disposition = options.disposition ?? "inline";
 
   const { Resource } = getDb();
   const row = await Resource.findOne({
     where: { id, ...visibleResources(viewer) },
-    attributes: ["externalUrl", "fileKey"],
+    attributes: ["title", "externalUrl", "fileKey"],
   });
   if (!row) throw new NotFoundError("Resource not found");
 
   // The stored file wins; the link is the backup.
   if (row.fileKey) {
-    const url = await getStorage().createReadUrl(row.fileKey, { expiresInSeconds: 5 * 60, disposition: "inline" });
+    const url = await getStorage().createReadUrl(row.fileKey, {
+      expiresInSeconds: 5 * 60,
+      disposition,
+      ...(disposition === "attachment" ? { filename: safeFilename(`${row.title}.pdf`) } : {}),
+    });
     return { url };
   }
+  if (disposition === "attachment") throw new NotFoundError("Resource has no file");
   if (row.externalUrl) return { url: row.externalUrl };
   // A draft may have no source at all.
   throw new UnavailableError("This resource is not available yet");

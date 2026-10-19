@@ -28,6 +28,17 @@ export interface ResourceDetail extends ResourceListItem {
   solutionOf: ResourceRef | null;
 }
 
+// What the reader page needs. The stored file's key is never exposed, only whether one exists.
+export interface ReaderResource extends ResourceDetail {
+  courseSemester: number;
+  // Position of the chapter it belongs to, or null when it has none (or is an exam).
+  chapterPosition: number | null;
+  courseHasChapters: boolean;
+  hasFile: boolean;
+  // The optional backup link, public for a published resource.
+  backupUrl: string | null;
+}
+
 // Where opening a resource leads. A link, or a short-lived signed URL for a stored file.
 export interface ResourceLink {
   url: string;

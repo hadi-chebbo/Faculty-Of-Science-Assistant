@@ -403,6 +403,36 @@ describe("getResourceLink", () => {
     await expect(getResourceLink(admin, draft.id)).rejects.toBeInstanceOf(UnavailableError);
     await expect(getResourceLink(null, draft.id)).rejects.toBeInstanceOf(NotFoundError);
   });
+
+  describe("as an attachment (download)", () => {
+    it("is served as an attachment named after the title, with .pdf added", async () => {
+      const { a } = await seed();
+      const { key } = await storeFile();
+      const stored = await getDb().Resource.create({
+        courseId: a.id, type: "lecture", title: 'Lecture "1"; part/2', fileKey: key, isPublished: true,
+      });
+      const { url } = await getResourceLink(null, stored.id, { disposition: "attachment" });
+      const response = await serveFromStorage(url);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-disposition")).toBe('attachment; filename="Lecture 1 part2.pdf"');
+      expect(new Uint8Array(await response.arrayBuffer())).toEqual(PDF_BYTES);
+    });
+
+    it("keeps the visibility rules: a draft is not found for non-admins", async () => {
+      const { a } = await seed();
+      const { key } = await storeFile();
+      const draft = await getDb().Resource.create({ courseId: a.id, type: "lecture", title: "Draft file", fileKey: key });
+      await expect(getResourceLink(null, draft.id, { disposition: "attachment" })).rejects.toBeInstanceOf(NotFoundError);
+      await expect(getResourceLink(null, "not-a-uuid", { disposition: "attachment" })).rejects.toBeInstanceOf(NotFoundError);
+      expect((await getResourceLink(admin, draft.id, { disposition: "attachment" })).url).toContain("/api/v1/storage/local");
+    });
+
+    it("is not found for a resource that only has a link, never redirecting to the link", async () => {
+      const { a } = await seed();
+      const linkOnly = await getDb().Resource.create({ courseId: a.id, type: "lecture", title: "Link only", externalUrl: SAMPLE_URL });
+      await expect(getResourceLink(admin, linkOnly.id, { disposition: "attachment" })).rejects.toBeInstanceOf(NotFoundError);
+    });
+  });
 });
 
 describe("requireAdmin", () => {
