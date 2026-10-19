@@ -27,11 +27,13 @@ import { LanguageSwitch, TypeChooser } from "./choice-groups";
 import { deleteNotes } from "./delete-notes";
 import { academicYearOptions } from "./form-helpers";
 import { Field, FormCard, RadioField, fieldClass, selectClass } from "./form-parts";
+import { FileField } from "./file-field";
 import { FormPreview } from "./form-preview";
 import { VisibilityCard } from "./visibility-card";
 
 const FIELD_MESSAGES: Record<string, string> = {
-  isPublished: "Add a link before publishing.",
+  file: "The file could not be checked. Upload a PDF of at most 50 MB.",
+  isPublished: "Add a file or link before publishing.",
   examSession: "Choose a session for an exam.",
   chapterId: "Choose a chapter of this course.",
   solutionOfId: "Choose an exercise or exam of this course.",
@@ -71,6 +73,8 @@ export function ResourceForm({
   const [isPublished, setIsPublished] = useState(resource?.isPublished ?? false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [fileTicket, setFileTicket] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [pending, setPending] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [yearOptions] = useState(() => academicYearOptions(new Date().getFullYear(), resource?.academicYearStart ?? null));
@@ -85,6 +89,7 @@ export function ResourceForm({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (uploading) return;
     const form = new FormData(event.currentTarget);
     const text = (name: string) => String(form.get(name) ?? "");
     const body = {
@@ -99,6 +104,7 @@ export function ResourceForm({
       solutionOfId: type === "solution" && solutionOfId ? solutionOfId : null,
       chapterId: type !== "exam" && chapterId ? chapterId : null,
       isPublished,
+      ...(fileTicket ? { fileTicket } : {}),
     };
 
     setPending(true);
@@ -119,6 +125,8 @@ export function ResourceForm({
         const data: { fields?: unknown } = await response.json().catch(() => ({}));
         const fields = Array.isArray(data.fields) ? data.fields.filter((f): f is string => typeof f === "string") : [];
         setErrors(Object.fromEntries(fields.map((f) => [f, FIELD_MESSAGES[f] ?? "Check this value."])));
+        // That upload is unusable: the admin has to choose the file again.
+        if (fields.includes("file")) setFileTicket(null);
         setFormError("The resource was not saved. Check the marked fields.");
       } else if (response.status === 401) {
         setFormError("Your session has ended. Redirecting to sign in.");
@@ -329,8 +337,21 @@ export function ResourceForm({
           </div>
         </FormCard>
 
-        <FormCard title="The material" description="A resource needs a file or a link before it can be published.">
-          <Field id="externalUrl" label="Link" hint={hasFile ? "Optional backup link (https://)." : "An https:// address."} error={errors.externalUrl}>
+        <FormCard title="The material" description="A PDF file. A backup link is optional.">
+          <FileField
+            id="file"
+            ticket={fileTicket}
+            onTicketChange={setFileTicket}
+            onUploadingChange={(value) => {
+              setUploading(value);
+              if (value) setErrors((current) => Object.fromEntries(Object.entries(current).filter(([name]) => name !== "file")));
+            }}
+            storedFileHref={resource && hasFile ? `/api/v1/resources/${resource.id}/open` : undefined}
+            serverError={errors.file}
+            onSignedOut={() => router.replace("/sign-in")}
+          />
+
+          <Field id="externalUrl" label="Backup link" optional hint="Shown beside the file, in case it fails to open (https://)." error={errors.externalUrl}>
             <Input
               id="externalUrl"
               name="externalUrl"
@@ -351,6 +372,7 @@ export function ResourceForm({
           error={errors.isPublished}
           formError={formError}
           pending={pending}
+          uploading={uploading}
           canDelete={resource !== undefined}
           onDelete={() => setConfirmingDelete(true)}
         />
