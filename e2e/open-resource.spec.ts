@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 import pg from "pg";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed
@@ -14,30 +15,63 @@ if (!process.env.DATABASE_URL) {
 const UNKNOWN_ID = "33333333-3333-4333-8333-333333333333";
 
 // Ids are read straight from the database; there is deliberately no API that lists them.
-async function resourceId(courseCode: string, title: string): Promise<{ id: string; externalUrl: string }> {
+async function resourceId(courseCode: string, title: string): Promise<{ id: string }> {
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
   try {
     const { rows } = await client.query(
-      `SELECT r.id, r.external_url FROM resources r JOIN courses c ON c.id = r.course_id
+      `SELECT r.id FROM resources r JOIN courses c ON c.id = r.course_id
        WHERE c.code = $1 AND r.title = $2`,
       [courseCode, title],
     );
     expect(rows).toHaveLength(1);
-    return { id: rows[0].id, externalUrl: rows[0].external_url };
+    return { id: rows[0].id };
   } finally {
     await client.end();
   }
 }
 
+// A published resource with a link and no file, made for one test and always removed again.
+// (Every seeded resource has a stored file, which wins over its link.)
+async function withLinkOnlyResource<T>(run: (resource: { id: string; externalUrl: string }) => Promise<T>): Promise<T> {
+  const externalUrl = "https://example.com/e2e/link-only";
+  const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  await client.connect();
+  let id: string | undefined;
+  try {
+    const { rows } = await client.query(
+      `INSERT INTO resources (course_id, type, title, language, external_url, is_published)
+       SELECT id, 'other', $2, 'en', $3, true FROM courses WHERE code = $1 RETURNING id`,
+      ["DEMO301", `E2E link-only ${randomUUID()}`, externalUrl],
+    );
+    id = rows[0].id as string;
+    return await run({ id, externalUrl });
+  } finally {
+    if (id) await client.query("DELETE FROM resources WHERE id = $1", [id]);
+    await client.end();
+  }
+}
+
 test.describe("GET /api/v1/resources/[id]/open", () => {
-  test("redirects a published resource to its link, uncached", async ({ request }) => {
-    const { id, externalUrl } = await resourceId("DEMO301", "Sample lecture 1");
+  test("redirects a seeded resource to its stored PDF, uncached", async ({ request }) => {
+    const { id } = await resourceId("DEMO301", "Sample lecture 1");
     const response = await request.get(`/api/v1/resources/${id}/open`, { maxRedirects: 0 });
     expect(response.status()).toBe(307);
-    expect(response.headers()["location"]).toBe(externalUrl);
-    expect(externalUrl).toMatch(/^https:\/\//);
     expect(response.headers()["cache-control"]).toBe("no-store");
+    const served = await request.get(response.headers()["location"]);
+    expect(served.status()).toBe(200);
+    expect(served.headers()["content-type"]).toBe("application/pdf");
+    expect((await served.body()).subarray(0, 5).toString("latin1")).toBe("%PDF-");
+  });
+
+  test("redirects a link-only resource to its link, uncached", async ({ request }) => {
+    await withLinkOnlyResource(async ({ id, externalUrl }) => {
+      const response = await request.get(`/api/v1/resources/${id}/open`, { maxRedirects: 0 });
+      expect(response.status()).toBe(307);
+      expect(response.headers()["location"]).toBe(externalUrl);
+      expect(externalUrl).toMatch(/^https:\/\//);
+      expect(response.headers()["cache-control"]).toBe("no-store");
+    });
   });
 
   test("answers 404 for an unknown id, a malformed id and a draft", async ({ request }) => {
@@ -64,11 +98,22 @@ test.describe("GET /api/v1/resources/[id]/open for a browser", () => {
     }
   });
 
-  test("still redirects a working resource to its link", async ({ request }) => {
-    const { id, externalUrl } = await resourceId("DEMO301", "Sample lecture 1");
+  test("still redirects a working resource to its stored PDF", async ({ request }) => {
+    const { id } = await resourceId("DEMO301", "Sample lecture 1");
     const response = await request.get(`/api/v1/resources/${id}/open`, { maxRedirects: 0, headers: HTML });
     expect(response.status()).toBe(307);
-    expect(response.headers()["location"]).toBe(externalUrl);
+    const served = await request.get(response.headers()["location"]);
+    expect(served.status()).toBe(200);
+    expect(served.headers()["content-type"]).toBe("application/pdf");
+    expect((await served.body()).subarray(0, 5).toString("latin1")).toBe("%PDF-");
+  });
+
+  test("still redirects a link-only resource to its link", async ({ request }) => {
+    await withLinkOnlyResource(async ({ id, externalUrl }) => {
+      const response = await request.get(`/api/v1/resources/${id}/open`, { maxRedirects: 0, headers: HTML });
+      expect(response.status()).toBe(307);
+      expect(response.headers()["location"]).toBe(externalUrl);
+    });
   });
 
   test("keeps the JSON answer for clients that do not accept HTML", async ({ request }) => {

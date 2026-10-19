@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { verify } from "@node-rs/argon2";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
@@ -9,6 +11,13 @@ const root = path.resolve(import.meta.dirname, "../..");
 const cli = path.join(root, "node_modules/sequelize-cli/lib/sequelize");
 const FULL_CODES = ["DEMO310", "DEMO410", "DEMO510", "DEMO610"];
 const ADMIN_PASSWORD = "a-long-test-password";
+// The seeder stores demo files through the storage driver; tests use a throwaway local folder.
+const storageDir = fs.mkdtempSync(path.join(os.tmpdir(), "ua-seed-storage-"));
+
+function storedPdfs(): string[] {
+  const dir = path.join(storageDir, "resources");
+  return fs.existsSync(dir) ? fs.readdirSync(dir).filter((name) => name.endsWith(".pdf")) : [];
+}
 
 // A controlled child environment: nothing from .env or the parent leaks in.
 function runCli(command: string, extra: Record<string, string> = {}) {
@@ -20,6 +29,8 @@ function runCli(command: string, extra: Record<string, string> = {}) {
       NODE_ENV: "test",
       DATABASE_URL: process.env.DATABASE_URL ?? "",
       DATABASE_SSL: "false",
+      STORAGE_DRIVER: "local",
+      STORAGE_LOCAL_DIR: storageDir,
       ...extra,
     },
   });
@@ -50,10 +61,12 @@ const FULL_ENV = {
 
 beforeEach(async () => {
   await truncateAllTables();
+  fs.rmSync(storageDir, { recursive: true, force: true });
 });
 
 afterAll(async () => {
   await closeDb();
+  fs.rmSync(storageDir, { recursive: true, force: true });
 });
 
 describe("seeders", () => {
@@ -66,8 +79,9 @@ describe("seeders", () => {
 
     expect(await count("courses")).toBe(12);
     expect(await query("SELECT 1 FROM resources r JOIN courses c ON c.id = r.course_id WHERE c.code = 'DEMO602'")).toHaveLength(0);
+    // Every published demo resource has a stored file and keeps its (fake) backup link.
     const badPublished = await query(
-      "SELECT 1 FROM resources WHERE is_published AND num_nonnulls(file_key, external_url) <> 1",
+      "SELECT 1 FROM resources WHERE is_published AND num_nonnulls(file_key, external_url) <> 2",
     );
     expect(badPublished).toHaveLength(0);
 
@@ -89,6 +103,26 @@ describe("seeders", () => {
     const second = runCli("db:seed:all", FULL_ENV);
     expect(second.status, second.output).toBe(0);
     expect(await counts()).toEqual(afterFirst);
+  });
+
+  it("stores one placeholder PDF per sourced resource, and replaces them when seeded again", async () => {
+    expect(runCli("db:seed:all", FULL_ENV).status).toBe(0);
+    const query = async (sql: string) => (await getDb().sequelize.query(sql))[0] as Record<string, unknown>[];
+    const keys = (await query("SELECT file_key FROM resources WHERE file_key IS NOT NULL")).map((r) => r.file_key as string);
+    expect(keys.length).toBeGreaterThan(100);
+    expect(new Set(keys).size).toBe(keys.length);
+    // Only the deliberate no-source drafts have no file.
+    expect(await query("SELECT 1 FROM resources WHERE file_key IS NULL AND external_url IS NOT NULL")).toHaveLength(0);
+    expect(storedPdfs()).toHaveLength(keys.length);
+    const first = fs.readFileSync(path.join(storageDir, keys[0]));
+    expect(first.subarray(0, 8).toString("latin1")).toBe("%PDF-1.4");
+    expect(first.toString("latin1")).toContain("(SAMPLE FILE) Tj");
+
+    // A second run swaps in new files and leaves no orphans.
+    expect(runCli("db:seed:all", FULL_ENV).status).toBe(0);
+    const again = (await query("SELECT file_key FROM resources WHERE file_key IS NOT NULL")).map((r) => r.file_key as string);
+    expect(again).toHaveLength(keys.length);
+    expect(storedPdfs()).toHaveLength(keys.length);
   });
 
   describe("demo chapters", () => {
@@ -209,14 +243,14 @@ describe("seeders", () => {
       }
     });
 
-    it("keeps every chapter link inside its own course and every published resource sourced once", async () => {
+    it("keeps every chapter link inside its own course and every published resource sourced by a file and a link", async () => {
       expect(
         await query(
           "SELECT 1 FROM resources r JOIN chapters ch ON ch.id = r.chapter_id WHERE ch.course_id <> r.course_id",
         ),
       ).toHaveLength(0);
       expect(
-        await query("SELECT 1 FROM resources WHERE is_published AND num_nonnulls(file_key, external_url) <> 1"),
+        await query("SELECT 1 FROM resources WHERE is_published AND num_nonnulls(file_key, external_url) <> 2"),
       ).toHaveLength(0);
     });
 
@@ -249,5 +283,6 @@ describe("seeders", () => {
     const undo = runCli("db:seed:undo:all", FULL_ENV);
     expect(undo.status, undo.output).toBe(0);
     expect(Object.values(await counts()).every((n) => n === 0)).toBe(true);
+    expect(storedPdfs()).toHaveLength(0);
   });
 });

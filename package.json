@@ -16,8 +16,8 @@
     "db:migrate:neon": "node --env-file=.env.neon ./node_modules/sequelize-cli/lib/sequelize db:migrate",
     "db:migrate:status:neon": "node --env-file=.env.neon ./node_modules/sequelize-cli/lib/sequelize db:migrate:status",
     "db:migration:create": "node --env-file-if-exists=.env ./node_modules/sequelize-cli/lib/sequelize migration:generate --name",
-    "db:seed": "node --env-file-if-exists=.env ./node_modules/sequelize-cli/lib/sequelize db:seed:all",
-    "db:seed:undo": "node --env-file-if-exists=.env ./node_modules/sequelize-cli/lib/sequelize db:seed:undo:all",
+    "db:seed": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON ./node_modules/sequelize-cli/lib/sequelize db:seed:all",
+    "db:seed:undo": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON ./node_modules/sequelize-cli/lib/sequelize db:seed:undo:all",
     "storage:check": "node --env-file-if-exists=.env --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-storage.mjs",
     "db:test:prepare": "node --env-file-if-exists=.env scripts/prepare-test-db.mjs"
   },
