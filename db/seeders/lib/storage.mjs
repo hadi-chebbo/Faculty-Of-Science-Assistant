@@ -6,12 +6,33 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const src = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../src");
+let hooked = false;
 
 export async function loadStorage() {
-  const [major, minor] = process.versions.node.split(".").map(Number);
-  if (major < 22 || (major === 22 && minor < 18)) {
+  // Node reports whether it can run TypeScript without a flag (22.18+, or 23.6+).
+  if (!process.features.typescript) {
     throw new Error("Seeding demo files needs Node 22.18 or newer (built-in TypeScript support).");
   }
+  if (!hooked) registerResolveHook();
+  hooked = true;
+  const url = (file) => pathToFileURL(path.join(src, file)).href;
+  const [config, keys, pdf, constants] = await Promise.all([
+    import(url("lib/storage/config.ts")),
+    import(url("lib/storage/keys.ts")),
+    import(url("lib/storage/sample-pdf.ts")),
+    import(url("db/constants.ts")),
+  ]);
+  return {
+    getStorage: config.getStorage,
+    newResourceFileKey: keys.newResourceFileKey,
+    samplePdf: pdf.samplePdf,
+    contentType: constants.UPLOAD_CONTENT_TYPE,
+  };
+}
+
+// Lets the app's TypeScript load here: "@/x" means src/x.ts, and an extension-less relative import
+// gets ".ts". Only specifiers the default resolver cannot find are rewritten (besides "@/").
+function registerResolveHook() {
   registerHooks({
     resolve(specifier, context, nextResolve) {
       if (specifier.startsWith("@/")) {
@@ -27,17 +48,4 @@ export async function loadStorage() {
       }
     },
   });
-  const url = (file) => pathToFileURL(path.join(src, file)).href;
-  const [config, keys, pdf, constants] = await Promise.all([
-    import(url("lib/storage/config.ts")),
-    import(url("lib/storage/keys.ts")),
-    import(url("lib/storage/sample-pdf.ts")),
-    import(url("db/constants.ts")),
-  ]);
-  return {
-    getStorage: config.getStorage,
-    newResourceFileKey: keys.newResourceFileKey,
-    samplePdf: pdf.samplePdf,
-    contentType: constants.UPLOAD_CONTENT_TYPE,
-  };
 }

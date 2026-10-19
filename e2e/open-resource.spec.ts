@@ -103,7 +103,9 @@ test.describe("GET /api/v1/resources/[id]/open for a browser", () => {
     const response = await request.get(`/api/v1/resources/${id}/open`, { maxRedirects: 0, headers: HTML });
     expect(response.status()).toBe(307);
     const served = await request.get(response.headers()["location"]);
+    expect(served.status()).toBe(200);
     expect(served.headers()["content-type"]).toBe("application/pdf");
+    expect((await served.body()).subarray(0, 5).toString("latin1")).toBe("%PDF-");
   });
 
   test("still redirects a link-only resource to its link", async ({ request }) => {

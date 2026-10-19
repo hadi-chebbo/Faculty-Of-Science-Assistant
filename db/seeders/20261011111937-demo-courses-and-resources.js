@@ -217,21 +217,36 @@ function pdfLines(r, courseTitles) {
   ];
 }
 
+// How many files are sent to storage at once. One at a time, about 220 round trips to R2 took minutes.
+const UPLOADS_AT_ONCE = 8;
+
+// Deletes stored files, never failing the seed over one: a failure leaves an orphan, which is
+// reported by count (never by key).
+async function deleteFiles(storage, keys, when) {
+  const results = await Promise.allSettled(keys.map((key) => storage.delete(key)));
+  const failed = results.filter((r) => r.status === 'rejected').length;
+  if (failed > 0) console.warn(`demo-courses-and-resources: ${failed} stored file(s) could not be deleted ${when}`);
+}
+
 // Stores one placeholder PDF per resource that has a source and returns the keys by resource object.
 // If storing fails part way, the files already stored are removed again.
 async function storeFiles(resources, courseTitles) {
   const { getStorage, newResourceFileKey, samplePdf, contentType } = await loadStorage();
   const storage = getStorage();
   const keys = new Map();
-  try {
-    for (const r of resources) {
-      if (r.noSource) continue;
+  const queue = resources.filter((r) => !r.noSource);
+  const worker = async () => {
+    for (let r = queue.shift(); r; r = queue.shift()) {
       const key = newResourceFileKey();
+      keys.set(r, key); // Recorded first, so a failed put is cleaned up too.
       await storage.put(key, samplePdf(pdfLines(r, courseTitles)), contentType);
-      keys.set(r, key);
     }
+  };
+  try {
+    await Promise.all(Array.from({ length: UPLOADS_AT_ONCE }, worker));
   } catch (error) {
-    await Promise.allSettled([...keys.values()].map((key) => storage.delete(key)));
+    queue.length = 0; // Stop the other workers taking more.
+    await deleteFiles(storage, [...keys.values()], 'after a failed upload');
     throw error;
   }
   return { keys, storage };
@@ -273,12 +288,9 @@ module.exports = {
 
     // Files first, then the rows that point at them. If the insert fails, the files are removed.
     const courseTitles = new Map(COURSES.map((c) => [c.code, c.title]));
-    const allResources = [
-      ...RESOURCES,
-      ...SOLUTIONS.map((s) => ({ ...s, type: 'solution', solutionOf: true })),
-    ];
-    const { keys, storage } = await storeFiles(allResources, courseTitles);
-    const solutionKeys = new Map(SOLUTIONS.map((s, i) => [s, keys.get(allResources[RESOURCES.length + i])]));
+    // Solutions as resources, built once and used both for their files and for their rows.
+    const solutionResources = new Map(SOLUTIONS.map((s) => [s, { ...s, type: 'solution', solutionOf: true }]));
+    const { keys, storage } = await storeFiles([...RESOURCES, ...solutionResources.values()], courseTitles);
 
     // The previous demo files are removed once the new rows are committed (below).
     let previousKeys = [];
@@ -330,7 +342,8 @@ module.exports = {
           'resources',
           SOLUTIONS.map((s) => {
             const solutionOfId = byKey.get(s.of);
-            return toRow({ ...s, type: 'solution', solutionOf: true }, courseIds, now, solutionOfId, solutionKeys.get(s));
+            const r = solutionResources.get(s);
+            return toRow(r, courseIds, now, solutionOfId, keys.get(r));
           }),
           { transaction },
         );
@@ -368,10 +381,10 @@ module.exports = {
         }
       });
     } catch (error) {
-      await Promise.allSettled([...keys.values()].map((key) => storage.delete(key)));
+      await deleteFiles(storage, [...keys.values()], 'after a failed insert');
       throw error;
     }
-    await Promise.allSettled(previousKeys.map((key) => storage.delete(key)));
+    await deleteFiles(storage, previousKeys, 'from the previous seed');
   },
 
   async down(queryInterface) {
@@ -383,8 +396,7 @@ module.exports = {
     // Remove the stored files once the rows are gone (a missing object is fine).
     if (keys.length > 0) {
       const { getStorage } = await loadStorage();
-      const storage = getStorage();
-      await Promise.all(keys.map((key) => storage.delete(key)));
+      await deleteFiles(getStorage(), keys, 'on undo');
     }
   },
 };
