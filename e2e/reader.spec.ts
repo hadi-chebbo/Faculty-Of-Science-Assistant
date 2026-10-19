@@ -345,7 +345,9 @@ test.describe("reading a long file", () => {
     await open(page);
     const fit = await zoomPercent(page);
     const box = page.getByLabel("Page number");
-    await box.focus();
+    // Start from an empty box: what End does to a selection differs by platform (it moves the
+    // caret on Linux, not on macOS), and the box's starting text is not what this test is about.
+    await box.fill("");
     // The keys go into the box (the "+" is typed there), not to the reader.
     await page.keyboard.press("End");
     await page.keyboard.press("+");

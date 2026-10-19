@@ -245,7 +245,9 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
 
   // The current page is the one with the most of itself on screen; the ends win at the ends.
   const update = useCallback(() => {
-    if (!scroller) return;
+    // Before the pages have their real sizes the document is not the one the reader will see, and
+    // a position measured on it must not become the page the reader is on.
+    if (!scroller || !ready) return;
     const view = viewport();
     let best: HTMLElement | null = null;
     let bestVisible = 0;
@@ -270,7 +272,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     if (inner && scroller.scrollTop <= 0) shown = 1;
     else if (inner && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) shown = total;
     if (performance.now() >= jumpUntil.current) setCurrent(shown);
-  }, [scroller, viewport, pageElements, inner, total]);
+  }, [scroller, ready, viewport, pageElements, inner, total]);
 
   useEffect(() => {
     if (!scroller) return;
@@ -349,6 +351,24 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     setDraft(null);
     if (page !== null) goTo(page);
   };
+
+  // The window must not move by itself while the pages come in. The browser would otherwise put
+  // the old scroll position back into the short page before the pages exist (on a slow phone), and
+  // then scroll anchoring would carry it down with the pages as they grow, landing a reload on the
+  // last page. So restoration is off (getting back to the place is the continue-reading notice's
+  // job) and so is anchoring on the page itself; the reader keeps its own place when sizes change.
+  // A layout effect, so it applies before the first layout of the pages.
+  useLayoutEffect(() => {
+    const html = document.documentElement;
+    const previousRestoration = history.scrollRestoration;
+    const previousAnchor = html.style.overflowAnchor;
+    history.scrollRestoration = "manual";
+    html.style.overflowAnchor = "none";
+    return () => {
+      history.scrollRestoration = previousRestoration;
+      html.style.overflowAnchor = previousAnchor;
+    };
+  }, []);
 
   // ---- Continue reading -------------------------------------------------------------------
   const currentRef = useRef(1);
