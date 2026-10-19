@@ -59,15 +59,14 @@ function isTyping(target: EventTarget | null): boolean {
 }
 
 // Makes everything outside the card unreachable (by Tab, pointer and screen readers) and returns
-// the way back. Menus and sheets are added to the end of the page when they open, after this runs,
-// so they are not affected.
+// the way back. Menus and sheets opened later are added to the end of the page after this runs, so
+// they stay usable. The menu that turned focus mode on is still fading out at this moment: it is
+// made inert like the rest, or Tab could land on it while it closes.
 function makeRestInert(card: HTMLElement | null): () => void {
   const changed: Element[] = [];
   for (let node: Element | null = card; node && node !== document.body; node = node.parentElement) {
     for (const sibling of Array.from(node.parentElement?.children ?? [])) {
       if (sibling === node || ["SCRIPT", "STYLE", "LINK"].includes(sibling.tagName) || sibling.hasAttribute("inert")) continue;
-      // An open menu or sheet is part of the card's controls.
-      if (sibling.matches('[data-state="open"]') || sibling.querySelector('[data-state="open"][role="menu"], [data-state="open"][role="dialog"]')) continue;
       sibling.setAttribute("inert", "");
       changed.push(sibling);
     }
