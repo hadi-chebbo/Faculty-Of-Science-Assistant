@@ -98,7 +98,7 @@ export function SearchForm({ q, type }: { q: string; type?: string }) {
       </div>
       {/* After the box, so the address reads q first. */}
       {type && <input type="hidden" name="type" value={type} />}
-      <Button type="submit" className="sr-only h-12 px-5 md:not-sr-only md:inline-flex">
+      <Button type="submit" className="h-12 px-5 max-md:sr-only">
         Search
       </Button>
     </form>
