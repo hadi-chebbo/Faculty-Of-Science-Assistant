@@ -73,8 +73,8 @@
   --reader-surface: #e6e7eb;
   /* Over a document's white page: selected text, every search match, and the current match. */
   --reader-selection: rgb(62 78 184 / 0.3);
-  --reader-hit: rgb(253 185 31 / 0.4);
-  --reader-hit-current: rgb(253 185 31 / 0.9);
+  --reader-hit: rgb(253 185 31 / 0.22);
+  --reader-hit-current: rgb(253 185 31 / 0.45);
   --reader-hit-ring: #a86b00;
   --muted-foreground: #6b6b6b;
   --accent: #eceefb;
@@ -117,8 +117,8 @@
   --reader-surface: #0f1117;
   /* The page itself stays white in the dark theme, so the matches keep their yellow. */
   --reader-selection: rgb(84 115 255 / 0.4);
-  --reader-hit: rgb(253 185 31 / 0.45);
-  --reader-hit-current: rgb(253 185 31 / 0.95);
+  --reader-hit: rgb(253 185 31 / 0.25);
+  --reader-hit-current: rgb(253 185 31 / 0.5);
   --reader-hit-ring: #7a4d00;
   --muted-foreground: #9aa0ad;
   --accent: #252b45;
