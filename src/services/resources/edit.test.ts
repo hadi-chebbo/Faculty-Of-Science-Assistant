@@ -56,6 +56,17 @@ describe("getResourceForEdit", () => {
     });
   });
 
+  it("reports no file for a link-only draft", async () => {
+    const f = await setup();
+    const { Resource } = getDb();
+    const draft = await Resource.create({
+      courseId: f.course.id, type: "lecture", title: "Link only", externalUrl: "https://example.com/l",
+    });
+    expect(await getResourceForEdit(f.admin, draft.id)).toMatchObject({
+      externalUrl: "https://example.com/l", isPublished: false, hasFile: false,
+    });
+  });
+
   it("reports when it was last saved as an ISO date", async () => {
     const f = await setup();
     const { updatedAt } = await getResourceForEdit(f.admin, f.exam.id);
