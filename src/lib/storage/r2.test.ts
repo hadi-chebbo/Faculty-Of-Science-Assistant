@@ -6,6 +6,18 @@ const config = { accountId: "acct123", bucket: "my-bucket", accessKeyId: "AKIATE
 const KEY = "resources/abc.pdf";
 const bytes = (text: string) => new TextEncoder().encode(text);
 
+// A body whose cancel() never settles, like the response bodies inside Next.js.
+const stuckBody = (text: string, close: boolean) =>
+  new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode(text));
+      if (close) controller.close();
+    },
+    cancel() {
+      return new Promise<void>(() => {});
+    },
+  });
+
 function setup(respond: (request: Request) => Response | Promise<Response>) {
   const requests: Request[] = [];
   const fakeFetch = (async (input: Request) => {
@@ -63,6 +75,16 @@ describe("r2 driver requests", () => {
 
   it("readStart never returns more than asked, even when the whole object comes back (200)", async () => {
     const { storage } = setup(() => new Response("0123456789", { status: 200 }));
+    expect(Buffer.from((await storage.readStart(KEY, 4))!).toString()).toBe("0123");
+  });
+
+  it("readStart does not wait for the body to be cancelled (206)", { timeout: 2000 }, async () => {
+    const { storage } = setup(() => new Response(stuckBody("%PDF-1.4", true), { status: 206 }));
+    expect(Buffer.from((await storage.readStart(KEY, 8))!).toString()).toBe("%PDF-1.4");
+  });
+
+  it("readStart does not wait for the body to be cancelled (200)", { timeout: 2000 }, async () => {
+    const { storage } = setup(() => new Response(stuckBody("0123456789", false), { status: 200 }));
     expect(Buffer.from((await storage.readStart(KEY, 4))!).toString()).toBe("0123");
   });
 
