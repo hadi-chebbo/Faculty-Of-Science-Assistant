@@ -170,6 +170,9 @@ mock exam generation, personalization.
   is left for Contents on the left and Search on the right, which come in a later change) and the
   pages on a muted reading surface. One floating bar holds previous / next, the page number (a box
   you can type into on desktop, plain "3 / 12" text on a phone) and zoom out / percentage / zoom in.
+  On a phone this bar shows for a few seconds on load, then hides by itself; a tap on the pages
+  (not a scroll, pinch or long-press) shows or hides it, and it hides a few seconds after its last
+  use (never while a menu is open or keyboard focus is in it); on desktop it is always visible.
   Zoom levels are 50 to 300% (100% is the PDF's real size); the default is "Fit width" (on wide screens the page stops at 880px so it sits centred on a grey surface), and "Fit
   page" shows a whole page; the percentage shown in a fit mode is the computed one, and zoom steps
   leave the fit mode. Zoom keeps the reader on the same page. The "More actions" menu (a dropdown on
