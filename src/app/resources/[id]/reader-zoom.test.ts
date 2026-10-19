@@ -33,14 +33,15 @@ describe("stepZoom", () => {
     expect(stepZoom(300, 1)).toBe(300);
     expect(stepZoom(50, -1)).toBe(50);
     expect(stepZoom(400, 1)).toBe(300);
-    expect(stepZoom(20, -1)).toBe(50);
+    expect(stepZoom(20, -1)).toBe(20);
+    expect(stepZoom(44, -1)).toBe(44);
     expect(stepZoom(20, 1)).toBe(50);
   });
 
-  it("only ever returns a level", () => {
+  it("zooming in always lands on a level, and zooming out never makes the page bigger", () => {
     for (let p = 10; p <= 450; p += 3.7) {
       expect(ZOOM_LEVELS).toContain(stepZoom(p, 1));
-      expect(ZOOM_LEVELS).toContain(stepZoom(p, -1));
+      expect(stepZoom(p, -1)).toBeLessThanOrEqual(p);
     }
   });
 });

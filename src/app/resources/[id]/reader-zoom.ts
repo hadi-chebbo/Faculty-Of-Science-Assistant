@@ -29,12 +29,13 @@ export function fitPagePercent(availableWidth: number, availableHeight: number, 
 }
 
 // The next level strictly above (or below) the current zoom, which may be a computed fit value
-// between two levels. At either end it stays where it is.
+// between two levels. At either end it stays where it is (or, below the smallest level, where it is).
 export function stepZoom(percent: number, direction: 1 | -1): number {
   const EPSILON = 0.5;
   if (direction === 1) return ZOOM_LEVELS.find((level) => level > percent + EPSILON) ?? ZOOM_LEVELS[ZOOM_LEVELS.length - 1];
   const lower = ZOOM_LEVELS.filter((level) => level < percent - EPSILON);
-  return lower.length > 0 ? lower[lower.length - 1] : ZOOM_LEVELS[0];
+  // Below the smallest level (a very small fit) there is nothing lower: stay.
+  return lower.length > 0 ? lower[lower.length - 1] : Math.min(percent, ZOOM_LEVELS[0]);
 }
 
 // The size a page is shown at, in CSS pixels.

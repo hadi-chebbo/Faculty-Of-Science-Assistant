@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense, cache } from "react";
 import { Crumbs, type Crumb } from "@/components/site/crumbs";
-import { PageTitle } from "@/components/site/page-title";
 import { StateBlock } from "@/components/site/state-block";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EXAM_SESSION_LABELS, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
@@ -11,7 +10,6 @@ import { readForPage } from "@/lib/page-errors";
 import { readerBackTarget } from "@/services/resources/back-target";
 import { getResourceForReader } from "@/services/resources/reader";
 import { PdfViewer } from "./pdf-viewer-loader";
-import { ReaderActions } from "./reader-actions";
 import { ReaderDetails } from "./reader-details";
 import { ViewerSkeleton } from "./viewer-skeleton";
 
@@ -34,7 +32,7 @@ export async function generateMetadata({ params }: PageProps<"/resources/[id]">)
 // Resource ids are runtime data: reading one happens inside Suspense, behind a skeleton.
 export default function ReaderPage({ params }: PageProps<"/resources/[id]">) {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
+    <main className="mx-auto w-full max-w-[100rem] px-4 pt-4 pb-6 md:px-8 md:pt-4 md:pb-5">
       <Suspense fallback={<ReaderSkeleton />}>
         {params.then(({ id }) => (
           <ReaderContent id={id} />
@@ -48,7 +46,7 @@ function ReaderSkeleton() {
   return (
     <div role="status" aria-label="Loading resource">
       <Skeleton className="mb-4 h-6 w-24 md:hidden" />
-      <div className="mb-6">
+      <div className="mb-4">
         <Skeleton className="h-8 w-64 max-w-full" />
         <Skeleton className="mt-3 h-1 w-12" />
       </div>
@@ -102,16 +100,16 @@ async function ReaderContent({ id }: { id: string }) {
       </Link>
       <Crumbs items={crumbs} />
 
-      <div className="md:flex md:items-start md:justify-between md:gap-6">
-        <PageTitle description={<span className="text-sm">{facts.join(" · ")}</span>}>{resource.title}</PageTitle>
-        {resource.hasFile && (
-          <div className="-mt-2 mb-6 md:mt-0 md:shrink-0">
-            <ReaderActions id={resource.id} />
-          </div>
-        )}
+      {/* Compact title: type and language beside the title from md up, below it on a phone. */}
+      <div className="mb-4 grid gap-x-3 md:grid-cols-[auto_1fr] md:items-baseline">
+        <h1 className="text-[1.375rem] font-semibold tracking-tight md:col-start-1 md:row-start-1 md:text-2xl">
+          {resource.title}
+        </h1>
+        <div className="mt-3 h-1 w-12 rounded-full bg-highlight md:col-span-2 md:row-start-2 md:mt-2" aria-hidden />
+        <p className="mt-3 text-sm md:col-start-2 md:row-start-1 md:mt-0">{facts.join(" · ")}</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_17rem] md:items-start">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-[minmax(0,1fr)_14rem] md:items-start md:gap-4">
         {resource.hasFile ? (
           <PdfViewer resourceId={resource.id} />
         ) : (
