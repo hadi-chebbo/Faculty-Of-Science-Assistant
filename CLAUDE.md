@@ -165,15 +165,28 @@ mock exam generation, personalization.
   ignored, not errors. Results are one flat list (newest year first), 20 per page, reusing the
   course-page resource row. Dropdowns only offer values that have a visible exam.
 - Reader page (`/resources/ID`, public, published resources only; anything else is the 404
-  page): PDF.js draws every page of the file on canvases in one vertical scroll, each fit to the
-  width and drawn lazily, with "Page N of M" kept in view. Toolbar: Download and Open outside the
-  reader. Phone: a back link (the course code) above the title, the file, then Details, Solutions
-  and the backup link below it. Desktop (md and up): breadcrumb ending at the course area that
-  lists the resource, and a details column beside the file. Back leads to Previous exams for an
-  exam, to the chapter page for a resource in a chapter, otherwise to the course (Other material
-  when the course has chapters). Resource rows and solution links on public pages open the reader
-  in the same tab. There is no AI panel yet and no text about one; the details column is where it
-  will go.
+  page): PDF.js draws every page of the file on canvases in one vertical scroll, drawn lazily. The
+  document dominates the page: a card with a top row (only the "More actions" button for now; room
+  is left for Contents on the left and Search on the right, which come in a later change) and the
+  pages on a muted reading surface. One floating bar holds previous / next, the page number (a box
+  you can type into on desktop, plain "3 / 12" text on a phone) and zoom out / percentage / zoom in.
+  Zoom levels are 50 to 300% (100% is the PDF's real size); the default is "Fit width", and "Fit
+  page" shows a whole page; the percentage shown in a fit mode is the computed one, and zoom steps
+  leave the fit mode. Zoom keeps the reader on the same page. The "More actions" menu (a dropdown on
+  desktop, a bottom sheet on a phone) has Fit width, Fit page, Focus mode, Download and Open
+  outside the reader. Focus mode makes the card cover the whole viewport (and asks for real
+  fullscreen where available, but does not depend on it); Esc leaves it. Keys (when not typing):
+  arrows, PageUp/PageDown, Home/End, `+`/`-`, `0`. The page being read is remembered per resource in
+  `localStorage` (`reader:last-page:ID`), and a later visit offers "Continue where you left off,
+  page N?" once; this is a position only, never progress. Desktop (md and up): breadcrumb ending at
+  the course area that lists the resource, the title with its type and language on one line, the
+  card at a fixed height with the pages scrolling inside it, and a narrow details column (plain
+  text under small headings) beside it. Phone: a back link (the course code) above the title, the
+  card's top row sticky under the site bar with the window scrolling the pages, then the details
+  below. Back leads to Previous exams for an exam, to the chapter page for a resource in a chapter,
+  otherwise to the course (Other material when the course has chapters). Resource rows and solution
+  links on public pages open the reader in the same tab. There is no text layer, search, contents
+  panel or AI panel yet and no text about one.
 - Branding is the plain text "University Assistant". No university logo, crest or name as
   branding. The footer says: "Independent student project. Not an official Lebanese
   University website."
