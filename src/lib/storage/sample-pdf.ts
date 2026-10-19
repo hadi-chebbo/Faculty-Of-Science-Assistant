@@ -1,26 +1,40 @@
-// A tiny PDF writer for the demo seed data: one A4 page of Helvetica text. Only ASCII is
+// A tiny PDF writer for the demo seed data: A4 pages of Helvetica text. Only ASCII is
 // supported; anything else becomes "?". No dependency, so the seeder can load it directly.
 function escapePdfText(line: string): string {
   return line.replace(/[^\x20-\x7e]/g, "?").replace(/[\\()]/g, (c) => `\\${c}`);
 }
 
-export function samplePdf(lines: string[]): Uint8Array {
+// `pages` makes a file of that many pages with the same text; with more than one, the heading of
+// each page ends with " - page N" so the pages can be told apart.
+export function samplePdf(lines: string[], pages = 1): Uint8Array {
   // The first line is a heading; the rest are smaller body lines below it.
-  const content = [
-    "BT",
-    "/F1 24 Tf",
-    "72 760 Td",
-    "30 TL",
-    ...lines.map((line, i) => `${i === 1 ? "/F1 14 Tf\n" : ""}(${escapePdfText(line)}) Tj T*`),
-    "ET",
-  ].join("\n");
+  const contentOf = (page: number) =>
+    [
+      "BT",
+      "/F1 24 Tf",
+      "72 760 Td",
+      "30 TL",
+      ...lines.map((line, i) => {
+        const text = i === 0 && pages > 1 ? `${line} - page ${page}` : line;
+        return `${i === 1 ? "/F1 14 Tf\n" : ""}(${escapePdfText(text)}) Tj T*`;
+      }),
+      "ET",
+    ].join("\n");
 
+  // Object 1 is the catalog, 2 the page tree and 3 the font; each page then takes two objects
+  // (the page, then its content).
+  const pageIds = Array.from({ length: pages }, (_, i) => 4 + 2 * i);
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pages} >>`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+    ...pageIds.flatMap((id, i) => {
+      const content = contentOf(i + 1);
+      return [
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${id + 1} 0 R >>`,
+        `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+      ];
+    }),
   ];
 
   // Everything is ASCII, so string length equals byte length and offsets can be computed on text.
