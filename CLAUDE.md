@@ -136,7 +136,9 @@ mock exam generation, personalization.
   - Light primary: deep blue `#3E4EB8` (white text on it). Links and active states use it.
   - Bright blue `#5473FF`: fails WCAG AA for small text on white, so it is the primary
     in the dark theme and is used for large or decorative elements only.
-  - Yellow `#FDB91F`: decorative only (a short 4px bar under page titles). Never text.
+  - Yellow `#FDB91F`: decorative only (a short 4px bar under page titles). Never text. The one other
+    use (owner-approved in the reader mockup) is a pale yellow background behind text for search
+    highlights in the reader; the text itself is never yellow.
   - Light theme: headings `#41454F`, body text `#575757`, page `#F5F5F5`, muted `#F8F8F8`,
     cards white. The dark theme uses dark neutral surfaces with light text.
   - Text contrast is at least 4.5:1 in both themes.
@@ -164,39 +166,45 @@ mock exam generation, personalization.
   JavaScript; with JavaScript a dropdown change submits automatically. Unusable URL values are
   ignored, not errors. Results are one flat list (newest year first), 20 per page, reusing the
   course-page resource row. Dropdowns only offer values that have a visible exam.
-- Reader page (`/resources/ID`, public, published resources only; anything else is the 404
-  page): PDF.js draws every page of the file on canvases in one vertical scroll, drawn lazily. The
-  document dominates the page: a card with a top row (only Contents on the left and Search and
-  "More actions" on the right; nothing else goes there) and the pages on a muted reading surface.
-  Each drawn page also has PDF.js's own text layer over it (invisible text, so text can be
-  selected and copied; built only for pages near the screen, scaled with the zoom; a scanned page
-  simply has none). Search ("Search in document", or Ctrl+F / Cmd+F, which replaces the browser's
-  find on this page) opens a bar under the top row: a box, "3 of 17" or "No matches", previous /
-  next (Enter / Shift+Enter) and close (Esc). It matches ignoring case and accents ("ete" finds
-  "été") on the text PDF.js extracts, read lazily page by page the first time a search runs and
-  kept; typing is debounced; the current match is highlighted strongly and centred, the others
-  softly, on the pages that are drawn. Contents toggles a ~200px panel left of the pages on
-  desktop (open or closed is remembered in `localStorage`, `reader:contents-open`) and a sheet from
-  the left on a phone; it lists the PDF's outline (nested, with page numbers) and, for a file
-  without one, a thumbnail of every page; the entry for the page being read is marked. One floating bar holds previous / next, the page number (a box
+- Reader page (`/resources/ID`, public, published resources only; anything else is the 404 page):
+  PDF.js draws every page of the file on canvases in one vertical scroll, drawn lazily. The document
+  dominates the page: a card with a top row (only Contents on the left and Search and "More actions"
+  on the right; nothing else goes there) and the pages on a muted reading surface. Each drawn page
+  also has PDF.js's own text layer over it (invisible text, so text can be selected and copied and a
+  screen reader can read it; built only for pages near the screen, scaled with the zoom; a scanned
+  page simply has none). Search ("Search in document", or Ctrl+F / Cmd+F, which replaces the
+  browser's find on this page) opens a bar under the top row: a box, "3 of 17" or "No matches",
+  previous / next (Enter / Shift+Enter) and close (Esc; the focus goes back to the Search button
+  however it was closed). It matches ignoring case, accents and runs of white space ("ete" finds
+  "été") and joins a word split by a hyphen at a line end, on the text PDF.js extracts. That text is
+  read and folded lazily, page by page, the first time a search runs, and kept (a page that failed
+  to read is retried by the next search); typing is debounced; the current match is highlighted
+  strongly and centred, the others softly, on the pages that are drawn. Contents toggles a ~200px
+  panel left of the pages on desktop (open or closed is remembered in `localStorage`,
+  `reader:contents-open`) and a sheet from the left on a phone; it lists the PDF's outline (nested,
+  with page numbers) and, for a file without one, a thumbnail of every page; the entry for the page
+  being read is marked. Every jump to a page (Contents, previous / next, the page box, a search
+  match's page) puts the top of the page at the top of the reading area with a small gap, also when
+  the layout changes during the jump. One floating bar holds previous / next, the page number (a box
   you can type into on desktop, plain "3 / 12" text on a phone) and zoom out / percentage / zoom in.
-  On a phone this bar shows for a few seconds on load, then hides by itself; a tap on the pages
-  (not a scroll, pinch or long-press) shows or hides it, and it hides a few seconds after its last
-  use (never while a menu is open or keyboard focus is in it); on desktop it is always visible.
-  Zoom levels are 50 to 300% (100% is the PDF's real size); the default is "Fit width" (on wide screens the page stops at 880px so it sits centred on a grey surface), and "Fit
-  page" shows a whole page; the percentage shown in a fit mode is the computed one, and zoom steps
-  leave the fit mode. Zoom keeps the reader on the same page. The "More actions" menu (a dropdown on
-  desktop, a bottom sheet on a phone) has Fit width, Fit page, Focus mode, Download and Open
-  outside the reader. Focus mode makes the card cover the whole viewport (and asks for real
-  fullscreen where available, but does not depend on it); Esc leaves it. Keys (when not typing):
-  arrows, PageUp/PageDown, Home/End, `+`/`-`, `0`. The page being read is remembered per resource in
+  On a phone this bar shows for a few seconds on load, then hides by itself; a tap on the pages (not
+  a scroll, pinch or long-press) shows or hides it, and it hides a few seconds after its last use
+  (never while a menu is open or keyboard focus is in it); on desktop it is always visible. Zoom
+  levels are 50 to 300% (100% is the PDF's real size); the default is "Fit width" (on wide screens
+  the page stops at 880px so it sits centred on a grey surface), and "Fit page" shows a whole page;
+  the percentage shown in a fit mode is the computed one, and zoom steps leave the fit mode. Zoom
+  keeps the reader on the same page. The "More actions" menu (a dropdown on desktop, a bottom sheet
+  on a phone) has Fit width, Fit page, Focus mode, Download and Open outside the reader. Focus mode
+  makes the card cover the whole viewport (and asks for real fullscreen where available, but does
+  not depend on it); Esc leaves it (or closes an open search first). Keys (when not typing): arrows,
+  PageUp/PageDown, Home/End, `+`/`-`, `0`. The page being read is remembered per resource in
   `localStorage` (`reader:last-page:ID`), and a later visit offers "Continue where you left off,
   page N?" once; this is a position only, never progress. Desktop (md and up): breadcrumb ending at
   the course area that lists the resource, the title with its type and language on one line, the
-  card at a fixed height with the pages scrolling inside it, and a narrow details column (plain
-  text under small headings) beside it. Phone: a back link (the course code) above the title, the
-  card's top row sticky under the site bar with the window scrolling the pages, then the details
-  below. Back leads to Previous exams for an exam, to the chapter page for a resource in a chapter,
+  card at a fixed height with the pages scrolling inside it, and a narrow details column (plain text
+  under small headings) beside it. Phone: a back link (the course code) above the title, the card's
+  top row sticky under the site bar with the window scrolling the pages, then the details below.
+  Back leads to Previous exams for an exam, to the chapter page for a resource in a chapter,
   otherwise to the course (Other material when the course has chapters). Resource rows and solution
   links on public pages open the reader in the same tab. There is no AI panel yet and no text about
   one.

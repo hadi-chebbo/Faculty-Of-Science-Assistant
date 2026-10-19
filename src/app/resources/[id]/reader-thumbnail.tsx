@@ -4,7 +4,7 @@ import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
-// Thumbnails start drawing a little before they scroll into view.
+// Thumbnails start drawing a little before they scroll into view, measured against the list that scrolls them.
 const NEAR_MARGIN = "300px 0px";
 // Shown width in CSS pixels.
 const THUMB_WIDTH = 112;
@@ -18,6 +18,7 @@ export function ThumbnailButton({
   size,
   active,
   onSelect,
+  root,
 }: {
   pdf: PDFDocumentProxy;
   number: number;
@@ -25,6 +26,8 @@ export function ThumbnailButton({
   size: { width: number; height: number };
   active: boolean;
   onSelect: (page: number) => void;
+  // The scrolling list the thumbnail is in.
+  root: Element;
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -34,10 +37,10 @@ export function ThumbnailButton({
   useEffect(() => {
     const button = buttonRef.current;
     if (!button) return;
-    const observer = new IntersectionObserver(([entry]) => setNear(entry.isIntersecting), { rootMargin: NEAR_MARGIN });
+    const observer = new IntersectionObserver(([entry]) => setNear(entry.isIntersecting), { root, rootMargin: NEAR_MARGIN });
     observer.observe(button);
     return () => observer.disconnect();
-  }, []);
+  }, [root]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

@@ -82,6 +82,28 @@ const searchInput = (page: Page) => page.getByRole("searchbox", { name: "Find in
 const currentHit = (page: Page, n: number) => page.locator(`[data-page="${n}"] mark.reader-hit-current`);
 const allHits = (page: Page) => page.locator("mark.reader-hit");
 
+// How far below the top of the reading area (the box that scrolls on a wide screen, the bottom of the
+// top row on a phone) the top of a page is. A page brought into view should sit a small gap below it.
+async function pageTopGap(page: Page, number: number): Promise<number> {
+  return page.locator(`[data-page="${number}"]`).evaluate((element) => {
+    const area = element.closest(".overflow-auto");
+    const top = area
+      ? area.getBoundingClientRect().top
+      : (document.querySelector("section[aria-label='Document'] > div")?.getBoundingClientRect().bottom ?? 0);
+    return element.getBoundingClientRect().top - top;
+  });
+}
+
+// The page top is where it should be, and stays there once the layout has settled.
+async function expectPageAtTop(page: Page, number: number) {
+  await expect.poll(() => pageTopGap(page, number), { timeout: 5000 }).toBeGreaterThanOrEqual(4);
+  await expect.poll(() => pageTopGap(page, number)).toBeLessThanOrEqual(14);
+  await page.waitForTimeout(1200);
+  const gap = await pageTopGap(page, number);
+  expect(gap).toBeGreaterThanOrEqual(4);
+  expect(gap).toBeLessThanOrEqual(14);
+}
+
 async function openSearchWithButton(page: Page) {
   await page.getByRole("button", { name: "Search in document" }).click();
   await expect(searchInput(page)).toBeFocused();
@@ -138,6 +160,9 @@ test.describe("text, search and contents", () => {
       const layer = page.locator('[data-page="1"] .reader-text');
       await expect(layer).toContainText("SEARCH TEST - page 1");
       await expect(layer).toContainText("Six pages");
+      // Not hidden from assistive technology: it is the page's text. The canvas keeps its own label.
+      await expect(layer).not.toHaveAttribute("aria-hidden", /.*/);
+      await expect(page.getByRole("img", { name: `Page 1 of ${WITH_OUTLINE}` })).toBeVisible();
       // The text is invisible (the canvas shows it) but selectable.
       const span = layer.locator("span", { hasText: "Six pages" });
       expect(await span.evaluate((el) => getComputedStyle(el).userSelect)).toBe("text");
@@ -280,6 +305,18 @@ test.describe("text, search and contents", () => {
       await expect(allHits(page)).toHaveCount(0);
     });
 
+    test("the box is the site's input, with the count inside it", async ({ page }) => {
+      await open(page);
+      await openSearchWithButton(page);
+      await expect(searchInput(page)).toHaveAttribute("data-slot", "input");
+      await search(page, "relation");
+      await expect(searchBar(page)).toContainText("1 of 3");
+      const field = (await searchInput(page).boundingBox())!;
+      const count = (await searchBar(page).locator("[aria-live]").boundingBox())!;
+      expect(count.x).toBeGreaterThan(field.x);
+      expect(count.x + count.width).toBeLessThanOrEqual(field.x + field.width);
+    });
+
     test("announces only the count, politely", async ({ page }) => {
       await open(page);
       await openSearchWithButton(page);
@@ -304,6 +341,26 @@ test.describe("text, search and contents", () => {
       // Opened again, it starts empty.
       await openSearchWithButton(page);
       await expect(searchInput(page)).toHaveValue("");
+    });
+
+    test("Esc with the focus on a bar button closes it and returns the focus to Search", async ({ page }) => {
+      await open(page);
+      for (const name of ["Next match", "Previous match", "Close search"]) {
+        await openSearchWithButton(page);
+        await search(page, "relation");
+        await expect(searchBar(page)).toContainText("1 of 3");
+        await page.getByRole("button", { name }).focus();
+        await page.keyboard.press("Escape");
+        await expect(searchBar(page), name).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Search in document" }), name).toBeFocused();
+      }
+    });
+
+    test("the close button returns the focus to Search too", async ({ page }) => {
+      await open(page);
+      await openSearchWithButton(page);
+      await page.getByRole("button", { name: "Close search" }).click();
+      await expect(page.getByRole("button", { name: "Search in document" })).toBeFocused();
     });
 
     test("the close button closes it too", async ({ page }) => {
@@ -411,6 +468,47 @@ test.describe("text, search and contents", () => {
       await expect(nav.locator("[aria-current]")).toHaveCount(1);
     });
 
+    test("a jump right after opening the panel lands on the page's top, with its gap", async ({ page, isMobile }) => {
+      test.skip(isMobile, "phones open a sheet instead");
+      await open(page);
+      await toggle(page).click();
+      // At once, before the pages have been laid out for the narrower area.
+      await page.getByRole("navigation", { name: "Contents" }).getByRole("button", { name: /2\.1 Definitions/ }).click();
+      await expectPageAtTop(page, 4);
+      // The same with thumbnails, and with the panel closing during the jump.
+      await toggle(page).click();
+      await expectPageAtTop(page, 4);
+    });
+
+    test("jumps by the page box and the arrows land on the page's top as well", async ({ page, isMobile }) => {
+      test.skip(isMobile, "uses the desktop page box");
+      await open(page);
+      await page.getByRole("button", { name: "Next page" }).click();
+      await expectPageAtTop(page, 2);
+      const box = page.getByLabel("Page number");
+      await box.fill("5");
+      await box.press("Enter");
+      await expectPageAtTop(page, 5);
+    });
+
+    test("when open, the toggle has a border, a tint and a bold label", async ({ page, isMobile }) => {
+      test.skip(isMobile, "phones have an icon only");
+      await open(page);
+      await expect(toggle(page)).not.toHaveAttribute("aria-controls", /.+/);
+      await toggle(page).click();
+      await expect(toggle(page)).toHaveAttribute("aria-controls", "reader-contents");
+      await expect(page.locator("#reader-contents")).toBeVisible();
+      const style = () =>
+        toggle(page).evaluate((el) => {
+          const css = getComputedStyle(el);
+          return { border: css.borderTopWidth, weight: Number(css.fontWeight), background: css.backgroundColor };
+        });
+      // (The button transitions its properties, so the weight takes a moment to arrive.)
+      await expect.poll(async () => (await style()).weight).toBeGreaterThanOrEqual(600);
+      expect((await style()).border).toBe("1px");
+      expect((await style()).background).not.toBe("rgba(0, 0, 0, 0)");
+    });
+
     test("narrows the reading area, and is remembered", async ({ page, isMobile }) => {
       test.skip(isMobile, "phones open a sheet instead");
       await open(page);
@@ -501,6 +599,7 @@ test.describe("text, search and contents", () => {
       await expect(sheet).toHaveCount(0);
       await expectPageNumber(page, 5, WITH_OUTLINE);
       await expect(page.getByRole("img", { name: `Page 5 of ${WITH_OUTLINE}` })).toBeInViewport();
+      await expectPageAtTop(page, 5);
       // Reopened, the entry for the page now being read is marked.
       await button.click();
       await expect(page.getByRole("dialog", { name: "Contents" }).getByRole("button", { name: /2\.2 Examples/ })).toHaveAttribute("aria-current", "location");

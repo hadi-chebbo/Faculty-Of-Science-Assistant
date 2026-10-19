@@ -15,6 +15,9 @@ const WIDE_FIT_MAX_WIDTH = 880;
 const WIDE_FIT_MARGIN = 48;
 const NARROW_FIT_MARGIN = 32;
 
+// The gap left above a page when it is brought to the top of the reading area.
+export const PAGE_GAP_ABOVE = 8;
+
 export type ZoomMode = { kind: "width" } | { kind: "page" } | { kind: "zoom"; percent: number };
 
 function clampFit(percent: number): number {

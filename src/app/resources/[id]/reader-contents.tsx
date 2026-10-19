@@ -33,24 +33,24 @@ export function ReaderContents({
   current: number;
   onSelect: (page: number) => void;
 }) {
-  const navRef = useRef<HTMLElement>(null);
+  // The scrolling list: in state so the thumbnails measure against it once it exists.
+  const [nav, setNav] = useState<HTMLElement | null>(null);
   const rows = useMemo(() => flattenOutline(outline ?? []), [outline]);
   const useOutlineRows = outline !== null && hasLinks(outline);
   const active = useOutlineRows ? activeRowId(rows, current) : current;
 
   // Keep the marked entry in sight inside the list (only the list scrolls, never the page).
   useEffect(() => {
-    const nav = navRef.current;
     const marked = nav?.querySelector<HTMLElement>("[aria-current]");
     if (!nav || !marked) return;
     const list = nav.getBoundingClientRect();
     const item = marked.getBoundingClientRect();
-    if (item.top < list.top) nav.scrollTop -= list.top - item.top + 8;
-    else if (item.bottom > list.bottom) nav.scrollTop += item.bottom - list.bottom + 8;
-  }, [active, useOutlineRows]);
+    if (item.top < list.top) nav.scrollBy({ top: item.top - list.top - 8, behavior: "instant" });
+    else if (item.bottom > list.bottom) nav.scrollBy({ top: item.bottom - list.bottom + 8, behavior: "instant" });
+  }, [nav, active, useOutlineRows]);
 
   return (
-    <nav ref={navRef} aria-label="Contents" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
+    <nav ref={setNav} aria-label="Contents" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
       {outline === null ? (
         <p className="px-2 py-1.5 text-sm text-muted-foreground">Loading…</p>
       ) : useOutlineRows ? (
@@ -84,7 +84,7 @@ export function ReaderContents({
         <ul className="flex flex-col items-center gap-1">
           {sizes.map((size, i) => (
             <li key={i}>
-              <ThumbnailButton pdf={pdf} number={i + 1} size={size} active={i + 1 === current} onSelect={onSelect} />
+              {nav && <ThumbnailButton pdf={pdf} number={i + 1} size={size} active={i + 1 === current} onSelect={onSelect} root={nav} />}
             </li>
           ))}
         </ul>

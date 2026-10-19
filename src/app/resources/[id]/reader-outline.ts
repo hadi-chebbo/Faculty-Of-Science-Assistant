@@ -8,10 +8,16 @@ export interface RawOutlineItem {
   items?: readonly RawOutlineItem[];
 }
 
+// How a PDF names one of its pages in a destination (PDF.js's RefProxy).
+export interface PageRef {
+  num: number;
+  gen: number;
+}
+
 export interface OutlineSource {
   getOutline(): Promise<readonly RawOutlineItem[] | null>;
   getDestination(id: string): Promise<readonly unknown[] | null>;
-  getPageIndex(ref: never): Promise<number>;
+  getPageIndex(ref: PageRef): Promise<number>;
 }
 
 export interface OutlineNode {
@@ -30,7 +36,7 @@ async function pageOf(source: OutlineSource, dest: RawOutlineItem["dest"], total
     if (!explicit || explicit.length === 0) return null;
     const target = explicit[0];
     // A reference to the page object, or (rarely) the page's index itself.
-    const index = typeof target === "number" ? target : await source.getPageIndex(target as never);
+    const index = typeof target === "number" ? target : await source.getPageIndex(target as PageRef);
     return Number.isInteger(index) && index >= 0 && index < total ? index + 1 : null;
   } catch {
     return null;

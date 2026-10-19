@@ -3,6 +3,7 @@
 import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
 import type { Ref } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { countLabel } from "./reader-search";
 import type { SearchStatus } from "./use-document-search";
 
@@ -34,12 +35,12 @@ export function ReaderSearchBar({
 
   return (
     <div role="search" className="flex items-center gap-1 border-t px-2 py-1">
-      <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-input bg-background px-2.5 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40">
-        <Search aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-        <span className="sr-only">Find in document</span>
-        <input
+      <div className="relative min-w-0 flex-1">
+        <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
           ref={inputRef}
           type="search"
+          aria-label="Find in document"
           value={query}
           placeholder="Find in document"
           autoComplete="off"
@@ -59,18 +60,14 @@ export function ReaderSearchBar({
               onClose();
             }
           }}
-          className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground md:text-sm [&::-webkit-search-cancel-button]:hidden"
+          className="h-10 rounded-lg bg-card pr-28 pl-9 focus-visible:border-primary focus-visible:ring-primary/25 dark:bg-card [&::-webkit-search-cancel-button]:hidden"
         />
-        {/* Only the finished count is announced; the percentage while searching is for the eye. */}
-        <span aria-live="polite" className="shrink-0 text-sm whitespace-nowrap text-muted-foreground tabular-nums">
-          {label}
-        </span>
-        {status.kind === "searching" && (
-          <span aria-hidden className="shrink-0 text-sm whitespace-nowrap text-muted-foreground tabular-nums">
-            Searching… {status.percent}%
-          </span>
-        )}
-      </label>
+        <div className="pointer-events-none absolute top-1/2 right-3 flex -translate-y-1/2 items-center gap-2 text-sm whitespace-nowrap text-muted-foreground tabular-nums">
+          {/* Only the finished count is announced; the percentage while searching is for the eye. */}
+          <span aria-live="polite">{label}</span>
+          {status.kind === "searching" && <span aria-hidden>Searching… {status.percent}%</span>}
+        </div>
+      </div>
       <Button variant="ghost" size="icon" className="size-10" aria-label="Previous match" disabled={matches === 0} onClick={() => onStep(-1)}>
         <ChevronUp aria-hidden />
       </Button>

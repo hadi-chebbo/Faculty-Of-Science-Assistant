@@ -160,8 +160,9 @@
   }
 }
 
-/* The invisible text over a document page, so it can be selected and copied. This is the part of
-   PDF.js's own stylesheet that its TextLayer needs: every run of text sits at its place in the page
+/* The invisible text over a document page, so it can be selected and copied. This mirrors the
+   `.textLayer` rules of pdfjs-dist 6.4.299 (web/pdf_viewer.css), the part its TextLayer needs;
+   check it against that file when pdfjs-dist is upgraded: every run of text sits at its place in the page
    (positions are percentages) and is sized from --scale-factor, which the page sets. */
 .reader-text {
   position: absolute;

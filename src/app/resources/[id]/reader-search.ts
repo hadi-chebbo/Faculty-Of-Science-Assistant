@@ -33,40 +33,72 @@ export function foldQuery(query: string): string {
   return Array.from(query.trim().replace(/\s+/gu, " "), foldCodePoint).join("");
 }
 
-// All matches of `query` on a page, in reading order and without overlaps. A line break between
-// items counts as a space, so a phrase can be found across two lines; items on the same line are
-// joined without one, so a word the file draws in two pieces is still one word.
-export function findMatches(items: readonly TextItemLike[], query: string): PageMatch[] {
-  const needle = foldQuery(query);
-  if (!needle) return [];
-
-  let haystack = "";
+// A page's text folded once, with where every folded character came from. Built the first time a
+// page is searched and kept, so later searches only look for the new query in it.
+export interface PageText {
+  haystack: string;
   // For every folded character: which item and character it came from (item -1 for a line break).
+  itemOf: number[];
+  startOf: number[];
+  lengthOf: number[];
+}
+
+export const EMPTY_PAGE_TEXT: PageText = { haystack: "", itemOf: [], startOf: [], lengthOf: [] };
+
+// A hyphen that ends a line after a letter: the word goes on in the next item.
+const LINE_END_HYPHEN = /\p{L}[-­‐]$/u;
+
+// Folds a page's items into one searchable text:
+// - runs of white space (non-breaking spaces included), inside an item and across items, are one space;
+// - a line break between items counts as a space, but items on the same line join with none, so a
+//   word the file draws in two pieces is still one word;
+// - a word cut by a hyphen at the end of a line is joined ("algo-" then "rithm" reads "algorithm");
+//   the hyphen is dropped from the text but still belongs to the letter before it, so a match is
+//   marked over it too. (A real hyphen at a line end, as in "well-" "known", is joined as well.)
+export function prepareText(items: readonly TextItemLike[]): PageText {
+  let haystack = "";
   const itemOf: number[] = [];
   const startOf: number[] = [];
   const lengthOf: number[] = [];
+  // A character that folds to nothing, or a space that adds nothing, belongs to the one before it.
+  const absorb = (index: number, length: number) => {
+    if (itemOf.length > 0 && itemOf[itemOf.length - 1] === index) lengthOf[lengthOf.length - 1] += length;
+  };
+
   items.forEach((item, index) => {
     let offset = 0;
-    for (const char of item.str) {
+    const joinsNext = item.hasEOL === true && LINE_END_HYPHEN.test(item.str);
+    const chars = Array.from(item.str);
+    chars.forEach((char, i) => {
+      const length = char.length;
       const folded = foldCodePoint(char);
-      // A combining accent folds away to nothing: it belongs to the letter before it.
-      if (folded === "" && itemOf[itemOf.length - 1] === index) lengthOf[lengthOf.length - 1] += char.length;
-      for (let i = 0; i < folded.length; i++) {
-        itemOf.push(index);
-        startOf.push(offset);
-        lengthOf.push(char.length);
+      const isJoiningHyphen = joinsNext && i === chars.length - 1;
+      if (folded === "" || isJoiningHyphen || (folded === " " && (haystack === "" || haystack.endsWith(" ")))) {
+        absorb(index, length);
+      } else {
+        for (let k = 0; k < folded.length; k++) {
+          itemOf.push(index);
+          startOf.push(offset);
+          lengthOf.push(length);
+        }
+        haystack += folded;
       }
-      haystack += folded;
-      offset += char.length;
-    }
-    if (item.hasEOL && !haystack.endsWith(" ")) {
+      offset += length;
+    });
+    if (item.hasEOL && !joinsNext && haystack !== "" && !haystack.endsWith(" ")) {
       haystack += " ";
       itemOf.push(-1);
       startOf.push(0);
       lengthOf.push(0);
     }
   });
+  return { haystack, itemOf, startOf, lengthOf };
+}
 
+// All matches of an already folded `needle` in a prepared page, in reading order, no overlaps.
+export function findInText(text: PageText, needle: string): PageMatch[] {
+  if (!needle) return [];
+  const { haystack, itemOf, startOf, lengthOf } = text;
   const matches: PageMatch[] = [];
   for (let from = haystack.indexOf(needle); from !== -1; from = haystack.indexOf(needle, from + needle.length)) {
     const parts: MatchPart[] = [];
@@ -76,13 +108,17 @@ export function findMatches(items: readonly TextItemLike[], query: string): Page
       const start = startOf[i];
       const end = start + lengthOf[i];
       const last = parts[parts.length - 1];
-      // One original character can fold to several; consecutive characters of one item merge.
       if (last && last.item === item && start <= last.end) last.end = Math.max(last.end, end);
       else parts.push({ item, start, end });
     }
     if (parts.length > 0) matches.push(parts);
   }
   return matches;
+}
+
+// Convenience for one-off use (and tests): fold the items and look for `query` in them.
+export function findMatches(items: readonly TextItemLike[], query: string): PageMatch[] {
+  return findInText(prepareText(items), foldQuery(query));
 }
 
 // Every match of a search, page by page and as one list in reading order.

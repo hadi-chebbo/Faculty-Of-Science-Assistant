@@ -53,6 +53,38 @@ describe("findMatches", () => {
     expect(findMatches(lines, "linesecond")).toEqual([]);
   });
 
+  it("treats runs of white space, non-breaking spaces included, as one space", () => {
+    expect(findMatches(items("a  b"), "a b")).toEqual([[{ item: 0, start: 0, end: 4 }]]);
+    expect(findMatches(items("a   \tb"), "a b")).toHaveLength(1);
+    expect(findMatches(items("a b"), "a   b")).toHaveLength(1);
+    // Across items: spaces at the end of one and the start of the next.
+    expect(findMatches(items("a ", " b"), "a b")).toEqual([
+      [
+        { item: 0, start: 0, end: 2 },
+        { item: 1, start: 1, end: 2 },
+      ],
+    ]);
+    // And across a line break that has spaces around it.
+    expect(findMatches([{ str: "a  ", hasEOL: true }, { str: "  b" }], "a b")).toHaveLength(1);
+  });
+
+  it("joins a word cut by a hyphen at the end of a line", () => {
+    const lines = [{ str: "the algo-", hasEOL: true }, { str: "rithm works" }];
+    expect(findMatches(lines, "algorithm")).toEqual([
+      [
+        { item: 0, start: 4, end: 9 },
+        { item: 1, start: 0, end: 5 },
+      ],
+    ]);
+    expect(findMatches(lines, "algorithm works")).toHaveLength(1);
+    // Only after a letter, and only at a line end.
+    expect(findMatches([{ str: "5 -", hasEOL: true }, { str: "rithm" }], "5 - rithm")).toHaveLength(1);
+    expect(findMatches(items("algo-", "rithm"), "algorithm")).toEqual([]);
+    expect(findMatches(items("algo-rithm"), "algo-rithm")).toHaveLength(1);
+    // A soft hyphen too.
+    expect(findMatches([{ str: "algo­", hasEOL: true }, { str: "rithm" }], "algorithm")).toHaveLength(1);
+  });
+
   it("does not add a second space after an item that already ends with one", () => {
     const lines = [{ str: "a ", hasEOL: true }, { str: "b" }];
     expect(findMatches(lines, "a b")).toHaveLength(1);

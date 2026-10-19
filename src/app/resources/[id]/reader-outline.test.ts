@@ -8,7 +8,7 @@ function source(raw: readonly RawOutlineItem[] | null, named: Record<string, rea
     getOutline: async () => raw,
     getDestination: async (id) => named[id] ?? null,
     getPageIndex: async (target) => {
-      const { num } = target as { num: number };
+      const { num } = target;
       if (num < 100) throw new Error("unknown page");
       return num - 100;
     },

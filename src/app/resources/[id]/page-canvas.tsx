@@ -1,7 +1,7 @@
 "use client";
 
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask, TextLayer } from "pdfjs-dist";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { applyHighlights } from "./reader-highlight";
 import type { PageMatch } from "./reader-search";
 import { MAX_CANVAS_PIXELS_SMALL, canvasPixelRatio } from "./reader-zoom";
@@ -24,7 +24,7 @@ interface LayerText {
 // One page: a white sheet of the size it is shown at, with a canvas and a text layer (so the text
 // can be selected, and search matches shown) drawn only while it is near the screen. `root` is the
 // element that scrolls the pages, or null when the window does.
-export function PageCanvas({
+export const PageCanvas = memo(function PageCanvas({
   pdf,
   number,
   total,
@@ -172,8 +172,9 @@ export function PageCanvas({
         aria-label={`Page ${number} of ${total}`}
         className="absolute inset-0 size-full"
       />
-      {/* Text only to select and copy: the canvas already shows it. */}
-      <div ref={textRef} aria-hidden className="reader-text" />
+      {/* The page's text, invisible over the canvas: it is what is selected and copied, and what a
+          screen reader reads (the canvas itself only has its "Page N of M" label). */}
+      <div ref={textRef} className="reader-text" />
     </div>
   );
-}
+});
