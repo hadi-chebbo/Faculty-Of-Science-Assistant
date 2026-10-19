@@ -78,6 +78,9 @@ npm run db:seed:undo   # removes what the seeders created
 
 - `SEED_DEMO_DATA=true` (in `.env`) enables the fake demo courses, resources and demo student
   (`demo.student@example.com`). Local development only; never set it in production.
+- Seeding also writes one placeholder PDF per demo resource through the storage driver: into
+  `.storage` locally, or into the R2 bucket when `STORAGE_DRIVER=r2`. `npm run db:seed:undo`
+  deletes them again. Needs Node 22.18+. Set `STORAGE_DRIVER=local` to keep seeding off R2.
 - The admin account is created by setting `ADMIN_EMAIL` and `ADMIN_PASSWORD` (12+ characters)
   when running `npm run db:seed`. Running it again with the same email updates the password.
 

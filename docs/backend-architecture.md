@@ -104,6 +104,8 @@ Bucket settings the owner applies in the Cloudflare dashboard (R2 → the bucket
 
 `npm run storage:check` exercises the driver against the real bucket (with `STORAGE_DRIVER=r2` and the four variables in `.env`): it uploads, reads, uploads through an upload URL, deletes and confirms, printing one line per step. Run it once after creating the bucket and the API token. It needs Node 22.18 or newer, which runs the TypeScript driver directly.
 
+Demo files: the demo seeder (`SEED_DEMO_DATA=true`) gives every seeded resource that has a source a generated placeholder PDF (`src/lib/storage/sample-pdf.ts`, one A4 page marked "SAMPLE FILE"). The files are stored through the configured driver (`.storage` locally, R2 with `STORAGE_DRIVER=r2`) under generated keys, before the rows are inserted; if the insert fails they are removed again. Seeding again replaces them, and the seeder's `down` deletes them with the rows. The seeder loads the TypeScript storage code through `db/seeders/lib/storage.mjs`, so seeding needs Node 22.18 or newer.
+
 ## Alternatives considered
 
 - **Separate Express backend.** Rejected for now. It means two deployables, a second host, cross-origin setup and an endpoint for every screen, and it solves a problem (many independent clients) the project does not have yet.
