@@ -3,6 +3,7 @@ import { EXAM_SESSIONS, LANGUAGES, RESOURCE_TYPES } from "@/db/constants";
 import {
   EXAM_SESSION_LABELS,
   LANGUAGE_LABELS,
+  LANGUAGE_NAMES,
   RESOURCE_TYPE_LABELS,
   RESOURCE_TYPE_SINGULAR_LABELS,
   describeGroups,
@@ -51,5 +52,9 @@ describe("RESOURCE_TYPE_SINGULAR_LABELS", () => {
     expect(RESOURCE_TYPES.map((t) => RESOURCE_TYPE_SINGULAR_LABELS[t])).toEqual([
       "Lecture", "Notes", "Exercise", "Exam", "Solution", "Other",
     ]);
+  });
+
+  it("has a full name for every language", () => {
+    expect(LANGUAGE_NAMES).toEqual({ en: "English", fr: "French" });
   });
 });

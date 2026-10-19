@@ -1,5 +1,9 @@
-import { expect, test } from "@playwright/test";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { expect, test, type Page } from "@playwright/test";
 import pg from "pg";
+import { ZOOM_LEVELS } from "../src/app/resources/[id]/reader-zoom";
+import { samplePdf } from "../src/lib/storage/sample-pdf";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed (with STORAGE_DRIVER=local).
 // Locally the URL lives in .env, which Next.js loads for the server but not for this process.
@@ -13,6 +17,31 @@ if (!process.env.DATABASE_URL) {
 
 const UNKNOWN_ID = "33333333-3333-4333-8333-333333333333";
 const HTML = { Accept: "text/html,application/xhtml+xml,*/*;q=0.8" };
+
+const MENU_BUTTON = "More actions";
+
+async function openMenu(page: Page) {
+  await page.getByRole("button", { name: MENU_BUTTON }).click();
+}
+
+// Desktop: a dropdown whose entries are menu items. Phone: a bottom sheet of buttons and links.
+function menuEntry(page: Page, isMobile: boolean, name: string | RegExp, link = false) {
+  return page.getByRole(isMobile ? (link ? "link" : "button") : "menuitem", { name });
+}
+
+// Desktop: a box you can type into. Phone: plain text.
+async function expectPageNumber(page: Page, isMobile: boolean, current: number, total: number) {
+  if (isMobile) {
+    await expect(page.getByRole("group", { name: "Page and zoom" })).toContainText(`${current} / ${total}`);
+  } else {
+    await expect(page.getByLabel("Page number")).toHaveValue(String(current));
+    await expect(page.getByRole("group", { name: "Page and zoom" })).toContainText(`/ ${total}`);
+  }
+}
+
+const zoomPercent = async (page: Page) => Number.parseInt((await page.getByTestId("zoom-percent").textContent()) ?? "", 10);
+const canvasWidth = async (page: Page, number: number, total: number) =>
+  (await page.getByRole("img", { name: `Page ${number} of ${total}` }).boundingBox())!.width;
 
 async function resourceId(courseCode: string, title: string): Promise<string> {
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -39,7 +68,7 @@ test.describe("the reader page", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Sample lecture 1" })).toBeVisible();
   });
 
-  test("shows the title, a drawn page and the page counter", async ({ page }) => {
+  test("shows the title, a drawn page and the page counter", async ({ page, isMobile }) => {
     const id = await resourceId("DEMO301", "Sample lecture 1");
     await page.goto(`/resources/${id}`);
     await expect(page).toHaveTitle("Sample lecture 1 (DEMO301) | University Assistant");
@@ -60,15 +89,16 @@ test.describe("the reader page", () => {
         }),
       )
       .toBe(true);
-    await expect(page.getByText("Page 1 of 1", { exact: true })).toBeVisible();
+    await expectPageNumber(page, isMobile, 1, 1);
     // The details are on the page as well.
     await expect(page.getByText("Details", { exact: true })).toBeVisible();
   });
 
-  test("Download answers with an attachment named after the title, and the bytes are a PDF", async ({ page, request }) => {
+  test("Download answers with an attachment named after the title, and the bytes are a PDF", async ({ page, request, isMobile }) => {
     const id = await resourceId("DEMO301", "Sample lecture 1");
     await page.goto(`/resources/${id}`);
-    const download = page.getByRole("link", { name: "Download" });
+    await openMenu(page);
+    const download = menuEntry(page, isMobile, "Download", true);
     await expect(download).toHaveAttribute("href", `/api/v1/resources/${id}/download`);
 
     const response = await request.get(`/api/v1/resources/${id}/download`, { maxRedirects: 0 });
@@ -80,10 +110,11 @@ test.describe("the reader page", () => {
     expect((await served.body()).subarray(0, 5).toString("latin1")).toBe("%PDF-");
   });
 
-  test("Open outside is a plain link to the open route, in a new tab", async ({ page }) => {
+  test("Open outside the reader is a plain link to the open route, in a new tab", async ({ page, isMobile }) => {
     const id = await resourceId("DEMO301", "Sample lecture 1");
     await page.goto(`/resources/${id}`);
-    const link = page.getByRole("link", { name: /Open outside/ });
+    await openMenu(page);
+    const link = menuEntry(page, isMobile, /Open outside the reader/, true);
     await expect(link).toHaveAttribute("href", `/api/v1/resources/${id}/open`);
     await expect(link).toHaveAttribute("target", "_blank");
     await expect(link).toHaveAttribute("rel", /noopener/);
@@ -123,7 +154,7 @@ test.describe("the reader page", () => {
     await page.goto(`/resources/${id}`);
     await expect(page.getByText("The file could not be shown here.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
-    // Beside the message (and in the toolbar above the file).
+    // Beside the message.
     const alert = page.getByRole("alert");
     await expect(alert.getByRole("link", { name: "Download" })).toBeVisible();
     await expect(alert.getByRole("link", { name: /Open outside/ })).toBeVisible();
@@ -156,6 +187,377 @@ test.describe("the reader page", () => {
         }
       });
     }
+  });
+});
+
+// The seed files have one page, so these tests store a 12-page file and a resource that points at it
+// (in DEMO302, which no other test counts), and remove both afterwards.
+const PAGES = 12;
+const storageDir = () => path.resolve(process.env.STORAGE_LOCAL_DIR ?? ".storage");
+
+test.describe("reading a long file", () => {
+  let id = "";
+  let key = "";
+
+  async function withDb<T>(run: (client: pg.Client) => Promise<T>): Promise<T> {
+    const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+    await client.connect();
+    try {
+      return await run(client);
+    } finally {
+      await client.end();
+    }
+  }
+
+  test.beforeAll(async () => {
+    key = `resources/${crypto.randomUUID()}.pdf`;
+    const file = path.join(storageDir(), ...key.split("/"));
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, samplePdf(["READER TEST", "Twelve pages"], PAGES));
+    await fs.writeFile(`${file}.meta.json`, JSON.stringify({ contentType: "application/pdf" }));
+    id = await withDb(async (client) => {
+      const { rows } = await client.query(
+        `INSERT INTO resources (course_id, type, title, language, file_key, is_published)
+         SELECT id, 'lecture', $2, 'en', $1, true FROM courses WHERE code = 'DEMO302' RETURNING id`,
+        [key, `Reader test twelve pages ${crypto.randomUUID().slice(0, 8)}`],
+      );
+      return rows[0].id as string;
+    });
+  });
+
+  test.afterAll(async () => {
+    await withDb((client) => client.query("DELETE FROM resources WHERE id = $1", [id]));
+    const file = path.join(storageDir(), ...key.split("/"));
+    await fs.rm(file, { force: true });
+    await fs.rm(`${file}.meta.json`, { force: true });
+  });
+
+  async function open(page: Page) {
+    await page.goto(`/resources/${id}`);
+    await expect(page.getByRole("img", { name: `Page 1 of ${PAGES}` })).toBeVisible();
+    await expect(page.getByTestId("zoom-percent")).toBeVisible();
+  }
+
+  const pageCanvas = (page: Page, n: number) => page.getByRole("img", { name: `Page ${n} of ${PAGES}` });
+
+  test("next and previous move through the pages and stop at the start", async ({ page, isMobile }) => {
+    await open(page);
+    await expectPageNumber(page, isMobile, 1, PAGES);
+    await expect(page.getByRole("button", { name: "Previous page" })).toBeDisabled();
+    await page.getByRole("button", { name: "Next page" }).click();
+    await expectPageNumber(page, isMobile, 2, PAGES);
+    await expect(pageCanvas(page, 2)).toBeInViewport();
+    await page.getByRole("button", { name: "Next page" }).click();
+    await expectPageNumber(page, isMobile, 3, PAGES);
+    await page.getByRole("button", { name: "Previous page" }).click();
+    await expectPageNumber(page, isMobile, 2, PAGES);
+    await expect(page.getByRole("button", { name: "Previous page" })).toBeEnabled();
+  });
+
+  test("the page box jumps to a typed page and ignores nonsense", async ({ page, isMobile }) => {
+    test.skip(isMobile, "phones show the page number as text");
+    await open(page);
+    const box = page.getByLabel("Page number");
+    await box.fill("5");
+    await box.press("Enter");
+    await expectPageNumber(page, false, 5, PAGES);
+    await expect(pageCanvas(page, 5)).toBeInViewport();
+    for (const bad of ["99", "0", "abc", ""]) {
+      await box.fill(bad);
+      await box.press("Enter");
+      await expect(box, bad).toHaveValue("5");
+    }
+    // Leaving the box jumps as well.
+    await box.fill("8");
+    await page.getByRole("button", { name: "Next page" }).focus();
+    await expectPageNumber(page, false, 8, PAGES);
+    await expect(pageCanvas(page, 8)).toBeInViewport();
+  });
+
+  test("the keys move between pages and change the zoom", async ({ page, isMobile }) => {
+    await open(page);
+    await page.keyboard.press("End");
+    await expectPageNumber(page, isMobile, PAGES, PAGES);
+    await expect(pageCanvas(page, PAGES)).toBeInViewport();
+    await page.keyboard.press("Home");
+    await expectPageNumber(page, isMobile, 1, PAGES);
+    await page.keyboard.press("ArrowRight");
+    await expectPageNumber(page, isMobile, 2, PAGES);
+    await page.keyboard.press("PageDown");
+    await expectPageNumber(page, isMobile, 3, PAGES);
+    await page.keyboard.press("ArrowLeft");
+    await expectPageNumber(page, isMobile, 2, PAGES);
+    await page.keyboard.press("PageUp");
+    await expectPageNumber(page, isMobile, 1, PAGES);
+
+    const fit = await zoomPercent(page);
+    await page.keyboard.press("+");
+    await expect.poll(() => zoomPercent(page)).toBeGreaterThan(fit);
+    await page.keyboard.press("=");
+    await expect.poll(() => zoomPercent(page)).toBeGreaterThan(fit + 10);
+    const zoomed = await zoomPercent(page);
+    await page.keyboard.press("-");
+    await expect.poll(() => zoomPercent(page)).toBeLessThan(zoomed);
+    await page.keyboard.press("0");
+    await expect.poll(() => zoomPercent(page)).toBe(fit);
+  });
+
+  test("the keys do nothing while typing in the page box", async ({ page, isMobile }) => {
+    test.skip(isMobile, "phones have no page box");
+    await open(page);
+    const fit = await zoomPercent(page);
+    const box = page.getByLabel("Page number");
+    await box.focus();
+    // The keys go into the box (the "+" is typed there), not to the reader.
+    await page.keyboard.press("End");
+    await page.keyboard.press("+");
+    await expect(box).toHaveValue("+");
+    expect(await zoomPercent(page)).toBe(fit);
+    await expect(pageCanvas(page, 1)).toBeInViewport();  });
+
+  test("zoom in and out change the percentage and the size of the pages", async ({ page }) => {
+    await open(page);
+    const fit = await zoomPercent(page);
+    const fitWidth = await canvasWidth(page, 1, PAGES);
+
+    await page.getByRole("button", { name: "Zoom in" }).click();
+    const bigger = await zoomPercent(page);
+    expect(bigger).toBe(ZOOM_LEVELS.find((level) => level > fit + 0.5));
+    await expect.poll(() => canvasWidth(page, 1, PAGES)).toBeGreaterThan(fitWidth);
+    expect((await canvasWidth(page, 1, PAGES)) / fitWidth).toBeCloseTo(bigger / fit, 1);
+
+    // Two steps up, then one down: smaller than the second step (a phone starts below 50%, where
+    // there is no way down).
+    await page.getByRole("button", { name: "Zoom in" }).click();
+    const biggest = await zoomPercent(page);
+    const biggestWidth = await canvasWidth(page, 1, PAGES);
+    await page.getByRole("button", { name: "Zoom out" }).click();
+    await expect.poll(() => zoomPercent(page)).toBeLessThan(biggest);
+    await expect.poll(() => canvasWidth(page, 1, PAGES)).toBeLessThan(biggestWidth);
+
+    // The page is drawn again at the new size.
+    await expect.poll(() => pageCanvas(page, 1).evaluate((element) => (element as HTMLCanvasElement).width > 0)).toBe(true);
+  });
+
+  test("zoom keeps the reader on the same page, and a wide page scrolls sideways", async ({ page, isMobile }) => {
+    await open(page);
+    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "Next page" }).click();
+    await expectPageNumber(page, isMobile, 4, PAGES);
+    await expect(pageCanvas(page, 4)).toBeInViewport();
+    // Let the smooth scroll to page 4 come to rest before zooming.
+    let last = -1;
+    await expect
+      .poll(async () => {
+        const top = (await pageCanvas(page, 4).boundingBox())!.y;
+        const rest = top === last;
+        last = top;
+        return rest;
+      })
+      .toBe(true);
+    const zoomIn = page.getByRole("button", { name: "Zoom in" });
+    for (let i = 0; i < 12 && (await zoomIn.isEnabled()); i++) {
+      const before = await zoomPercent(page);
+      await zoomIn.click();
+      await expect.poll(() => zoomPercent(page)).toBeGreaterThan(before);
+    }
+    await expect.poll(() => zoomPercent(page)).toBe(300);
+    expect(await canvasWidth(page, 4, PAGES)).toBeGreaterThan(page.viewportSize()!.width);
+    await expectPageNumber(page, isMobile, 4, PAGES);
+    await expect(pageCanvas(page, 4)).toBeInViewport();
+    // Something in the card scrolls sideways.
+    const sideways = await page
+      .getByRole("region", { name: "Document" })
+      .evaluate((card) =>
+        Array.from(card.querySelectorAll("div")).some((d) => d.scrollWidth > d.clientWidth + 8 && getComputedStyle(d).overflowX !== "visible"),
+      );
+    expect(sideways).toBe(true);
+  });
+
+  test("fit page shows a whole page where fit width does not", async ({ page, isMobile }) => {
+    test.skip(isMobile, "on a phone both fits give the same size for an A4 page");
+    await open(page);
+    const widthPercent = await zoomPercent(page);
+    const card = (await page.getByRole("region", { name: "Document" }).boundingBox())!;
+    expect((await pageCanvas(page, 1).boundingBox())!.height).toBeGreaterThan(card.height);
+
+    await openMenu(page);
+    await menuEntry(page, false, "Fit page").click();
+    await expect.poll(() => zoomPercent(page)).toBeLessThan(widthPercent);
+    await expect.poll(async () => (await pageCanvas(page, 1).boundingBox())!.height).toBeLessThan(card.height);
+
+    await openMenu(page);
+    await menuEntry(page, false, "Fit width").click();
+    await expect.poll(() => zoomPercent(page)).toBe(widthPercent);
+  });
+
+  test("the menu has Fit, Focus mode, Download and Open outside the reader", async ({ page, isMobile }) => {
+    await open(page);
+    await openMenu(page);
+    for (const name of ["Fit width", "Fit page", "Focus mode"]) await expect(menuEntry(page, isMobile, name)).toBeVisible();
+    const download = menuEntry(page, isMobile, "Download", true);
+    await expect(download).toHaveAttribute("href", `/api/v1/resources/${id}/download`);
+    const outside = menuEntry(page, isMobile, /Open outside the reader/, true);
+    await expect(outside).toHaveAttribute("href", `/api/v1/resources/${id}/open`);
+    await expect(outside).toHaveAttribute("target", "_blank");
+    await expect(outside).toHaveAttribute("rel", /noopener/);
+    await page.keyboard.press("Escape");
+    await expect(download).toHaveCount(0);
+    // The old toolbar buttons are gone from the title area.
+    await expect(page.getByRole("link", { name: "Download" })).toHaveCount(0);
+  });
+
+  test("focus mode covers the viewport and Esc leaves it", async ({ page, isMobile }) => {
+    await open(page);
+    const card = page.getByRole("region", { name: "Document" });
+    const normal = (await card.boundingBox())!;
+    await openMenu(page);
+    await menuEntry(page, isMobile, "Focus mode").click();
+
+    await expect
+      .poll(async () => {
+        const box = (await card.boundingBox())!;
+        const view = await page.evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }));
+        return [box.x, box.y, Math.round(box.width), Math.round(box.height)].join() === [0, 0, view.w, view.h].join();
+      })
+      .toBe(true);
+    expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe("hidden");
+    await expect(page.getByRole("group", { name: "Page and zoom" })).toBeVisible();
+    await expect(page.getByRole("button", { name: MENU_BUTTON })).toBeVisible();
+
+    await openMenu(page);
+    await expect(menuEntry(page, isMobile, "Exit focus mode")).toBeVisible();
+    // The first Esc closes the menu, the second leaves focus mode.
+    await page.keyboard.press("Escape");
+    await expect(menuEntry(page, isMobile, "Exit focus mode")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect.poll(async () => Math.round((await card.boundingBox())!.width)).toBe(Math.round(normal.width));
+    expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe("");
+    await expect(page.getByRole("button", { name: MENU_BUTTON })).toBeFocused();
+  });
+
+  test("in focus mode Tab stays inside the card", async ({ page, isMobile }) => {
+    await open(page);
+    await openMenu(page);
+    await menuEntry(page, isMobile, "Focus mode").click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).toBe("hidden");
+    const outside = () =>
+      page.evaluate(() => {
+        const active = document.activeElement;
+        if (active === null || active === document.body || active.closest('section[aria-label="Document"]')) return false;
+        return `${active.tagName} ${active.id} ${(active.getAttribute("aria-label") ?? active.textContent ?? "").slice(0, 40)}`;
+      });
+    for (let i = 0; i < 14; i++) {
+      await page.keyboard.press("Tab");
+      expect(await outside(), `after Tab ${i + 1}`).toBe(false);
+    }
+    for (let i = 0; i < 4; i++) {
+      await page.keyboard.press("Shift+Tab");
+      expect(await outside(), `after Shift+Tab ${i + 1}`).toBe(false);
+    }
+    // The menu still works, and everything behind is reachable again afterwards.
+    await openMenu(page);
+    await menuEntry(page, isMobile, "Exit focus mode").click();
+    await expect.poll(() => page.evaluate(() => document.querySelectorAll("[inert]").length)).toBe(0);
+  });
+
+  test("focus mode can be left from the menu", async ({ page, isMobile }) => {
+    await open(page);
+    await openMenu(page);
+    await menuEntry(page, isMobile, "Focus mode").click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).toBe("hidden");
+    await openMenu(page);
+    await menuEntry(page, isMobile, "Exit focus mode").click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).toBe("");
+    await expect(page.getByRole("button", { name: MENU_BUTTON })).toBeFocused();
+  });
+
+  test("offers to continue where the reader left off, once", async ({ page, isMobile }) => {
+    await open(page);
+    await expect(page.getByRole("region", { name: "Continue reading" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Next page" }).click();
+    await expectPageNumber(page, isMobile, 2, PAGES);
+    await expect.poll(() => page.evaluate((k) => localStorage.getItem(k), `reader:last-page:${id}`)).toBe("2");
+
+    await page.reload();
+    const notice = page.getByRole("region", { name: "Continue reading" });
+    await expect(notice).toContainText("Continue where you left off, page 2?");
+    await notice.getByRole("button", { name: "Go" }).click();
+    await expect(notice).toHaveCount(0);
+    await expectPageNumber(page, isMobile, 2, PAGES);
+    await expect(pageCanvas(page, 2)).toBeInViewport();
+
+    // Dismissing hides it without moving.
+    await page.reload();
+    await expect(notice).toBeVisible();
+    await notice.getByRole("button", { name: "Dismiss" }).click();
+    await expect(notice).toHaveCount(0);
+    await expectPageNumber(page, isMobile, 1, PAGES);
+  });
+
+  test("Enter in the page box jumps once", async ({ page, isMobile }) => {
+    test.skip(isMobile, "phones have no page box");
+    await page.addInitScript(() => {
+      (window as unknown as { jumps: number }).jumps = 0;
+      const original = Element.prototype.scrollBy;
+      Element.prototype.scrollBy = function (this: Element, ...args: unknown[]) {
+        (window as unknown as { jumps: number }).jumps++;
+        return (original as (...a: unknown[]) => void).apply(this, args);
+      } as typeof Element.prototype.scrollBy;
+    });
+    await open(page);
+    const box = page.getByLabel("Page number");
+    await box.fill("6");
+    await box.press("Enter");
+    await expectPageNumber(page, false, 6, PAGES);
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => (window as unknown as { jumps: number }).jumps)).toBe(1);
+  });
+
+  test("the arrow keys scroll sideways while the page is wider than the area", async ({ page, isMobile }) => {
+    await open(page);
+    const zoomIn = page.getByRole("button", { name: "Zoom in" });
+    for (let i = 0; i < 12 && (await zoomIn.isEnabled()); i++) await zoomIn.click();
+    await expect.poll(() => zoomPercent(page)).toBe(300);
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(300);
+    await expectPageNumber(page, isMobile, 1, PAGES);
+    // Page keys and Home/End still move between pages.
+    await page.keyboard.press("PageDown");
+    await expectPageNumber(page, isMobile, 2, PAGES);
+    await page.keyboard.press("0");
+    await page.keyboard.press("ArrowRight");
+    await expectPageNumber(page, isMobile, 3, PAGES);
+  });
+
+  test("the place is saved when leaving by an in-app link straight away", async ({ page, isMobile }) => {
+    await open(page);
+    await page.getByRole("button", { name: "Next page" }).click();
+    await expectPageNumber(page, isMobile, 2, PAGES);
+    const toCourse = isMobile
+      ? page.getByRole("link", { name: /^Back to DEMO302/ })
+      : page.getByRole("navigation", { name: "breadcrumb" }).getByRole("link", { name: "DEMO302", exact: true });
+    await toCourse.click();
+    await expect(page).toHaveURL(/\/courses\/DEMO302/);
+    await expect.poll(() => page.evaluate((k) => localStorage.getItem(k), `reader:last-page:${id}`)).toBe("2");
+  });
+
+  test("keeps working when the browser's storage throws", async ({ page, isMobile }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.addInitScript(() => {
+      Object.defineProperty(window, "localStorage", {
+        get() {
+          throw new DOMException("blocked", "SecurityError");
+        },
+      });
+    });
+    await open(page);
+    await page.getByRole("button", { name: "Next page" }).click();
+    await expectPageNumber(page, isMobile, 2, PAGES);
+    await page.waitForTimeout(800);
+    await expect(page.getByRole("region", { name: "Continue reading" })).toHaveCount(0);
+    expect(errors).toEqual([]);
   });
 });
 

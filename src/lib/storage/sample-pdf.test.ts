@@ -45,4 +45,21 @@ describe("samplePdf", () => {
     expect(s).toContain("(a \\(b\\) c\\\\d) Tj");
     expect(s).toContain("(caf?) Tj");
   });
+
+  it("makes a file of several pages with a consistent xref table", () => {
+    const s = text(["SAMPLE FILE", "Title"]);
+    expect(s).toContain("/Count 1");
+    const many = new TextDecoder().decode(samplePdf(["SAMPLE FILE", "Title"], 4));
+    expect(many).toContain("/Count 4");
+    expect(many.match(/\/Type \/Page /g)).toHaveLength(4);
+    expect(many).toContain("(SAMPLE FILE - page 1) Tj");
+    expect(many).toContain("(SAMPLE FILE - page 4) Tj");
+    const startxref = Number(/startxref\n(\d+)\n/.exec(many)![1]);
+    const entries = [...many.slice(startxref).matchAll(/^(\d{10}) 00000 n $/gm)].map((m) => Number(m[1]));
+    expect(entries).toHaveLength(3 + 2 * 4);
+    entries.forEach((offset, i) => {
+      expect(many.slice(offset).startsWith(`${i + 1} 0 obj\n`)).toBe(true);
+    });
+    expect(many).toContain(`/Size ${entries.length + 1}`);
+  });
 });

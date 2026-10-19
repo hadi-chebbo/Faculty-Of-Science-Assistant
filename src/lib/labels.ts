@@ -26,6 +26,12 @@ export const EXAM_SESSION_LABELS: Record<ExamSession, string> = {
   second: "Second session",
 };
 
+// The full name, where there is room (the short form is for dense rows).
+export const LANGUAGE_NAMES: Record<Language, string> = {
+  en: "English",
+  fr: "French",
+};
+
 export const LANGUAGE_LABELS: Record<Language, string> = {
   en: "EN",
   fr: "FR",
