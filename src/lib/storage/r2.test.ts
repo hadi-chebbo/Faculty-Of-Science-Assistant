@@ -6,17 +6,25 @@ const config = { accountId: "acct123", bucket: "my-bucket", accessKeyId: "AKIATE
 const KEY = "resources/abc.pdf";
 const bytes = (text: string) => new TextEncoder().encode(text);
 
-// A body whose cancel() never settles, like the response bodies inside Next.js.
-const stuckBody = (text: string, close: boolean) =>
-  new ReadableStream<Uint8Array>({
+// A body whose cancel() never settles, as response bodies behaved inside Next.js. With
+// `endAfterMs` it ends a moment after the bytes, like a real response whose end has not been read
+// yet; without it, it never ends.
+function uncancellableBody(text: string, endAfterMs?: number) {
+  return new ReadableStream<Uint8Array>({
     start(controller) {
-      controller.enqueue(new TextEncoder().encode(text));
-      if (close) controller.close();
+      controller.enqueue(bytes(text));
+      if (endAfterMs === undefined) return;
+      setTimeout(() => {
+        try {
+          controller.close();
+        } catch {
+          // Already cancelled.
+        }
+      }, endAfterMs);
     },
-    cancel() {
-      return new Promise<void>(() => {});
-    },
+    cancel: () => new Promise<void>(() => {}),
   });
+}
 
 function setup(respond: (request: Request) => Response | Promise<Response>) {
   const requests: Request[] = [];
@@ -78,14 +86,25 @@ describe("r2 driver requests", () => {
     expect(Buffer.from((await storage.readStart(KEY, 4))!).toString()).toBe("0123");
   });
 
-  it("readStart does not wait for the body to be cancelled (206)", { timeout: 2000 }, async () => {
-    const { storage } = setup(() => new Response(stuckBody("%PDF-1.4", true), { status: 206 }));
+  it("readStart reads a 206 of the requested length to its end instead of cancelling it", { timeout: 2000 }, async () => {
+    const { storage } = setup(
+      () => new Response(uncancellableBody("%PDF-1.4", 20), { status: 206, headers: { "Content-Length": "8" } }),
+    );
     expect(Buffer.from((await storage.readStart(KEY, 8))!).toString()).toBe("%PDF-1.4");
   });
 
-  it("readStart does not wait for the body to be cancelled (200)", { timeout: 2000 }, async () => {
-    const { storage } = setup(() => new Response(stuckBody("0123456789", false), { status: 200 }));
+  it("readStart does not wait for a 200 body to be cancelled", { timeout: 2000 }, async () => {
+    const { storage } = setup(() => new Response(uncancellableBody("0123456789"), { status: 200 }));
     expect(Buffer.from((await storage.readStart(KEY, 4))!).toString()).toBe("0123");
+  });
+
+  it("readStart reads only what was asked from a 206 that is larger or has no length", { timeout: 2000 }, async () => {
+    const larger = setup(
+      () => new Response(uncancellableBody("%PDF-1.4 and much more"), { status: 206, headers: { "Content-Length": "1000000" } }),
+    );
+    expect(Buffer.from((await larger.storage.readStart(KEY, 8))!).toString()).toBe("%PDF-1.4");
+    const unknown = setup(() => new Response(uncancellableBody("%PDF-1.4 and much more"), { status: 206 }));
+    expect(Buffer.from((await unknown.storage.readStart(KEY, 8))!).toString()).toBe("%PDF-1.4");
   });
 
   it("readStart returns fewer bytes for a short object", async () => {
