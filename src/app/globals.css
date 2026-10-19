@@ -71,6 +71,11 @@
   --muted: #f8f8f8;
   /* The reading surface behind a document's white pages: clearly darker than the card. */
   --reader-surface: #e6e7eb;
+  /* Over a document's white page: selected text, every search match, and the current match. */
+  --reader-selection: rgb(62 78 184 / 0.3);
+  --reader-hit: rgb(253 185 31 / 0.22);
+  --reader-hit-current: rgb(253 185 31 / 0.45);
+  --reader-hit-ring: #a86b00;
   --muted-foreground: #6b6b6b;
   --accent: #eceefb;
   --accent-foreground: #2f3b95;
@@ -110,6 +115,11 @@
   --secondary-foreground: #eeeff2;
   --muted: #232733;
   --reader-surface: #0f1117;
+  /* The page itself stays white in the dark theme, so the matches keep their yellow. */
+  --reader-selection: rgb(84 115 255 / 0.4);
+  --reader-hit: rgb(253 185 31 / 0.25);
+  --reader-hit-current: rgb(253 185 31 / 0.5);
+  --reader-hit-ring: #7a4d00;
   --muted-foreground: #9aa0ad;
   --accent: #252b45;
   --accent-foreground: #dfe5ff;
@@ -148,4 +158,66 @@
   h1, h2, h3, h4 {
     @apply text-heading;
   }
+}
+
+/* The invisible text over a document page, so it can be selected and copied. This mirrors the
+   `.textLayer` rules of pdfjs-dist 6.4.299 (web/pdf_viewer.css), the part its TextLayer needs;
+   check it against that file when pdfjs-dist is upgraded: every run of text sits at its place in the page
+   (positions are percentages) and is sized from --scale-factor, which the page sets. */
+.reader-text {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-align: initial;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  color-scheme: only light;
+  --min-font-size: 1;
+  --user-unit: 1;
+  --total-scale-factor: calc(var(--scale-factor) * var(--user-unit));
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+
+.reader-text :is(span, br) {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0 0;
+  user-select: text;
+}
+
+.reader-text > span {
+  --font-height: 0;
+  --scale-x: 1;
+  --rotate: 0deg;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+.reader-text ::selection,
+.reader-text::selection {
+  background: var(--reader-selection);
+  color: transparent;
+}
+
+.reader-text br::selection {
+  background: transparent;
+}
+
+/* Search matches, drawn over the page by marking the characters of the text layer. */
+.reader-text mark {
+  color: transparent;
+  background: var(--reader-hit);
+  border-radius: 2px;
+}
+
+.reader-text mark.reader-hit-current {
+  background: var(--reader-hit-current);
+  outline: 2px solid var(--reader-hit-ring);
 }

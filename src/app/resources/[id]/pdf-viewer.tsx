@@ -25,7 +25,7 @@ async function loadPdfjs() {
 }
 
 // Loads one PDF and hands it to the document card, which shows all its pages in a single vertical
-// scroll, each drawn on a canvas (no text layer yet). The file comes from the same-origin open route, which redirects to a
+// scroll, each drawn on a canvas with a text layer over it. The file comes from the same-origin open route, which redirects to a
 // short-lived signed URL; range requests and streaming are off so the browser makes one plain
 // GET, with no Range header and so no CORS preflight.
 export function PdfViewer({ resourceId }: { resourceId: string }) {

@@ -744,7 +744,8 @@ test.describe("reading a long file", () => {
     await page.clock.fastForward(30_000);
     await expect(bar(page)).toBeVisible();
     // A click on the pages does not toggle it either.
-    await page.getByRole("img", { name: `Page 1 of ${PAGES}` }).click({ position: { x: 20, y: 20 } });
+    // (The page's text layer lies over its canvas now, so the click is made on the page itself.)
+    await page.locator('[data-page="1"]').click({ position: { x: 20, y: 20 } });
     await expect(bar(page)).toBeVisible();
   });
 });

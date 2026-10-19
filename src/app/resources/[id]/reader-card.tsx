@@ -1,16 +1,21 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Minus, Plus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minus, PanelLeft, Plus, Search, X } from "lucide-react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { PageCanvas } from "./page-canvas";
+import { ReaderContents, useOutline } from "./reader-contents";
 import { ReaderMenu } from "./reader-menu";
+import { readContentsOpen, writeContentsOpen } from "./reader-panel";
 import { pageToOffer, readLastPage, writeLastPage } from "./reader-position";
+import { ReaderSearchBar } from "./reader-search-bar";
 import { createTapTracker } from "./reader-tap";
 import {
+  PAGE_GAP_ABOVE,
   clampPage,
   fitAreaWidth,
   fitPagePercent,
@@ -21,6 +26,7 @@ import {
   type ZoomMode,
 } from "./reader-zoom";
 import { useAutoHide } from "./use-auto-hide";
+import { useReaderSearch } from "./use-reader-search";
 
 export interface PageSize {
   // In PDF points.
@@ -35,9 +41,13 @@ const PADDING = 16;
 // On a phone the window scrolls: the site header, the document's top row and the tab bar take this much.
 const PHONE_CHROME = 56 + 52 + 56;
 const PHONE_TAB_BAR = 56;
-const PAGE_GAP_ABOVE = 8;
+// The search bar under the top row (a 40px box and its padding, and a border).
+const SEARCH_BAR_HEIGHT = 49;
 // Longer than a smooth scroll to any page takes.
 const JUMP_SETTLE_MS = 900;
+// After that, the scroll position is looked at this often until it has stopped moving.
+const SETTLE_CHECK_MS = 80;
+const SETTLE_CHECKS = 25;
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 300;
 // A touch this soon after the page last scrolled is stopping a momentum scroll, not tapping.
@@ -126,6 +136,10 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
   const [offer, setOffer] = useState<number | null>(() => pageToOffer(readLastPage(resourceId), total));
   const [menuOpen, setMenuOpen] = useState(false);
   const menuOpenRef = useRef(false);
+  // Contents: on a wide screen a panel beside the pages (remembered); on a phone a sheet.
+  const [contentsOpen, setContentsOpen] = useState(() => readContentsOpen());
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const panelShown = desktop && contentsOpen;
 
   // ---- Zoom -------------------------------------------------------------------------------
   const maxWidth = Math.max(...sizes.map((s) => s.width));
@@ -140,37 +154,6 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
 
   const zoomBy = useCallback((direction: 1 | -1) => setMode({ kind: "zoom", percent: stepZoom(percent, direction) }), [percent]);
 
-  // The reading area's size, debounced so dragging a window edge does not redraw every page at
-  // every step. The first measurement (and the first after the layout changes) is applied at once.
-  useEffect(() => {
-    if (!scroller) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let first = true;
-    const measure = () => {
-      const height = inner ? scroller.clientHeight : window.innerHeight - PHONE_CHROME;
-      setAvailable({
-        width: fitAreaWidth(scroller.clientWidth, desktop),
-        height: Math.max(1, height - 2 * PADDING),
-      });
-    };
-    const schedule = () => {
-      clearTimeout(timer);
-      if (first) {
-        first = false;
-        measure();
-      } else {
-        timer = setTimeout(measure, RESIZE_DEBOUNCE_MS);
-      }
-    };
-    const observer = new ResizeObserver(schedule);
-    observer.observe(scroller);
-    window.addEventListener("resize", schedule);
-    return () => {
-      clearTimeout(timer);
-      observer.disconnect();
-      window.removeEventListener("resize", schedule);
-    };
-  }, [scroller, inner, desktop]);
 
   // ---- Where the reader is ----------------------------------------------------------------
   // The part of the screen the pages are seen through.
@@ -188,10 +171,21 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     [scroller],
   );
 
+  // Scrolls the pages (the box in the card, or the window on a phone) by `delta` pixels.
+  const scrollPagesBy = useCallback(
+    (delta: number, behavior: ScrollBehavior = "instant") => {
+      if (inner) scrollerRef.current?.scrollBy({ top: delta, behavior });
+      else window.scrollBy({ top: delta, behavior });
+    },
+    [inner],
+  );
+
   const anchorRef = useRef<Anchor | null>(null);
   // While the reader is being taken to a page (a smooth scroll), the pages passing by do not
   // change the current page: it is the one asked for.
   const jumpUntil = useRef(0);
+  // The page that scroll is taking the reader to.
+  const jumpPage = useRef(0);
   const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(settleTimer.current), []);
 
@@ -280,39 +274,69 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     const anchor = anchorRef.current;
     // Nothing to keep before the first layout, or when only the first measurement arrived.
     if (!scroller || !anchor || before === null || !before.startsWith("true")) return;
-    const element = scroller.querySelector<HTMLElement>(`[data-page="${anchor.page}"]`);
-    if (!element) return;
     const area = scrollerRef.current;
     if (!area) return;
+    // The layout changed while the reader was being taken to a page (the Contents panel opening
+    // narrows the pages a moment after it is used): the page asked for goes back to the top, with
+    // its gap, in the new layout, rather than the place the reader was on a moment ago.
+    const jumping = performance.now() < jumpUntil.current && jumpPage.current > 0;
+    const target = jumping ? scroller.querySelector<HTMLElement>(`[data-page="${jumpPage.current}"]`) : null;
+    const element = target ?? scroller.querySelector<HTMLElement>(`[data-page="${anchor.page}"]`);
+    if (!element) return;
     // A smooth scroll still on its way would carry on to a place that no longer exists.
     if (inner) area.scrollTo({ top: area.scrollTop, behavior: "instant" });
     else window.scrollTo({ top: window.scrollY, behavior: "instant" });
     const view = viewport();
     const box = element.getBoundingClientRect();
-    const delta = box.top - view.top - anchor.gap + anchor.fraction * box.height;
-    if (inner) area.scrollTop += delta;
-    else window.scrollBy(0, delta);
+    const delta = target
+      ? box.top - view.top - PAGE_GAP_ABOVE
+      : box.top - view.top - anchor.gap + anchor.fraction * box.height;
+    scrollPagesBy(delta);
     area.scrollLeft = anchor.centre * area.scrollWidth - area.clientWidth / 2;
-  }, [ready, percent, inner, scroller, viewport]);
+  }, [ready, percent, inner, scroller, viewport, scrollPagesBy]);
+
+  const cancelJump = useCallback(() => {
+    jumpPage.current = 0;
+  }, []);
+
+  // Puts the top of a page at the top of the reading area, with the usual gap, at once.
+  const alignPage = useCallback(
+    (page: number) => {
+      const element = scroller?.querySelector<HTMLElement>(`[data-page="${page}"]`);
+      if (element) scrollPagesBy(element.getBoundingClientRect().top - viewport().top - PAGE_GAP_ABOVE);
+    },
+    [scroller, viewport, scrollPagesBy],
+  );
 
   const goTo = useCallback(
     (wanted: number) => {
       const page = clampPage(wanted, total);
       const element = scroller?.querySelector<HTMLElement>(`[data-page="${page}"]`);
       if (!scroller || !element) return;
-      const delta = element.getBoundingClientRect().top - viewport().top - PAGE_GAP_ABOVE;
       const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-      if (inner) scrollerRef.current?.scrollBy({ top: delta, behavior });
-      else window.scrollBy({ top: delta, behavior });
+      scrollPagesBy(element.getBoundingClientRect().top - viewport().top - PAGE_GAP_ABOVE, behavior);
       setCurrent(page);
-      // Settle on what is really in view once the scroll is over.
+      // Once the scroll is over, make sure the page really is at the top (the layout may have
+      // changed on the way), then settle on what is really in view.
       const duration = behavior === "smooth" ? JUMP_SETTLE_MS : 50;
       jumpUntil.current = performance.now() + duration;
+      jumpPage.current = page;
       pokeBar();
       clearTimeout(settleTimer.current);
-      settleTimer.current = setTimeout(update, duration + 50);
+      // A long smooth scroll may still be moving then: wait until it has stopped, or the page
+      // would be put back in place only for the scroll to carry on past it.
+      const finish = (previous: number, checks: number) => {
+        const position = inner ? (scrollerRef.current?.scrollTop ?? 0) : window.scrollY;
+        if (position !== previous && checks < SETTLE_CHECKS) {
+          settleTimer.current = setTimeout(() => finish(position, checks + 1), SETTLE_CHECK_MS);
+          return;
+        }
+        if (jumpPage.current === page) alignPage(page);
+        update();
+      };
+      settleTimer.current = setTimeout(() => finish(-1, 0), duration + 50);
     },
-    [scroller, viewport, inner, total, update, pokeBar],
+    [scroller, viewport, inner, total, update, pokeBar, scrollPagesBy, alignPage],
   );
 
   // ---- The page box -----------------------------------------------------------------------
@@ -381,6 +405,67 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     };
   }, [resourceId]);
 
+  // ---- Search -----------------------------------------------------------------------------
+  // Its state lives in a hook; this is what the hook needs from the reader around it.
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchButtonRef = useRef<HTMLButtonElement>(null);
+  const search = useReaderSearch(
+    pdf,
+    {
+      area: () => scrollerRef.current,
+      viewport: () => viewport(),
+      scrollBy: (delta) => scrollPagesBy(delta),
+      currentPage: () => currentRef.current,
+      beginJump: (page, holdMs) => {
+        jumpUntil.current = performance.now() + holdMs;
+        jumpPage.current = page;
+        setCurrent(page);
+      },
+      settle: (afterMs) => {
+        clearTimeout(settleTimer.current);
+        settleTimer.current = setTimeout(update, afterMs);
+      },
+    },
+    searchInputRef,
+    searchButtonRef,
+  );
+  const searchOpen = search.open;
+
+  // On a phone the window scrolls and the search bar takes room from the pages' view.
+  const phoneSearch = !inner && searchOpen;
+
+  // The reading area's size, debounced so dragging a window edge does not redraw every page at
+  // every step. The first measurement (and the first after the layout changes) is applied at once.
+  useEffect(() => {
+    if (!scroller) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let first = true;
+    const measure = () => {
+      const height = inner ? scroller.clientHeight : window.innerHeight - PHONE_CHROME - (phoneSearch ? SEARCH_BAR_HEIGHT : 0);
+      setAvailable({
+        width: fitAreaWidth(scroller.clientWidth, desktop),
+        height: Math.max(1, height - 2 * PADDING),
+      });
+    };
+    const schedule = () => {
+      clearTimeout(timer);
+      if (first) {
+        first = false;
+        measure();
+      } else {
+        timer = setTimeout(measure, RESIZE_DEBOUNCE_MS);
+      }
+    };
+    const observer = new ResizeObserver(schedule);
+    observer.observe(scroller);
+    window.addEventListener("resize", schedule);
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+      window.removeEventListener("resize", schedule);
+    };
+  }, [scroller, inner, desktop, phoneSearch]);
+
   // ---- Focus mode -------------------------------------------------------------------------
   const usedFullscreen = useRef(false);
   const enterFocus = () => {
@@ -439,10 +524,45 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     [],
   );
 
+  // ---- Contents ---------------------------------------------------------------------------
+  const outline = useOutline(pdf, panelShown || sheetOpen);
+  const toggleContents = () => {
+    const next = !contentsOpen;
+    setContentsOpen(next);
+    writeContentsOpen(next);
+  };
+  // On a phone the jump waits until the sheet has really closed (and its scroll lock is gone).
+  const pendingJump = useRef<number | null>(null);
+  const chooseContents = (page: number) => {
+    if (desktop) {
+      goTo(page);
+      return;
+    }
+    pendingJump.current = page;
+    setSheetOpen(false);
+  };
+  const afterSheetClosed = () => {
+    const page = pendingJump.current;
+    pendingJump.current = null;
+    if (page !== null) goTo(page);
+  };
+
+  // The list is the same in the panel and in the sheet.
+  const contentsList = <ReaderContents pdf={pdf} sizes={sizes} outline={outline} current={current} onSelect={chooseContents} />;
+
   // ---- Keyboard ---------------------------------------------------------------------------
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.defaultPrevented) return;
+      // Ctrl+F / Cmd+F opens our search instead of the browser's, which cannot see the page's text
+      // while it is drawn on canvases. Menus and sheets keep the browser's.
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "f") {
+        if (menuOpenRef.current || (event.target instanceof Element && event.target.closest('[role="menu"], [role="dialog"]'))) return;
+        event.preventDefault();
+        search.openSearch();
+        return;
+      }
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (isTyping(event.target)) return;
       // Menus and sheets have their own keys.
       if (event.target instanceof Element && event.target.closest('[role="menu"], [role="dialog"]')) return;
@@ -479,8 +599,10 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
           setMode({ kind: "width" });
           break;
         case "Escape":
-          if (!focus) return;
-          exitFocus();
+          // Esc closes the search first, then leaves focus mode.
+          if (searchOpen) search.close();
+          else if (focus) exitFocus();
+          else return;
           break;
         default:
           return;
@@ -489,7 +611,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [goTo, zoomBy, exitFocus, current, total, focus]);
+  }, [goTo, zoomBy, exitFocus, current, total, focus, searchOpen, search]);
 
   // ---- Render -----------------------------------------------------------------------------
   const barHidden = !bar.shown;
@@ -510,207 +632,274 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
         desktop && !focus && "h-[max(30rem,calc(100dvh-13rem))] overflow-hidden",
       )}
     >
-      <div
-        ref={topRowRef}
-        className={cn(
-          "z-20 flex shrink-0 items-center gap-1 border-b bg-card px-2",
-          desktop ? "h-12" : "h-[52px]",
-          !focus && "rounded-t-xl",
-          !inner && "sticky top-14",
+      {/* The top row holds only Contents (left) and Search and More actions (right). The search bar,
+          when open, hangs under it inside the same sticky box. */}
+      <div ref={topRowRef} className={cn("z-20 shrink-0 border-b bg-card", !focus && "rounded-t-xl", !inner && "sticky top-14")}>
+        <div className={cn("flex items-center gap-1 px-2", desktop ? "h-12" : "h-[52px]")}>
+          {desktop ? (
+            <Button
+              variant="ghost"
+              className={cn(
+                "h-10 gap-2 border border-transparent px-3",
+                contentsOpen && "border-primary/30 bg-accent font-semibold text-accent-foreground",
+              )}
+              aria-expanded={contentsOpen}
+              aria-controls={panelShown ? "reader-contents" : undefined}
+              onClick={toggleContents}
+            >
+              <PanelLeft aria-hidden />
+              Contents
+            </Button>
+          ) : (
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn("size-10 border border-transparent", sheetOpen && "border-primary/30 bg-accent text-accent-foreground")}
+                  aria-label="Contents"
+                >
+                  <PanelLeft aria-hidden />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="gap-0 pb-[env(safe-area-inset-bottom)]" onCloseAutoFocus={afterSheetClosed}>
+                <SheetHeader>
+                  <SheetTitle>Contents</SheetTitle>
+                  <SheetDescription className="sr-only">Go to a part of the document.</SheetDescription>
+                </SheetHeader>
+                {contentsList}
+              </SheetContent>
+            </Sheet>
+          )}
+          <div className="flex-1" />
+          <Button
+            ref={searchButtonRef}
+            variant="ghost"
+            size="icon"
+            className={cn("size-10", searchOpen && "bg-accent text-accent-foreground")}
+            aria-label="Search in document"
+            aria-expanded={searchOpen}
+            onClick={() => (searchOpen ? search.close() : search.openSearch())}
+          >
+            <Search aria-hidden />
+          </Button>
+          <ReaderMenu
+            id={resourceId}
+            sheet={!desktop}
+            fit={mode.kind === "zoom" ? null : mode.kind}
+            focus={focus}
+            open={menuOpen}
+            onOpenChange={(open) => {
+              menuOpenRef.current = open;
+              setMenuOpen(open);
+              if (!open) pokeBar();
+            }}
+            onFit={(fit) => setMode({ kind: fit })}
+            onFocus={() => (focus ? exitFocus() : enterFocus())}
+            triggerRef={menuButtonRef}
+          />
+        </div>
+        {searchOpen && (
+          <ReaderSearchBar
+            query={search.query}
+            onQueryChange={search.setQuery}
+            status={search.status}
+            onStep={search.step}
+            onFlush={search.flush}
+            pending={search.pending}
+            onClose={search.close}
+            inputRef={searchInputRef}
+          />
         )}
-      >
-        {/* Room for the Contents button on the left and Search on the right, which come later. */}
-        <div className="flex-1" />
-        <ReaderMenu
-          id={resourceId}
-          sheet={!desktop}
-          fit={mode.kind === "zoom" ? null : mode.kind}
-          focus={focus}
-          open={menuOpen}
-          onOpenChange={(open) => {
-            menuOpenRef.current = open;
-            setMenuOpen(open);
-            if (!open) pokeBar();
-          }}
-          onFit={(fit) => setMode({ kind: fit })}
-          onFocus={() => (focus ? exitFocus() : enterFocus())}
-          triggerRef={menuButtonRef}
-        />
       </div>
 
-      <div className={cn("relative", inner && "min-h-0 flex-1")}>
-        <div
-          ref={setScroller}
-          onPointerDown={(event) => {
-            if (desktop || (event.pointerType === "mouse" && event.button !== 0)) return;
-            if (performance.now() - lastScroll.current < MOMENTUM_MS) return;
-            tapTracker.current.down(event.pointerId, toPoint(event));
-          }}
-          onPointerMove={(event) => {
-            if (!desktop) tapTracker.current.move(event.pointerId, toPoint(event));
-          }}
-          onPointerCancel={(event) => tapTracker.current.cancel(event.pointerId)}
-          onPointerUp={(event) => {
-            const tapped = tapTracker.current.up(event.pointerId, toPoint(event));
-            if (!tapped || desktop) return;
-            // A tap on a control is that control's, not the page's.
-            if (event.target instanceof Element && event.target.closest("a, button, input, select, textarea, [role='button']")) return;
-            // Never take the bar away from someone using it with the keyboard.
-            if (keyboardInBar()) bar.show();
-            else bar.toggle();
-          }}
-          className={cn("touch-manipulation bg-reader-surface [overflow-anchor:none]", inner ? "absolute inset-0 overflow-auto" : "overflow-x-auto rounded-b-xl")}
-        >
-          <div className={cn("flex w-max min-w-full flex-col items-center gap-3 p-4", !ready && "invisible")}>
-            {sizes.map((size, i) => {
-              const css = pageCssSize(size.width, size.height, percent);
-              return (
-                <PageCanvas
-                  key={i}
-                  pdf={pdf}
-                  number={i + 1}
-                  total={total}
-                  pointsWidth={size.width}
-                  cssWidth={css.width}
-                  cssHeight={css.height}
-                  root={inner ? scroller : null}
-                  ready={ready}
-                />
-              );
-            })}
+      <div className={cn(inner && "flex min-h-0 flex-1")}>
+        {panelShown && (
+          <aside id="reader-contents" className="flex w-[200px] shrink-0 flex-col border-r bg-card pt-3">
+            <p aria-hidden className="px-4 pb-2 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              Contents
+            </p>
+            {contentsList}
+          </aside>
+        )}
+        <div className={cn("relative", inner && "min-h-0 min-w-0 flex-1")}>
+          <div
+            ref={setScroller}
+            // The reader taking over with the wheel or a finger ends the pull towards a page.
+            onWheel={cancelJump}
+            onTouchStart={cancelJump}
+            onPointerDown={(event) => {
+              if (desktop || (event.pointerType === "mouse" && event.button !== 0)) return;
+              if (performance.now() - lastScroll.current < MOMENTUM_MS) return;
+              tapTracker.current.down(event.pointerId, toPoint(event));
+            }}
+            onPointerMove={(event) => {
+              if (!desktop) tapTracker.current.move(event.pointerId, toPoint(event));
+            }}
+            onPointerCancel={(event) => tapTracker.current.cancel(event.pointerId)}
+            onPointerUp={(event) => {
+              const tapped = tapTracker.current.up(event.pointerId, toPoint(event));
+              if (!tapped || desktop) return;
+              // A tap on a control is that control's, not the page's.
+              if (event.target instanceof Element && event.target.closest("a, button, input, select, textarea, [role='button']")) return;
+              // Never take the bar away from someone using it with the keyboard.
+              if (keyboardInBar()) bar.show();
+              else bar.toggle();
+            }}
+            className={cn("touch-manipulation bg-reader-surface [overflow-anchor:none]", inner ? "absolute inset-0 overflow-auto" : "overflow-x-auto rounded-b-xl")}
+          >
+            <div className={cn("flex w-max min-w-full flex-col items-center gap-3 p-4", !ready && "invisible")}>
+              {sizes.map((size, i) => {
+                const css = pageCssSize(size.width, size.height, percent);
+                return (
+                  <PageCanvas
+                    key={i}
+                    pdf={pdf}
+                    number={i + 1}
+                    total={total}
+                    pointsWidth={size.width}
+                    cssWidth={css.width}
+                    cssHeight={css.height}
+                    root={inner ? scroller : null}
+                    ready={ready}
+                    hits={search.hits.get(i + 1)}
+                  />
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        {/* On a phone this sits just above the fixed tab bar and follows the window; otherwise it
-            floats at the bottom of the reading area. Not a live region: the page number changes on
-            every scroll step, and each page canvas is already labelled. */}
-        <div
-          className={cn(
-            "pointer-events-none z-10",
-            inner ? "absolute inset-x-0 bottom-0" : "sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.75rem)] h-0",
-          )}
-        >
+          {/* On a phone this sits just above the fixed tab bar and follows the window; otherwise it
+              floats at the bottom of the reading area. Not a live region: the page number changes on
+              every scroll step, and each page canvas is already labelled. */}
           <div
             className={cn(
-              "flex flex-col items-center gap-2 px-3",
-              inner ? barPadding : "absolute inset-x-0 bottom-0",
+              "pointer-events-none z-10",
+              inner ? "absolute inset-x-0 bottom-0" : "sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.75rem)] h-0",
             )}
           >
-            {offer !== null && (
-              <div
-                role="region"
-                aria-label="Continue reading"
-                className="pointer-events-auto flex max-w-full items-center gap-2 rounded-xl border bg-card py-1.5 pr-1.5 pl-3 text-sm text-heading shadow-lg"
-              >
-                <span>Continue where you left off, page {offer}?</span>
-                <Button
-                  className="h-10"
-                  onClick={() => {
-                    goTo(offer);
-                    setOffer(null);
-                  }}
-                >
-                  Go
-                </Button>
-                <Button variant="ghost" size="icon" className="size-10" aria-label="Dismiss" onClick={() => setOffer(null)}>
-                  <X aria-hidden />
-                </Button>
-              </div>
-            )}
-
             <div
-              role="group"
-              aria-label="Page and zoom"
-              ref={barRef}
-              // A press during the fade-out still works and brings the bar back.
-              onPointerDownCapture={bar.show}
-              onKeyDownCapture={bar.show}
               className={cn(
-                "flex items-center gap-0.5 rounded-full border bg-card px-1.5 py-0.5 text-sm text-heading shadow-lg",
-                "duration-200 motion-reduce:transition-none",
-                // Hiding waits for the fade before the bar leaves the tab order and stops taking
-                // presses (visibility: hidden does both); showing makes it focusable at once (a Tab
-                // that reveals it must be able to land on it).
-                "pointer-events-auto",
-                barHidden ? "invisible translate-y-2 opacity-0 transition-[opacity,transform,visibility]" : "transition-[opacity,transform]",
+                "flex flex-col items-center gap-2 px-3",
+                inner ? barPadding : "absolute inset-x-0 bottom-0",
               )}
             >
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-10 rounded-full"
-                aria-label="Previous page"
-                disabled={current <= 1}
-                onClick={() => goTo(current - 1)}
-              >
-                <ChevronLeft aria-hidden />
-              </Button>
-              {desktop ? (
-                <>
-                  <Input
-                    aria-label="Page number"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    className="h-10 w-12 px-1 text-center tabular-nums"
-                    value={draft ?? String(current)}
-                    onFocus={(event) => {
-                      setDraft(String(current));
-                      event.currentTarget.select();
+              {offer !== null && (
+                <div
+                  role="region"
+                  aria-label="Continue reading"
+                  className="pointer-events-auto flex max-w-full items-center gap-2 rounded-xl border bg-card py-1.5 pr-1.5 pl-3 text-sm text-heading shadow-lg"
+                >
+                  <span>Continue where you left off, page {offer}?</span>
+                  <Button
+                    className="h-10"
+                    onClick={() => {
+                      goTo(offer);
+                      setOffer(null);
                     }}
-                    onChange={(event) => setDraft(event.target.value)}
-                    onBlur={commitDraft}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        commitDraft();
-                        event.currentTarget.blur();
-                      } else if (event.key === "Escape") {
-                        event.stopPropagation();
-                        setDraft(null);
-                        event.currentTarget.blur();
-                      }
-                    }}
-                  />
-                  <span className="pr-1 tabular-nums">/ {total}</span>
-                </>
-              ) : (
-                <span className="px-1 tabular-nums">
-                  {current} / {total}
-                </span>
+                  >
+                    Go
+                  </Button>
+                  <Button variant="ghost" size="icon" className="size-10" aria-label="Dismiss" onClick={() => setOffer(null)}>
+                    <X aria-hidden />
+                  </Button>
+                </div>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-10 rounded-full"
-                aria-label="Next page"
-                disabled={current >= total}
-                onClick={() => goTo(current + 1)}
+
+              <div
+                role="group"
+                aria-label="Page and zoom"
+                ref={barRef}
+                // A press during the fade-out still works and brings the bar back.
+                onPointerDownCapture={bar.show}
+                onKeyDownCapture={bar.show}
+                className={cn(
+                  "flex items-center gap-0.5 rounded-full border bg-card px-1.5 py-0.5 text-sm text-heading shadow-lg",
+                  "duration-200 motion-reduce:transition-none",
+                  // Hiding waits for the fade before the bar leaves the tab order and stops taking
+                  // presses (visibility: hidden does both); showing makes it focusable at once (a Tab
+                  // that reveals it must be able to land on it).
+                  "pointer-events-auto",
+                  barHidden ? "invisible translate-y-2 opacity-0 transition-[opacity,transform,visibility]" : "transition-[opacity,transform]",
+                )}
               >
-                <ChevronRight aria-hidden />
-              </Button>
-              <span aria-hidden className="mx-1 h-5 w-px bg-border" />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-10 rounded-full"
-                aria-label="Zoom out"
-                disabled={percent <= MIN_ZOOM + 0.5}
-                onClick={() => zoomBy(-1)}
-              >
-                <Minus aria-hidden />
-              </Button>
-              <span data-testid="zoom-percent" className="min-w-12 text-center tabular-nums">
-                {Math.round(percent)}%
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-10 rounded-full"
-                aria-label="Zoom in"
-                disabled={percent >= MAX_ZOOM - 0.5}
-                onClick={() => zoomBy(1)}
-              >
-                <Plus aria-hidden />
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-10 rounded-full"
+                  aria-label="Previous page"
+                  disabled={current <= 1}
+                  onClick={() => goTo(current - 1)}
+                >
+                  <ChevronLeft aria-hidden />
+                </Button>
+                {desktop ? (
+                  <>
+                    <Input
+                      aria-label="Page number"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      className="h-10 w-12 px-1 text-center tabular-nums"
+                      value={draft ?? String(current)}
+                      onFocus={(event) => {
+                        setDraft(String(current));
+                        event.currentTarget.select();
+                      }}
+                      onChange={(event) => setDraft(event.target.value)}
+                      onBlur={commitDraft}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          commitDraft();
+                          event.currentTarget.blur();
+                        } else if (event.key === "Escape") {
+                          event.stopPropagation();
+                          setDraft(null);
+                          event.currentTarget.blur();
+                        }
+                      }}
+                    />
+                    <span className="pr-1 tabular-nums">/ {total}</span>
+                  </>
+                ) : (
+                  <span className="px-1 tabular-nums">
+                    {current} / {total}
+                  </span>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-10 rounded-full"
+                  aria-label="Next page"
+                  disabled={current >= total}
+                  onClick={() => goTo(current + 1)}
+                >
+                  <ChevronRight aria-hidden />
+                </Button>
+                <span aria-hidden className="mx-1 h-5 w-px bg-border" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-10 rounded-full"
+                  aria-label="Zoom out"
+                  disabled={percent <= MIN_ZOOM + 0.5}
+                  onClick={() => zoomBy(-1)}
+                >
+                  <Minus aria-hidden />
+                </Button>
+                <span data-testid="zoom-percent" className="min-w-12 text-center tabular-nums">
+                  {Math.round(percent)}%
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-10 rounded-full"
+                  aria-label="Zoom in"
+                  disabled={percent >= MAX_ZOOM - 0.5}
+                  onClick={() => zoomBy(1)}
+                >
+                  <Plus aria-hidden />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
