@@ -1,6 +1,6 @@
 import { CheckCircle2, ExternalLink } from "lucide-react";
 import Link from "next/link";
-import { EXAM_SESSION_LABELS, LANGUAGE_LABELS, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
+import { EXAM_SESSION_LABELS, LANGUAGE_NAMES, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
 import type { ReaderResource } from "@/services/resources/types";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
@@ -17,7 +17,7 @@ export function ReaderDetails({ resource }: { resource: ReaderResource }) {
           ...(resource.examSession ? [EXAM_SESSION_LABELS[resource.examSession]] : []),
         ].join(" · ")
       : null,
-    LANGUAGE_LABELS[resource.language],
+    LANGUAGE_NAMES[resource.language],
   ].filter((line): line is string => line !== null);
   const related = [
     ...(resource.solutionOf ? [{ ref: resource.solutionOf, label: `Solution of: ${resource.solutionOf.title}` }] : []),

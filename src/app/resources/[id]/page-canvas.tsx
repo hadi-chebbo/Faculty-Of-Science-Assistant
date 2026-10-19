@@ -2,7 +2,7 @@
 
 import type { PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { canvasPixelRatio } from "./reader-zoom";
+import { MAX_CANVAS_PIXELS_SMALL, canvasPixelRatio } from "./reader-zoom";
 
 // Pages within this distance of the viewport are drawn; the rest are empty placeholders.
 const RENDER_MARGIN = "150% 0px";
@@ -47,7 +47,9 @@ export function PageCanvas({
     async (canvas: HTMLCanvasElement, isCancelled: () => boolean, setTask: (task: RenderTask) => void) => {
       const page = await pdf.getPage(number);
       if (isCancelled()) return;
-      const ratio = canvasPixelRatio(cssWidth, cssHeight, window.devicePixelRatio);
+      // Touch and small screens get a lower memory budget per canvas.
+      const small = window.matchMedia("(max-width: 767px), (pointer: coarse)").matches;
+      const ratio = canvasPixelRatio(cssWidth, cssHeight, window.devicePixelRatio, 2, small ? MAX_CANVAS_PIXELS_SMALL : undefined);
       const viewport = page.getViewport({ scale: (cssWidth / pointsWidth) * ratio });
       canvas.width = Math.floor(viewport.width);
       canvas.height = Math.floor(viewport.height);
@@ -85,7 +87,7 @@ export function PageCanvas({
     <div
       ref={wrapperRef}
       data-page={number}
-      className="relative shrink-0 bg-white shadow-md ring-1 ring-black/5"
+      className="relative shrink-0 bg-white shadow-md ring-1 ring-black/10 dark:shadow-black/60 dark:ring-white/30"
       style={{ width: cssWidth, height: cssHeight }}
     >
       <canvas

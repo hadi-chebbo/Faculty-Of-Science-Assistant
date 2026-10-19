@@ -5,7 +5,7 @@ import { Suspense, cache } from "react";
 import { Crumbs, type Crumb } from "@/components/site/crumbs";
 import { StateBlock } from "@/components/site/state-block";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EXAM_SESSION_LABELS, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
+import { EXAM_SESSION_LABELS, LANGUAGE_NAMES, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
 import { readForPage } from "@/lib/page-errors";
 import { readerBackTarget } from "@/services/resources/back-target";
 import { getResourceForReader } from "@/services/resources/reader";
@@ -83,7 +83,7 @@ async function ReaderContent({ id }: { id: string }) {
 
   const facts = [
     RESOURCE_TYPE_SINGULAR_LABELS[resource.type],
-    resource.language === "en" ? "English" : "French",
+    LANGUAGE_NAMES[resource.language],
     ...(resource.academicYearStart !== null ? [formatAcademicYear(resource.academicYearStart)] : []),
     ...(resource.examSession ? [EXAM_SESSION_LABELS[resource.examSession]] : []),
   ];

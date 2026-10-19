@@ -11,6 +11,7 @@ import { ReaderMenu } from "./reader-menu";
 import { pageToOffer, readLastPage, writeLastPage } from "./reader-position";
 import {
   clampPage,
+  fitAreaWidth,
   fitPagePercent,
   fitWidthPercent,
   pageCssSize,
@@ -39,20 +40,39 @@ const MIN_ZOOM = 50;
 const MAX_ZOOM = 300;
 
 function useMediaQuery(query: string): boolean {
-  return useSyncExternalStore(
-    (notify) => {
+  // Stable functions per query: a new subscribe on every render would re-subscribe every time.
+  const subscribe = useCallback(
+    (notify: () => void) => {
       const list = window.matchMedia(query);
       list.addEventListener("change", notify);
       return () => list.removeEventListener("change", notify);
     },
-    () => window.matchMedia(query).matches,
-    () => false,
+    [query],
   );
+  const snapshot = useCallback(() => window.matchMedia(query).matches, [query]);
+  return useSyncExternalStore(subscribe, snapshot, () => false);
 }
 
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+}
+
+// Makes everything outside the card unreachable (by Tab, pointer and screen readers) and returns
+// the way back. Menus and sheets are added to the end of the page when they open, after this runs,
+// so they are not affected.
+function makeRestInert(card: HTMLElement | null): () => void {
+  const changed: Element[] = [];
+  for (let node: Element | null = card; node && node !== document.body; node = node.parentElement) {
+    for (const sibling of Array.from(node.parentElement?.children ?? [])) {
+      if (sibling === node || ["SCRIPT", "STYLE", "LINK"].includes(sibling.tagName) || sibling.hasAttribute("inert")) continue;
+      // An open menu or sheet is part of the card's controls.
+      if (sibling.matches('[data-state="open"]') || sibling.querySelector('[data-state="open"][role="menu"], [data-state="open"][role="dialog"]')) continue;
+      sibling.setAttribute("inert", "");
+      changed.push(sibling);
+    }
+  }
+  return () => changed.forEach((element) => element.removeAttribute("inert"));
 }
 
 interface Anchor {
@@ -89,7 +109,14 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
   const [available, setAvailable] = useState({ width: 0, height: 0 });
   const [mode, setMode] = useState<ZoomMode>({ kind: "width" });
   const [current, setCurrent] = useState(1);
-  const [draft, setDraft] = useState<string | null>(null);
+  const [draft, setDraftState] = useState<string | null>(null);
+  // The same value in a ref, so a commit from a key press and the blur that follows it in the same
+  // render cannot both see it.
+  const draftRef = useRef<string | null>(null);
+  const setDraft = useCallback((value: string | null) => {
+    draftRef.current = value;
+    setDraftState(value);
+  }, []);
   // The viewer only runs in the browser (no server render), so storage can be read right away.
   const [offer, setOffer] = useState<number | null>(() => pageToOffer(readLastPage(resourceId), total));
   const [menuOpen, setMenuOpen] = useState(false);
@@ -117,7 +144,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     const measure = () => {
       const height = inner ? scroller.clientHeight : window.innerHeight - PHONE_CHROME;
       setAvailable({
-        width: Math.max(1, scroller.clientWidth - 2 * PADDING),
+        width: fitAreaWidth(scroller.clientWidth, desktop),
         height: Math.max(1, height - 2 * PADDING),
       });
     };
@@ -138,7 +165,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
       observer.disconnect();
       window.removeEventListener("resize", schedule);
     };
-  }, [scroller, inner]);
+  }, [scroller, inner, desktop]);
 
   // ---- Where the reader is ----------------------------------------------------------------
   // The part of the screen the pages are seen through.
@@ -160,6 +187,8 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
   // While the reader is being taken to a page (a smooth scroll), the pages passing by do not
   // change the current page: it is the one asked for.
   const jumpUntil = useRef(0);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(settleTimer.current), []);
 
   // The current page is the one with the most of itself on screen; the ends win at the ends.
   const update = useCallback(() => {
@@ -245,15 +274,17 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
       // Settle on what is really in view once the scroll is over.
       const duration = behavior === "smooth" ? JUMP_SETTLE_MS : 50;
       jumpUntil.current = performance.now() + duration;
-      setTimeout(update, duration + 50);
+      clearTimeout(settleTimer.current);
+      settleTimer.current = setTimeout(update, duration + 50);
     },
     [scroller, viewport, inner, total, update],
   );
 
   // ---- The page box -----------------------------------------------------------------------
   const commitDraft = () => {
-    if (draft === null) return;
-    const page = parsePageInput(draft, total);
+    const text = draftRef.current;
+    if (text === null) return;
+    const page = parsePageInput(text, total);
     setDraft(null);
     if (page !== null) goTo(page);
   };
@@ -261,10 +292,8 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
   // ---- Continue reading -------------------------------------------------------------------
   const currentRef = useRef(1);
   const moved = useRef(false);
-  const offerRef = useRef<number | null>(null);
   useEffect(() => {
     currentRef.current = current;
-    offerRef.current = offer;
   });
   useEffect(() => {
     // Do not replace the remembered page with page 1 before the reader has gone anywhere.
@@ -273,12 +302,30 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
     const timer = setTimeout(() => writeLastPage(resourceId, current), SAVE_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [current, resourceId]);
+  // Save at once when the reader is about to leave. Leaving by an in-app link or Back does not fire
+  // pagehide, and the route change scrolls the window to the top before the page unmounts, which
+  // would make "the current page" 1: so the position is saved from the event that starts the
+  // leaving (a link click, popstate, the tab being hidden), never from the unmount itself.
   useEffect(() => {
     const save = () => {
       if (moved.current) writeLastPage(resourceId, currentRef.current);
     };
+    const onClick = (event: MouseEvent) => {
+      if (event.target instanceof Element && event.target.closest("a[href]")) save();
+    };
+    const onHidden = () => {
+      if (document.visibilityState === "hidden") save();
+    };
     window.addEventListener("pagehide", save);
-    return () => window.removeEventListener("pagehide", save);
+    window.addEventListener("popstate", save);
+    document.addEventListener("click", onClick, true);
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      window.removeEventListener("pagehide", save);
+      window.removeEventListener("popstate", save);
+      document.removeEventListener("click", onClick, true);
+      document.removeEventListener("visibilitychange", onHidden);
+    };
   }, [resourceId]);
 
   // ---- Focus mode -------------------------------------------------------------------------
@@ -311,6 +358,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
       const previous = html.style.overflow;
       html.style.overflow = "hidden";
       cardRef.current?.focus({ preventScroll: true });
+      const restoreInert = makeRestInert(cardRef.current);
       const onFullscreenChange = () => {
         if (!document.fullscreenElement && usedFullscreen.current) {
           usedFullscreen.current = false;
@@ -320,6 +368,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
       document.addEventListener("fullscreenchange", onFullscreenChange);
       return () => {
         html.style.overflow = previous;
+        restoreInert();
         document.removeEventListener("fullscreenchange", onFullscreenChange);
       };
     }
@@ -347,10 +396,16 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
       if (menuOpenRef.current) return;
       switch (event.key) {
         case "ArrowLeft":
+        case "ArrowRight": {
+          // Zoomed in far enough to scroll sideways: the arrows are for that.
+          const area = scrollerRef.current;
+          if (area && area.scrollWidth > area.clientWidth + 1) return;
+          goTo(event.key === "ArrowLeft" ? current - 1 : current + 1);
+          break;
+        }
         case "PageUp":
           goTo(current - 1);
           break;
-        case "ArrowRight":
         case "PageDown":
           goTo(current + 1);
           break;
@@ -427,7 +482,7 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
       <div className={cn("relative", inner && "min-h-0 flex-1")}>
         <div
           ref={setScroller}
-          className={cn("bg-muted [overflow-anchor:none]", inner ? "absolute inset-0 overflow-auto" : "overflow-x-auto rounded-b-xl")}
+          className={cn("bg-reader-surface [overflow-anchor:none]", inner ? "absolute inset-0 overflow-auto" : "overflow-x-auto rounded-b-xl")}
         >
           <div className={cn("flex w-max min-w-full flex-col items-center gap-3 p-4", !ready && "invisible")}>
             {sizes.map((size, i) => {

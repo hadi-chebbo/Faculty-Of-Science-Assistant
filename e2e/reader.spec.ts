@@ -435,6 +435,31 @@ test.describe("reading a long file", () => {
     await expect(page.getByRole("button", { name: MENU_BUTTON })).toBeFocused();
   });
 
+  test("in focus mode Tab stays inside the card", async ({ page, isMobile }) => {
+    await open(page);
+    await openMenu(page);
+    await menuEntry(page, isMobile, "Focus mode").click();
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).toBe("hidden");
+    const outside = () =>
+      page.evaluate(() => {
+        const active = document.activeElement;
+        if (active === null || active === document.body || active.closest('section[aria-label="Document"]')) return false;
+        return `${active.tagName} ${active.id} ${(active.getAttribute("aria-label") ?? active.textContent ?? "").slice(0, 40)}`;
+      });
+    for (let i = 0; i < 14; i++) {
+      await page.keyboard.press("Tab");
+      expect(await outside(), `after Tab ${i + 1}`).toBe(false);
+    }
+    for (let i = 0; i < 4; i++) {
+      await page.keyboard.press("Shift+Tab");
+      expect(await outside(), `after Shift+Tab ${i + 1}`).toBe(false);
+    }
+    // The menu still works, and everything behind is reachable again afterwards.
+    await openMenu(page);
+    await menuEntry(page, isMobile, "Exit focus mode").click();
+    await expect.poll(() => page.evaluate(() => document.querySelectorAll("[inert]").length)).toBe(0);
+  });
+
   test("focus mode can be left from the menu", async ({ page, isMobile }) => {
     await open(page);
     await openMenu(page);
@@ -467,6 +492,54 @@ test.describe("reading a long file", () => {
     await notice.getByRole("button", { name: "Dismiss" }).click();
     await expect(notice).toHaveCount(0);
     await expectPageNumber(page, isMobile, 1, PAGES);
+  });
+
+  test("Enter in the page box jumps once", async ({ page, isMobile }) => {
+    test.skip(isMobile, "phones have no page box");
+    await page.addInitScript(() => {
+      (window as unknown as { jumps: number }).jumps = 0;
+      const original = Element.prototype.scrollBy;
+      Element.prototype.scrollBy = function (this: Element, ...args: unknown[]) {
+        (window as unknown as { jumps: number }).jumps++;
+        return (original as (...a: unknown[]) => void).apply(this, args);
+      } as typeof Element.prototype.scrollBy;
+    });
+    await open(page);
+    const box = page.getByLabel("Page number");
+    await box.fill("6");
+    await box.press("Enter");
+    await expectPageNumber(page, false, 6, PAGES);
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => (window as unknown as { jumps: number }).jumps)).toBe(1);
+  });
+
+  test("the arrow keys scroll sideways while the page is wider than the area", async ({ page, isMobile }) => {
+    await open(page);
+    const zoomIn = page.getByRole("button", { name: "Zoom in" });
+    for (let i = 0; i < 12 && (await zoomIn.isEnabled()); i++) await zoomIn.click();
+    await expect.poll(() => zoomPercent(page)).toBe(300);
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(300);
+    await expectPageNumber(page, isMobile, 1, PAGES);
+    // Page keys and Home/End still move between pages.
+    await page.keyboard.press("PageDown");
+    await expectPageNumber(page, isMobile, 2, PAGES);
+    await page.keyboard.press("0");
+    await page.keyboard.press("ArrowRight");
+    await expectPageNumber(page, isMobile, 3, PAGES);
+  });
+
+  test("the place is saved when leaving by an in-app link straight away", async ({ page, isMobile }) => {
+    await open(page);
+    await page.getByRole("button", { name: "Next page" }).click();
+    await expectPageNumber(page, isMobile, 2, PAGES);
+    const toCourse = isMobile
+      ? page.getByRole("link", { name: /^Back to DEMO302/ })
+      : page.getByRole("navigation", { name: "breadcrumb" }).getByRole("link", { name: "DEMO302", exact: true });
+    await toCourse.click();
+    await expect(page).toHaveURL(/\/courses\/DEMO302/);
+    await expect.poll(() => page.evaluate((k) => localStorage.getItem(k), `reader:last-page:${id}`)).toBe("2");
   });
 
   test("keeps working when the browser's storage throws", async ({ page, isMobile }) => {

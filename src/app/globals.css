@@ -8,6 +8,7 @@
   --color-heading: var(--heading);
   --color-link: var(--link);
   --color-highlight: var(--highlight);
+  --color-reader-surface: var(--reader-surface);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -68,6 +69,8 @@
   --secondary: #f8f8f8;
   --secondary-foreground: #41454f;
   --muted: #f8f8f8;
+  /* The reading surface behind a document's white pages: clearly darker than the card. */
+  --reader-surface: #e6e7eb;
   --muted-foreground: #6b6b6b;
   --accent: #eceefb;
   --accent-foreground: #2f3b95;
@@ -106,6 +109,7 @@
   --secondary: #252936;
   --secondary-foreground: #eeeff2;
   --muted: #232733;
+  --reader-surface: #0f1117;
   --muted-foreground: #9aa0ad;
   --accent: #252b45;
   --accent-foreground: #dfe5ff;

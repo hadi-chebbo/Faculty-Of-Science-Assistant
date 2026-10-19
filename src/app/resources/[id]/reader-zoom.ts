@@ -8,12 +8,25 @@ const MIN_FIT_PERCENT = 25;
 const MAX_FIT_PERCENT = 400;
 // Canvases above this many pixels are drawn at a lower resolution: memory, not sharpness, is the limit.
 const MAX_CANVAS_PIXELS = 16_000_000;
+// Phones (older iPhones especially) run out of canvas memory sooner.
+export const MAX_CANVAS_PIXELS_SMALL = 8_000_000;
+// On a wide screen a fitted page stops growing here, so it sits centred with margins.
+const WIDE_FIT_MAX_WIDTH = 880;
+const WIDE_FIT_MARGIN = 48;
+const NARROW_FIT_MARGIN = 32;
 
 export type ZoomMode = { kind: "width" } | { kind: "page" } | { kind: "zoom"; percent: number };
 
 function clampFit(percent: number): number {
   if (!Number.isFinite(percent) || percent <= 0) return 100;
   return Math.min(MAX_FIT_PERCENT, Math.max(MIN_FIT_PERCENT, percent));
+}
+
+// The width a fitted page may take, from the width of the reading area: the whole width minus the
+// margins on a phone; on a wide screen also never more than a comfortable line length.
+export function fitAreaWidth(areaWidth: number, wide: boolean): number {
+  const width = wide ? Math.min(areaWidth - WIDE_FIT_MARGIN, WIDE_FIT_MAX_WIDTH) : areaWidth - NARROW_FIT_MARGIN;
+  return Math.max(1, width);
 }
 
 // The zoom at which a page `pagePoints` wide exactly fills `available` CSS pixels.
@@ -45,11 +58,17 @@ export function pageCssSize(pointsWidth: number, pointsHeight: number, percent: 
 }
 
 // How many canvas pixels per CSS pixel: the screen's ratio, capped, and lowered further for huge pages.
-export function canvasPixelRatio(cssWidth: number, cssHeight: number, devicePixelRatio: number, cap = 2): number {
+export function canvasPixelRatio(
+  cssWidth: number,
+  cssHeight: number,
+  devicePixelRatio: number,
+  cap = 2,
+  maxPixels = MAX_CANVAS_PIXELS,
+): number {
   const wanted = Math.min(Math.max(devicePixelRatio || 1, 1), cap);
   const area = cssWidth * cssHeight;
   if (area <= 0) return wanted;
-  return Math.min(wanted, Math.sqrt(MAX_CANVAS_PIXELS / area));
+  return Math.min(wanted, Math.sqrt(maxPixels / area));
 }
 
 // A page number typed into the box: whole numbers from 1 to the page count, otherwise null.

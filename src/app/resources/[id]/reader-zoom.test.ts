@@ -3,6 +3,8 @@ import {
   ZOOM_LEVELS,
   canvasPixelRatio,
   clampPage,
+  MAX_CANVAS_PIXELS_SMALL,
+  fitAreaWidth,
   fitPagePercent,
   fitWidthPercent,
   pageCssSize,
@@ -71,6 +73,23 @@ describe("fit scales", () => {
   });
 });
 
+describe("fitAreaWidth", () => {
+  it("takes the whole width minus the margins on a phone", () => {
+    expect(fitAreaWidth(390, false)).toBe(358);
+  });
+
+  it("is capped on a wide screen so the page keeps grey margins", () => {
+    expect(fitAreaWidth(1000, true)).toBe(880);
+    expect(fitAreaWidth(1500, true)).toBe(880);
+  });
+
+  it("follows a narrow window on a wide layout, and never reaches zero", () => {
+    expect(fitAreaWidth(700, true)).toBe(652);
+    expect(fitAreaWidth(10, true)).toBe(1);
+    expect(fitAreaWidth(0, false)).toBe(1);
+  });
+});
+
 describe("pageCssSize", () => {
   it("shows 100% at the PDF's real size", () => {
     expect(pageCssSize(595, 842, 100)).toEqual({ width: 793, height: 1123 });
@@ -89,6 +108,15 @@ describe("canvasPixelRatio", () => {
     const ratio = canvasPixelRatio(2400, 3400, 2);
     expect(ratio).toBeLessThan(2);
     expect(2400 * ratio * 3400 * ratio).toBeLessThanOrEqual(16_000_001);
+  });
+});
+
+describe("canvasPixelRatio on a small screen", () => {
+  it("keeps a canvas to about 8M pixels", () => {
+    const ratio = canvasPixelRatio(2380, 3366, 3, 2, MAX_CANVAS_PIXELS_SMALL);
+    expect(ratio).toBeLessThan(1.1);
+    expect(2380 * ratio * 3366 * ratio).toBeLessThanOrEqual(8_000_001);
+    expect(canvasPixelRatio(360, 510, 3, 2, MAX_CANVAS_PIXELS_SMALL)).toBe(2);
   });
 });
 
