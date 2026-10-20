@@ -4,6 +4,8 @@
 // a line each). A match is reported as the parts of items it covers, in each item's own characters,
 // so the reader can mark exactly those characters on the page's text layer.
 
+import { foldCodePoint, foldQuery } from "@/lib/text-fold";
+
 export interface TextItemLike {
   str: string;
   // PDF.js sets this on an item that ends a line.
@@ -20,18 +22,6 @@ export interface MatchPart {
 
 // One match; it has more than one part when it runs across items.
 export type PageMatch = MatchPart[];
-
-// Lower case, without accents, and any white space as a single plain space: "Été" and "ete" fold to
-// the same text. Works one character at a time so the position of every folded character in the
-// original text is known.
-function foldCodePoint(char: string): string {
-  if (/^\s$/u.test(char)) return " ";
-  return char.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
-}
-
-export function foldQuery(query: string): string {
-  return Array.from(query.trim().replace(/\s+/gu, " "), foldCodePoint).join("");
-}
 
 // A page's text folded once, with where every folded character came from. Built the first time a
 // page is searched and kept, so later searches only look for the new query in it.

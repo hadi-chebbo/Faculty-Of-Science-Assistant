@@ -46,12 +46,10 @@ test("an unknown course shows the not-found page", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Back to home" })).toBeVisible();
 });
 
-test("Search is visibly disabled, Exams is a link", async ({ page }) => {
+test("Search and Exams are links, and no navigation item is disabled", async ({ page }) => {
   await page.goto("/");
   // Both the top bar and the bottom bar render the items; only one is visible per device.
-  const search = page.locator(`[aria-disabled="true"]:visible`, { hasText: "Search" });
-  await expect(search).toHaveCount(1);
-  await expect(page.getByRole("link", { name: "Search" })).toHaveCount(0);
-  await expect(page.locator(`[aria-disabled="true"]:visible`)).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "Search", exact: true })).toHaveAttribute("href", "/search");
+  await expect(page.locator(`[aria-disabled="true"]:visible`)).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Exams", exact: true })).toHaveAttribute("href", "/exams");
 });

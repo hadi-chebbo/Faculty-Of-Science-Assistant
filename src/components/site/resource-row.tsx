@@ -34,15 +34,23 @@ const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible
 // One resource in a list: opens its reader page, with its solutions (if any) as links below.
 // `showCourse` adds the course code, for lists that mix courses. `lead` becomes the main text and
 // the title moves to a smaller muted line; the year and session badges are then left out, because
-// the surrounding list already says them.
+// the surrounding list already says them. The search results add three things: `title` replaces the
+// title's text (with its matches marked), `meta` is a small line under it (chapter and type) and
+// `snippet` is a short line of the description, for a file that matched only there.
 export function ResourceRow({
   resource,
   showCourse = false,
   lead,
+  title,
+  meta,
+  snippet,
 }: {
   resource: ResourceListItem;
   showCourse?: boolean;
   lead?: string;
+  title?: React.ReactNode;
+  meta?: string;
+  snippet?: React.ReactNode;
 }) {
   const TypeIcon = TYPE_ICONS[resource.type];
   return (
@@ -57,9 +65,11 @@ export function ResourceRow({
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-medium text-heading">
             {showCourse && <span className="mr-2 font-mono text-xs font-medium text-link">{resource.courseCode}</span>}
-            {lead ?? resource.title}
+            {lead ?? title ?? resource.title}
           </span>
           {lead !== undefined && <span className="mt-0.5 block text-xs text-muted-foreground">{resource.title}</span>}
+          {meta && <span className="mt-0.5 block text-xs text-muted-foreground">{meta}</span>}
+          {snippet && <span className="mt-0.5 block text-xs text-muted-foreground">{snippet}</span>}
           <span className="mt-1.5 flex flex-wrap gap-1.5">
             <Badge variant="outline">{LANGUAGE_LABELS[resource.language]}</Badge>
             {lead === undefined && resource.academicYearStart !== null && (

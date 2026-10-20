@@ -91,7 +91,7 @@ mock exam generation, personalization.
   service.
 - PostgreSQL with Sequelize 6 (owner's choice over Drizzle) and committed
   sequelize-cli migrations in `db/migrations` (CommonJS, each with a working
-  `down`). Postgres full-text search; no separate search service.
+  `down`). Postgres full-text search (with the `unaccent` extension); no separate search service.
 - Package manager: npm. Node 22+. `@types/node` is kept at 24.
 - S3-compatible object storage for files, delivered through short-lived
   signed URLs. All storage access goes through one interface in
@@ -146,7 +146,7 @@ mock exam generation, personalization.
 - UI language: English only.
 - Navigation adapts to the device. Phone: slim top bar plus a fixed bottom tab bar
   (Browse, Exams, Search). Desktop (md and up): the same items inline in the top bar and a
-  breadcrumb trail on inner pages. Items without a page yet are shown disabled. The top bar
+  breadcrumb trail on inner pages. An item without a page would be shown disabled. The top bar
   also shows a "Sign in" link or, when signed in, an account button with the user's name
   (never the email) and a menu with Admin (admins only) and Sign out.
 - Home is a landing page: a hero (headline, description, "Browse courses" and "Previous exams"
@@ -166,6 +166,23 @@ mock exam generation, personalization.
   JavaScript; with JavaScript a dropdown change submits automatically. Unusable URL values are
   ignored, not errors. Results are one flat list (newest year first), 20 per page, reusing the
   course-page resource row. Dropdowns only offer values that have a visible exam.
+- Search page (`/search?q=…&type=…`, public, never reads the session; opened by the Search nav
+  item; there is no other search box). It searches course codes and titles, chapter titles and
+  the title and description of published files, not the text inside PDFs. Matching ignores case
+  and accents, treats every word as a prefix ("algo" finds "Algorithms") and finds a course code
+  with or without a space ("demo 301"); there is no typo tolerance. The query and the chip live in
+  the URL; results follow the typing after about 300 ms (`router.replace`, no history entry per
+  keystroke), and without JavaScript it is a plain GET form with a Search button. Under 2
+  characters it shows hints and the four semester links. Results are Courses, Chapters and Files
+  (the course-page resource row), each with its count and its top 5 plus "Show all N files"
+  (`&show=files`, 20 per page); empty sections are hidden. Words that name a type, session or year
+  ("exam", "cours", "final", "partiel", "2024", "2024-2025"; a session word only with a year or
+  type word, or alone: "partial derivatives" is text) also filter Files, are not searched
+  as text and are not highlighted, and show "Showing final exams from 2024-2025 · N results"; a
+  type word selects its chip. Chips: All, Courses, Lectures & notes, Exercises, Exams (solutions
+  and other files appear only under All). Matches are bold heading-colour text with no background
+  (never yellow); a file matched only in its description shows a snippet. No results: the tips,
+  a link to drop the chip, and Browse courses / Previous exams.
 - Reader page (`/resources/ID`, public, published resources only; anything else is the 404 page):
   PDF.js draws every page of the file on canvases in one vertical scroll, drawn lazily. The document
   dominates the page: a card with a top row (only Contents on the left and Search and "More actions"

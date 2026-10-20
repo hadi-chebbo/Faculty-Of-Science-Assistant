@@ -7,13 +7,13 @@ import {
   buildResult,
   findInText,
   firstMatchFrom,
-  foldQuery,
   prepareText,
   stepMatch,
   type PageMatch,
   type PageText,
   type SearchResult,
 } from "./reader-search";
+import { foldQuery } from "@/lib/text-fold";
 
 export type SearchStatus =
   | { kind: "idle" }
