@@ -176,7 +176,8 @@ mock exam generation, personalization.
   characters it shows hints and the four semester links. Results are Courses, Chapters and Files
   (the course-page resource row), each with its count and its top 5 plus "Show all N files"
   (`&show=files`, 20 per page); empty sections are hidden. Words that name a type, session or year
-  ("exam", "cours", "final", "partiel", "2024", "2024-2025") also filter Files, are not searched
+  ("exam", "cours", "final", "partiel", "2024", "2024-2025"; a session word only with a year or
+  type word, or alone: "partial derivatives" is text) also filter Files, are not searched
   as text and are not highlighted, and show "Showing final exams from 2024-2025 · N results"; a
   type word selects its chip. Chips: All, Courses, Lectures & notes, Exercises, Exams (solutions
   and other files appear only under All). Matches are bold heading-colour text with no background
