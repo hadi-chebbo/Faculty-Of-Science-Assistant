@@ -4,7 +4,7 @@ This file lists every package in `package.json`: what it is, why the project has
 
 CLAUDE.md says "No new dependency without a stated reason". This file is where the reason is kept.
 
-**Keep it current.** When you add or remove a dependency, update this file in the same commit. Versions below are the ones in `package-lock.json` on 2026-10-12. To check that each package has exactly one table row, run:
+**Keep it current.** When you add or remove a dependency, update this file in the same commit. Versions below are the ones in `package-lock.json` on 2026-10-12, updated 2026-10-20 for the dependency security fixes (review item 6). To check that each package has exactly one table row, run:
 
 ```bash
 node -e "const p=require('./package.json');const rows=require('fs').readFileSync('docs/dependencies.md','utf8').split('\n').filter(l=>l.startsWith('| \`')).map(l=>l.split('|')[1].trim().replace(/\`/g,''));for(const k of Object.keys({...p.dependencies,...p.devDependencies}))if(rows.filter(n=>n===k).length!==1)console.log('check',k)"
@@ -34,8 +34,8 @@ shadcn/ui is not a package you import. Its CLI copies component source files int
 |---|---|---|---|---|---|
 | `tailwindcss` | Utility-class CSS framework (v4). | CLAUDE.md: Tailwind CSS. | `@import "tailwindcss"` in `src/app/globals.css`. Build time only. | `^4` / 4.3.3 | Yes, dev (only produces CSS at build time) |
 | `@tailwindcss/turbopack` | A loader that runs Tailwind on CSS files when Next builds with Turbopack. | Needed to process Tailwind v4 under Turbopack. Specific reason not recorded. | `next.config.ts` (`turbopack.rules["*.css"]`). | `^4` / 4.3.3 | Yes, dev (build step) |
-| `tw-animate-css` | CSS classes for animations used by shadcn components. | Added with the shadcn setup (commit 00d48ea). | `@import "tw-animate-css"` in `src/app/globals.css`. No JavaScript import. | `^1.4.0` / 1.4.0 | In `dependencies` but build-time only. See review item 4. |
-| `shadcn` | The shadcn/ui CLI, which also ships a stylesheet. | Added with the shadcn setup (commit 00d48ea). | `@import "shadcn/tailwind.css"` in `src/app/globals.css`; the `shadcn` command for adding components. | `^4.21.4` / 4.21.4 | Debatable. See review item 3. |
+| `tw-animate-css` | CSS classes for animations used by shadcn components. | Added with the shadcn setup (commit 00d48ea). | `@import "tw-animate-css"` in `src/app/globals.css`. No JavaScript import. | `^1.4.0` / 1.4.0 | Yes, dev (build-time CSS only; moved from `dependencies` on 2026-10-20, review item 4) |
+| `shadcn` | The shadcn/ui CLI, which also ships a stylesheet. | Added with the shadcn setup (commit 00d48ea). | `@import "shadcn/tailwind.css"` in `src/app/globals.css`; the `shadcn` command for adding components. | `^4.21.4` / 4.21.4 | Yes, dev (build-time import and CLI; moved from `dependencies` on 2026-10-20, review item 3) |
 | `radix-ui` | Unstyled accessible UI building blocks (tabs, slot and others). | The shadcn `radix-vega` style builds on it. | `src/components/ui/{tabs,breadcrumb,badge,button,dropdown-menu,progress}.tsx`. | `^1.7.0` / 1.7.0 | Yes, runtime |
 | `class-variance-authority` | Helper that picks CSS class sets from named variants (for example button size). | Used by the shadcn components. | `src/components/ui/{tabs,badge,button}.tsx`. | `^0.7.1` / 0.7.1 | Yes, runtime |
 | `cn` | A small library that merges class names and resolves Tailwind conflicts. Its description: "Drop-in replacement for clsx + tailwind-merge". It comes from the `shadcn-ui/cn` repository. | Added by the shadcn setup (commit 00d48ea). It supplies the `cn()` function. | `src/lib/utils.ts` re-exports it. `src/components/ui/{badge,card,breadcrumb,tabs,skeleton,button}.tsx` import it directly from `"cn"`. | `^0.4.0` / 0.4.0 | Yes, runtime. It is used. See review item 1. |
@@ -71,7 +71,8 @@ Why `sequelize`, `pg` and `pg-hstore` are in `serverExternalPackages` (`next.con
 | Package | What it is | Why we have it | Where used | Declared / installed | Section OK? |
 |---|---|---|---|---|---|
 | `zod` | Checks that data has the expected shape and gives typed results. | CLAUDE.md: Zod for validating all external input. | `src/lib/env.ts`, `src/services/validation.ts`, `src/services/courses/schemas.ts`, `src/services/resources/schemas.ts`. | `^4.6.5` / 4.6.5 | Yes, runtime |
-| `@node-rs/argon2` | Password hashing with Argon2 (native code). | The users table stores a password hash and the seeders create hashes. No note records why Argon2 was chosen. | `db/seeders/20261011111938-demo-student.js`, `db/seeders/20261011111939-admin-user.js` (hashing); `src/db/seeders.test.ts` (verifying). The app does not import it yet. | `^2.2.2` / 2.2.2 | Used only by seeders and a test so far. Runtime is right once sign-in is merged. |
+| `jose` | Signs and verifies JWTs (HS256) with Web Crypto. | CLAUDE.md: access tokens are HS256 JWTs signed with `jose`, the one auth dependency; also signs upload tickets. | `src/services/auth/access-token.ts` (access tokens); `src/lib/storage/{token,upload-ticket}.ts` (storage tokens and upload tickets). | `^6.2.12` / 6.2.12 | Yes, runtime |
+| `@node-rs/argon2` | Password hashing with Argon2 (native code). | The users table stores a password hash and the seeders create hashes. No note records why Argon2 was chosen. | `db/seeders/20261011111938-demo-student.js`, `db/seeders/20261011111939-admin-user.js` (hashing); `src/db/seeders.test.ts` (verifying); `src/services/auth/auth.ts` (checking passwords at sign-in). | `^2.2.2` / 2.2.2 | Yes, runtime |
 
 ## Testing
 
@@ -100,7 +101,6 @@ Taken only from `CLAUDE.md` and `docs/`. None of these are in `package.json` on 
 | Planned | Source | Note |
 |---|---|---|
 | An S3-compatible client for Cloudflare R2 (upload, short-lived signed URLs) | CLAUDE.md Stack (object storage, signed URLs, hosting on Cloudflare R2); `docs/backend-architecture.md` (uploads, signed download link) | No package is named in the docs. Choose one when the upload slice starts and record the reason here. |
-| `jose` (signing and verifying JWT access tokens) | An auth task in progress on another branch; CLAUDE.md describes short-lived stateless access tokens | Not on `main`, so not installed. Record the reason when it merges. |
 | Error tracking tool | CLAUDE.md: "Error tracking: not yet decided" | Undecided. |
 
 Refresh tokens need no extra package: CLAUDE.md says they are stored as SHA-256 hashes, which Node's built-in `crypto` can compute.
@@ -120,14 +120,14 @@ Each item says what was found, how it was checked, and a suggested action. Nothi
 3. **`shadcn` is a runtime dependency but is a build-time and CLI tool.**
    - Found: the only use is `@import "shadcn/tailwind.css"` in `src/app/globals.css`, resolved at build. Nothing in `src/` imports it as JavaScript.
    - It is the source of the `braces` audit finding (item 6).
-   - Action: consider moving `shadcn` (and `tw-animate-css`) to `devDependencies` and confirm `npm run build` still works. Vercel installs dev dependencies for the build, so it should. Not tested here.
-4. **`tw-animate-css` is CSS-only.** Imported once in `src/app/globals.css`, like `tailwindcss`, which is dev. Same action as item 3.
-5. **Other runtime and dev placement.** No other misplacement found. `react-dom` has no direct import but Next needs it. `@node-rs/argon2` is used only by seeders and one test today, and belongs in `dependencies` once sign-in lands.
-6. **`npm audit`** (run on a fresh `npm ci`, no fix applied).
-   - `npm audit --omit=dev`: 9 vulnerabilities (2 moderate, 7 high). `npm audit`: 11 (2 moderate, 9 high).
-   - `braces` (high, stack exhaustion on deeply nested patterns, GHSA-vfj7-8cjw-p6xm), reached through `micromatch`, `fast-glob`, then `shadcn` (via `@shadcn/registry` and `ts-morph`).
-   - `uuid <11.1.1` (moderate, missing buffer bounds check in v3/v5/v6 when `buf` is provided, GHSA-w5hq-g745-h8pq), reached through `sequelize`. npm's suggested fix is to downgrade Sequelize to 3.30.0, which is not sensible.
-   - The `braces` chain comes from the `shadcn` CLI, not from code that serves requests. I only checked the dependency paths, not exploitability.
-   - Action: moving `shadcn` to dev would remove the `braces` chain from the `--omit=dev` report. Watch for a Sequelize 6 release that updates `uuid`. Do not run `npm audit fix --force`.
+   - Done 2026-10-20: `shadcn` and `tw-animate-css` moved to `devDependencies`, ranges unchanged. `npm run build` and the e2e tests were run afterwards. Vercel installs dev dependencies for the build.
+4. **`tw-animate-css` is CSS-only.** Imported once in `src/app/globals.css`, like `tailwindcss`, which is dev. Done 2026-10-20: moved to `devDependencies` together with `shadcn` (item 3).
+5. **Other runtime and dev placement.** No other misplacement found. `react-dom` has no direct import but Next needs it. `@node-rs/argon2` is used by sign-in (`src/services/auth/auth.ts`), so `dependencies` is right (checked 2026-10-20).
+6. **`npm audit`** (first run on a fresh `npm ci` with no fix applied; fixed 2026-10-20).
+   - Before: `npm audit --omit=dev` 9 vulnerabilities (2 moderate, 7 high); `npm audit` 11 (2 moderate, 9 high).
+   - After (2026-10-20): `npm audit --omit=dev` reports 0. `npm audit` reports 9 high, all the `braces` chain below.
+   - `uuid <11.1.1` (moderate, missing buffer bounds check in v3/v5/v6 when `buf` is provided, GHSA-w5hq-g745-h8pq), reached only through `sequelize`. npm's suggested fix (downgrade Sequelize to 3.30.0) is wrong and was not applied. Fixed with an `overrides` entry in `package.json` scoped to Sequelize: `"overrides": { "sequelize": { "uuid": "^11.1.1" } }`, which installs uuid 11.1.1. Sequelize only calls `uuid.v1` and `uuid.v4` (`sequelize/lib/utils.js`) and never passes `buf`, so the advisory was not reachable and the override is defence in depth. Both functions were checked to work against uuid 11 from CommonJS. Remove the override when Sequelize 6 ships its own uuid >= 11.1.1.
+   - `braces` (high, stack exhaustion on deeply nested patterns, GHSA-vfj7-8cjw-p6xm), reached through `micromatch`, `fast-glob`, then `shadcn` (via `@shadcn/registry` and `ts-morph`) and `eslint-config-next`. **Accepted.** No patched `braces` exists (3.0.3 is the latest); npm's suggested fixes downgrade `shadcn` and `eslint-config-next` to old majors and were not applied. Reasons: it is dev tooling only (not in `--omit=dev`, not in the deployed app), and it is reachable only through glob patterns we write ourselves. Re-check with `npm audit` before launch.
+   - Never run `npm audit fix --force`.
 7. **Duplicates.** No true duplicate. `cn` overlaps in purpose with `clsx` + `tailwind-merge`, but those are not direct dependencies (items 1 and 2). `eslint-config-next` and `shadcn` each pull a separate copy of `fast-glob` (3.3.1 and 3.3.3), which is harmless.
 8. **Reasons not recorded** in CLAUDE.md or commit messages for `@tailwindcss/turbopack`, `eslint`, `eslint-config-next`, and the choice of Argon2. Action: add a sentence here if you remember one.
