@@ -4,7 +4,7 @@ This file lists every package in `package.json`: what it is, why the project has
 
 CLAUDE.md says "No new dependency without a stated reason". This file is where the reason is kept.
 
-**Keep it current.** When you add or remove a dependency, update this file in the same commit. Versions below are the ones in `package-lock.json` on 2026-10-12. To check that each package has exactly one table row, run:
+**Keep it current.** When you add or remove a dependency, update this file in the same commit. Versions below are the ones in `package-lock.json` on 2026-10-12, updated 2026-10-20 for the dependency security fixes (review item 6). To check that each package has exactly one table row, run:
 
 ```bash
 node -e "const p=require('./package.json');const rows=require('fs').readFileSync('docs/dependencies.md','utf8').split('\n').filter(l=>l.startsWith('| \`')).map(l=>l.split('|')[1].trim().replace(/\`/g,''));for(const k of Object.keys({...p.dependencies,...p.devDependencies}))if(rows.filter(n=>n===k).length!==1)console.log('check',k)"
@@ -71,8 +71,8 @@ Why `sequelize`, `pg` and `pg-hstore` are in `serverExternalPackages` (`next.con
 | Package | What it is | Why we have it | Where used | Declared / installed | Section OK? |
 |---|---|---|---|---|---|
 | `zod` | Checks that data has the expected shape and gives typed results. | CLAUDE.md: Zod for validating all external input. | `src/lib/env.ts`, `src/services/validation.ts`, `src/services/courses/schemas.ts`, `src/services/resources/schemas.ts`. | `^4.6.5` / 4.6.5 | Yes, runtime |
-| `jose` | Signs and verifies JWTs (HS256) with Web Crypto. | CLAUDE.md: access tokens are HS256 JWTs signed with `jose`, the one auth dependency; also signs upload tickets. | `src/lib/storage/{token,upload-ticket}.ts`. | `^6.2.12` / 6.2.12 | Yes, runtime |
-| `@node-rs/argon2` | Password hashing with Argon2 (native code). | The users table stores a password hash and the seeders create hashes. No note records why Argon2 was chosen. | `db/seeders/20261011111938-demo-student.js`, `db/seeders/20261011111939-admin-user.js` (hashing); `src/db/seeders.test.ts` (verifying). The app does not import it yet. | `^2.2.2` / 2.2.2 | Used only by seeders and a test so far. Runtime is right once sign-in is merged. |
+| `jose` | Signs and verifies JWTs (HS256) with Web Crypto. | CLAUDE.md: access tokens are HS256 JWTs signed with `jose`, the one auth dependency; also signs upload tickets. | `src/services/auth/access-token.ts` (access tokens); `src/lib/storage/{token,upload-ticket}.ts` (storage tokens and upload tickets). | `^6.2.12` / 6.2.12 | Yes, runtime |
+| `@node-rs/argon2` | Password hashing with Argon2 (native code). | The users table stores a password hash and the seeders create hashes. No note records why Argon2 was chosen. | `db/seeders/20261011111938-demo-student.js`, `db/seeders/20261011111939-admin-user.js` (hashing); `src/db/seeders.test.ts` (verifying); `src/services/auth/auth.ts` (checking passwords at sign-in). | `^2.2.2` / 2.2.2 | Yes, runtime |
 
 ## Testing
 
@@ -122,7 +122,7 @@ Each item says what was found, how it was checked, and a suggested action. Nothi
    - It is the source of the `braces` audit finding (item 6).
    - Done 2026-10-20: `shadcn` and `tw-animate-css` moved to `devDependencies`, ranges unchanged. `npm run build` and the e2e tests were run afterwards. Vercel installs dev dependencies for the build.
 4. **`tw-animate-css` is CSS-only.** Imported once in `src/app/globals.css`, like `tailwindcss`, which is dev. Done 2026-10-20: moved to `devDependencies` together with `shadcn` (item 3).
-5. **Other runtime and dev placement.** No other misplacement found. `react-dom` has no direct import but Next needs it. `@node-rs/argon2` is used only by seeders and one test today, and belongs in `dependencies` once sign-in lands.
+5. **Other runtime and dev placement.** No other misplacement found. `react-dom` has no direct import but Next needs it. `@node-rs/argon2` is used by sign-in (`src/services/auth/auth.ts`), so `dependencies` is right (checked 2026-10-20).
 6. **`npm audit`** (first run on a fresh `npm ci` with no fix applied; fixed 2026-10-20).
    - Before: `npm audit --omit=dev` 9 vulnerabilities (2 moderate, 7 high); `npm audit` 11 (2 moderate, 9 high).
    - After (2026-10-20): `npm audit --omit=dev` reports 0. `npm audit` reports 9 high, all the `braces` chain below.
