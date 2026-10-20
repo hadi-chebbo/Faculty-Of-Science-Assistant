@@ -26,6 +26,11 @@ describe("parseSearchParams", () => {
     expect(parseSearchParams({ q: "é".repeat(150) }).q).toBe("é".repeat(100));
   });
 
+  it("cuts by characters, the way the service counts them", () => {
+    expect(parseSearchParams({ q: "𝐀".repeat(150) }).q).toBe("𝐀".repeat(100));
+    expect(Array.from(parseSearchParams({ q: "😀".repeat(60) }).q)).toHaveLength(60);
+  });
+
   it("keeps an explicit 'all'", () => {
     expect(parseSearchParams({ type: "all" }).type).toBe("all");
   });

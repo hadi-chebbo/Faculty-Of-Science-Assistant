@@ -40,7 +40,7 @@ export function foldWithMap(original: string): FoldedText {
 }
 
 // A run of letters or digits: what counts as a word in a search.
-const WORD = /[\p{L}\p{Nd}]+/gu;
+export const WORD = /[\p{L}\p{Nd}]+/gu;
 
 // The words of a text, folded. Everything that is not a letter or a digit separates words, so
 // "algo-rithm" is two words and punctuation never reaches a search query.

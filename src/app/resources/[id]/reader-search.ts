@@ -6,9 +6,6 @@
 
 import { foldCodePoint, foldQuery } from "@/lib/text-fold";
 
-// The reader's tests and hooks take the folding from here.
-export { foldQuery };
-
 export interface TextItemLike {
   str: string;
   // PDF.js sets this on an item that ends a line.

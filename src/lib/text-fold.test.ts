@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { markText, snippetAround } from "./highlight";
+import { descriptionSnippet, markText, snippetAround } from "./highlight";
 import { findPrefixRanges, foldedWords, foldQuery, foldWithMap } from "./text-fold";
 
 describe("foldQuery and foldedWords", () => {
@@ -117,5 +117,19 @@ describe("snippetAround", () => {
     expect(snippet).toBeNull();
     const spaced = snippetAround(`${"x".repeat(200)} relation ${"y".repeat(200)}`, ["relation"])!;
     expect(spaced.ranges).toHaveLength(1);
+  });
+});
+
+describe("descriptionSnippet", () => {
+  it("shows the description for words the title lacks", () => {
+    const snippet = descriptionSnippet("Sample lecture", "An introduction to graphs.", ["sample", "graph"])!;
+    expect(snippet.text).toBe("An introduction to graphs.");
+    expect(snippet.ranges).toEqual([{ start: 19, end: 24 }]);
+  });
+
+  it("shows nothing when the title has every word, or there is no description or match", () => {
+    expect(descriptionSnippet("Graph theory", "About graph theory.", ["graph", "theory"])).toBeNull();
+    expect(descriptionSnippet("Sample", null, ["graph"])).toBeNull();
+    expect(descriptionSnippet("Sample", "Nothing here.", ["graph"])).toBeNull();
   });
 });

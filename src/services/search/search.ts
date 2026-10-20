@@ -3,7 +3,7 @@ import { getDb } from "@/db/models";
 import { toResourceListItem, visibleSolutionsOf } from "../resources/resources";
 import { parseInput } from "../validation";
 import {
-  buildTsQuery,
+  CHIP_SECTIONS,
   CHIP_TYPES,
   chipForTypes,
   filterTypes,
@@ -31,17 +31,24 @@ import {
 //
 // Matching is Postgres full-text search with the `simple` configuration (no stemming, no stop
 // words) over unaccent(lower(text)), and every query word is a prefix: "algo" finds "Algorithms",
-// "theorie" finds "Théorie". The query text is built by buildTsQuery from words that hold only
-// letters and digits and is passed as a bound parameter, so input can never be tsquery syntax.
+// "theorie" finds "Théorie". The words hold only letters and digits and are passed as a bound array, and
+// the tsquery is assembled in SQL (see TERMS), so input can never be tsquery syntax.
 // A course is also found by its code with the spaces of the query taken out ("demo 301").
 //
 // There are no search indexes on purpose: the whole catalogue is a few hundred rows, so computing
 // the text vectors while querying costs nothing noticeable. Add generated tsvector columns with
 // GIN indexes if the data ever grows by orders of magnitude (see docs/backend-architecture.md).
 
-// The full-text pieces. `$tsq` is the tsquery text, folded again by unaccent so that characters
-// the database folds differently from JavaScript (ligatures, for one) still agree.
-const QUERY = "to_tsquery('simple', unaccent($tsq::text))";
+// The full-text pieces. The words are a bound array. Each is folded by unaccent FIRST (a letter such
+// as "ŉ" unaccents to "'n"), then anything that is syntax for a tsquery or for LIKE is removed, and
+// only then is it quoted into a prefix term ('word':*), all of them required. Quoting last means
+// nothing the database folds a letter into can break out of the quotes.
+const TERMS = `(SELECT string_agg('''' || t || ''':*', ' & ')
+  FROM (SELECT regexp_replace(unaccent(w), '[\\s''\\\\:&|!()<>*]', '', 'g') AS t FROM unnest($words::text[]) AS w) AS x
+  WHERE t <> '')`;
+const QUERY = `to_tsquery('simple', ${TERMS})`;
+// The words joined, folded like the code, without anything LIKE would read as a pattern.
+const JOINED = "regexp_replace(unaccent($joined::text), '[%_\\\\]', '', 'g')";
 const vector = (expression: string) => `to_tsvector('simple', unaccent(lower(${expression})))`;
 
 const COURSE_VECTOR = vector("c.code || ' ' || c.title");
@@ -102,13 +109,13 @@ export async function searchCatalog(query: string, options: Omit<SearchInput, "q
     parsed,
     hasText,
     fileTypes,
-    bind: hasText ? { tsq: buildTsQuery(parsed.words), joined: joinedCode(parsed.words) } : {},
+    bind: hasText ? { words: parsed.words, joined: joinedCode(parsed.words) } : {},
   };
 
   const enabled: Record<SearchSection, boolean> = {
-    courses: hasText && chip !== "exam" && chip !== "lecture" && chip !== "exercise",
-    chapters: hasText && chip === "all",
-    files: chip !== "course" && (fileTypes === null || fileTypes.length > 0),
+    courses: hasText && CHIP_SECTIONS[chip].courses,
+    chapters: hasText && CHIP_SECTIONS[chip].chapters,
+    files: CHIP_SECTIONS[chip].files && (fileTypes === null || fileTypes.length > 0),
   };
   const show = input.show && enabled[input.show] ? input.show : null;
   if (show) {
@@ -147,7 +154,7 @@ function select<T>(sql: string, bind: Bind): Promise<T[]> {
 
 // The code form is compared as a prefix; `joined` holds only letters and digits, so it holds no
 // LIKE wildcard.
-const COURSE_MATCH = `(${COURSE_VECTOR} @@ ${QUERY} OR ${CODE_FORM} LIKE $joined::text || '%')`;
+const COURSE_MATCH = `(${COURSE_VECTOR} @@ ${QUERY} OR ${CODE_FORM} LIKE ${JOINED} || '%')`;
 
 async function countCourses({ bind }: Plan): Promise<number> {
   const [row] = await select<{ n: number }>(`SELECT count(*)::int AS n FROM courses c WHERE ${COURSE_MATCH}`, bind);
@@ -167,7 +174,7 @@ async function listCourses({ bind }: Plan, limit: number, offset: number): Promi
         (SELECT count(*)::int FROM resources r WHERE r.course_id = c.id AND r.is_published) AS file_count
       FROM courses c
       WHERE ${COURSE_MATCH}
-      ORDER BY (${CODE_FORM} = $joined::text) DESC,
+      ORDER BY (${CODE_FORM} = ${JOINED}) DESC,
         (${COURSE_TITLE_VECTOR} @@ ${QUERY}) DESC,
         ts_rank(${COURSE_VECTOR}, ${QUERY}) DESC,
         c.code ASC
@@ -204,7 +211,7 @@ async function listChapters({ bind }: Plan, limit: number, offset: number): Prom
     `SELECT ch.position, ch.title, c.code, c.title AS course_title, fc.n
       FROM ${CHAPTER_FROM}
       WHERE ${CHAPTER_VECTOR} @@ ${QUERY}
-      ORDER BY ts_rank(${CHAPTER_VECTOR}, ${QUERY}) DESC, c.code ASC, ch.position ASC
+      ORDER BY ts_rank(${CHAPTER_VECTOR}, ${QUERY}) DESC, ch.title ASC, c.code ASC, ch.position ASC
       LIMIT $limit::int OFFSET $offset::int`,
     { ...bind, limit, offset },
   );

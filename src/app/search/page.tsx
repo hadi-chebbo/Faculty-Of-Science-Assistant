@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageTitle } from "@/components/site/page-title";
 import { SearchSkeleton } from "@/components/site/skeletons";
+import { SEARCH_MIN_LENGTH, searchLength } from "@/services/search/query";
 import { parseSearchParams, type SearchParams } from "./params";
 import { SearchResults } from "./results";
 import { SearchForm } from "./search-form";
@@ -9,7 +10,7 @@ import { SearchForm } from "./search-form";
 // "Search", or "“graphs” – Search" once there is something typed. The template adds the site name.
 export async function generateMetadata({ searchParams }: PageProps<"/search">): Promise<Metadata> {
   const { q } = parseSearchParams(await searchParams);
-  const shown = Array.from(q).length > 60 ? `${Array.from(q).slice(0, 60).join("")}…` : q;
+  const shown = searchLength(q) > 60 ? `${Array.from(q).slice(0, 60).join("")}…` : q;
   return { title: shown ? `“${shown}” – Search` : "Search" };
 }
 
@@ -41,7 +42,7 @@ export default function SearchPage({ searchParams }: PageProps<"/search">) {
 }
 
 function SearchContent({ params }: { params: SearchParams }) {
-  const active = Array.from(params.q).length >= 2;
+  const active = searchLength(params.q) >= SEARCH_MIN_LENGTH;
   return (
     <>
       {/* On a phone the results need the room, so the visible title is for the start page and for

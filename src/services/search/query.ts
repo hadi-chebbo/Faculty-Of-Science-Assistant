@@ -4,16 +4,28 @@
 // A query is split into words. Words that name a resource type, an exam session or an academic
 // year also act as filters on files and are taken out of the text that is searched; the rest are
 // the text words. Every text word is folded (lower case, no accents) and reduced to letters and
-// digits, so nothing a visitor types can reach the tsquery parser as syntax.
+// digits, so punctuation never reaches the database as search syntax.
 
 import { ACADEMIC_YEAR_MAX, ACADEMIC_YEAR_MIN } from "@/db/constants";
 import type { ExamSession, ResourceType } from "@/db/constants";
-import { foldQuery } from "@/lib/text-fold";
+import { foldQuery, WORD } from "@/lib/text-fold";
 
 export const SEARCH_MIN_LENGTH = 2;
 export const SEARCH_MAX_LENGTH = 100;
 // A hundred characters hold at most 50 words; more than this many are ignored.
 const MAX_TEXT_WORDS = 12;
+
+// The one rule for the length of a query: characters (code points), not UTF-16 units, so an
+// astral character counts once everywhere.
+export function searchLength(text: string): number {
+  return Array.from(text).length;
+}
+
+// Trimmed and cut to the longest length; for text that comes from an address and must never be
+// an error.
+export function clipQuery(text: string): string {
+  return Array.from(text.trim()).slice(0, SEARCH_MAX_LENGTH).join("").trim();
+}
 
 // Words that are filters, written folded (no accents, lower case). Both English and French.
 const TYPE_WORDS: Record<string, ResourceType> = {
@@ -54,13 +66,12 @@ export interface ParsedQuery {
   year: number | null;
 }
 
-const WORD = /[\p{L}\p{Nd}]+/gu;
-
 export function parseSearchQuery(raw: string): ParsedQuery {
   const types: ResourceType[] = [];
-  const sessions: ExamSession[] = [];
-  let year: number | null = null;
-  const words: string[] = [];
+  const year = { value: null as number | null };
+  // What is neither a type nor a year, in order; a session word is one of these until it is known
+  // to be a filter.
+  const rest: { token: string; session?: ExamSession }[] = [];
 
   for (const spaced of foldQuery(raw).split(" ")) {
     // "exams," and "(final)" are the words exams and final.
@@ -71,21 +82,30 @@ export function parseSearchQuery(raw: string): ParsedQuery {
       if (!types.includes(type)) types.push(type);
       continue;
     }
-    const session = Object.hasOwn(SESSION_WORDS, token) ? SESSION_WORDS[token] : undefined;
-    if (session) {
-      if (!sessions.includes(session)) sessions.push(session);
-      continue;
-    }
-    if (year === null) {
+    if (year.value === null) {
       const start = academicYearStart(token);
       if (start !== null) {
-        year = start;
+        year.value = start;
         continue;
       }
     }
-    for (const word of token.match(WORD) ?? []) words.push(word);
+    rest.push({ token, session: Object.hasOwn(SESSION_WORDS, token) ? SESSION_WORDS[token] : undefined });
   }
-  return { words: words.slice(0, MAX_TEXT_WORDS), types, sessions, year };
+
+  // "final 2024" and "exam partiel" ask for exams of a session, and "final" alone is a session
+  // too. But "partial derivatives" and "second order equations" are about mathematics: next to
+  // other plain words a session word is a text word.
+  const sessionsFilter = year.value !== null || types.length > 0 || rest.every((r) => r.session !== undefined);
+  const sessions: ExamSession[] = [];
+  const words: string[] = [];
+  for (const { token, session } of rest) {
+    if (session && sessionsFilter) {
+      if (!sessions.includes(session)) sessions.push(session);
+    } else {
+      for (const word of token.match(WORD) ?? []) words.push(word);
+    }
+  }
+  return { words: words.slice(0, MAX_TEXT_WORDS), types, sessions, year: year.value };
 }
 
 // "2024" is the year 2024-2025; "2024-2025" and "2024/2025" say the same. Anything else, including
@@ -97,16 +117,6 @@ function academicYearStart(token: string): number | null {
   if (start < ACADEMIC_YEAR_MIN || start > ACADEMIC_YEAR_MAX) return null;
   if (match[2] !== undefined && Number(match[2]) !== start + 1) return null;
   return start;
-}
-
-// The text for to_tsquery: every word is a quoted prefix lexeme and they are all required.
-// Words are already only letters and digits; the escaping is a second line of defence, so that
-// whatever reaches this function can never be read as tsquery syntax.
-export function buildTsQuery(words: readonly string[]): string {
-  return words
-    .filter((word) => word !== "")
-    .map((word) => `'${word.replaceAll("\\", "\\\\").replaceAll("'", "''")}':*`)
-    .join(" & ");
 }
 
 // What the words make when the spaces are taken out: "demo 301" is "demo301", the way a course code
@@ -131,6 +141,15 @@ export const CHIP_TYPES: Record<SearchChip, readonly ResourceType[] | null> = {
   lecture: ["lecture", "notes"],
   exercise: ["exercise"],
   exam: ["exam"],
+};
+
+// Which sections of results each chip shows.
+export const CHIP_SECTIONS: Record<SearchChip, { courses: boolean; chapters: boolean; files: boolean }> = {
+  all: { courses: true, chapters: true, files: true },
+  course: { courses: true, chapters: false, files: false },
+  lecture: { courses: false, chapters: false, files: true },
+  exercise: { courses: false, chapters: false, files: true },
+  exam: { courses: false, chapters: false, files: true },
 };
 
 // What the words of a query say about the chip: the kinds of file asked for, and the chip that

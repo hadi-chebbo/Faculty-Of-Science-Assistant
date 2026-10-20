@@ -32,6 +32,11 @@ function fileRows(page: Page) {
   return page.locator("li").filter({ has: page.locator('a[href^="/resources/"]') });
 }
 
+// Text on the page, apart from the live region (which says the same for screen readers).
+function shown(page: Page, text: RegExp) {
+  return page.getByText(text).and(page.locator(":not([aria-live])"));
+}
+
 // A chip, not the item of the same name in the main navigation.
 function chip(page: Page, name: string) {
   return page.getByRole("navigation", { name: "Result types" }).getByRole("link", { name, exact: true });
@@ -65,6 +70,86 @@ test("before typing it shows hints and a link to every semester", async ({ page 
 
   await page.getByRole("link", { name: "Semester 5", exact: true }).click();
   await expect(page).toHaveURL(/\/semesters\/5$/);
+});
+
+test("a session word beside plain words is text, not a filter", async ({ page }) => {
+  await page.goto("/search?q=partial+derivatives");
+  await expect(shown(page, /^Showing /)).toHaveCount(0);
+  await expect(chip(page, "All")).toHaveAttribute("aria-current", "true");
+  await page.goto("/search?q=final");
+  await expect(shown(page, /^Showing final exams · \d+ results?$/)).toBeVisible();
+});
+
+test("a very long query of astral characters is trimmed, not an error", async ({ page }) => {
+  const response = await page.goto(`/search?q=${encodeURIComponent("𝐀".repeat(150))}`);
+  expect(response?.status()).toBe(200);
+  await expect(shown(page, /No results for/).first()).toBeVisible();
+  const sixty = await page.goto(`/search?q=${encodeURIComponent("𝐀".repeat(60))}`);
+  expect(sixty?.status()).toBe(200);
+  await expect(page.getByRole("heading", { level: 2, name: /No results for/ })).toBeVisible();
+});
+
+test("one live region announces the summary, including no results", async ({ page }) => {
+  await page.goto("/search?q=final+2024");
+  const live = page.locator("main [aria-live]");
+  await expect(live).toHaveCount(1);
+  await expect(live).toHaveText(/^Showing final exams from 2024-2025 · \d+ results?$/);
+  await page.goto("/search?q=zzqqxx");
+  await expect(page.locator("main [aria-live]")).toHaveText("No results for “zzqqxx”");
+  await page.goto("/search");
+  await expect(page.locator("main [aria-live]")).toHaveCount(1);
+});
+
+test("typed text survives a slow answer to an earlier keystroke", async ({ page }) => {
+  await page.goto("/search");
+  const box = page.getByRole("searchbox", { name: "Search courses, chapters and files" });
+  // Hydrated once typing leads to a request; every request is then held back for a while.
+  await expect(async () => {
+    await box.fill("");
+    await box.pressSequentially("demo", { delay: 20 });
+    await expect(page).toHaveURL(/q=demo$/, { timeout: 1500 });
+  }).toPass();
+  await box.fill("");
+  await expect(page).toHaveURL(/\/search$/);
+  await page.route(/_rsc=/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await route.continue();
+  });
+  await box.pressSequentially("algo", { delay: 20 });
+  // The address is replaced after 300 ms and its answer is slow: type on while it is on its way.
+  await page.waitForTimeout(500);
+  await box.pressSequentially("r");
+  await expect(page).toHaveURL(/q=algor$/);
+  // After the late answers have arrived the box still holds what was typed, caret at the end.
+  await page.waitForTimeout(2800);
+  await expect(box).toHaveValue("algor");
+  expect(await box.evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd])).toEqual([5, 5]);
+});
+
+test("the chip in effect is in view in the row, also on a phone", async ({ page }) => {
+  await page.goto("/search?q=final+2024");
+  const active = chip(page, "Exams");
+  await expect(active).toHaveAttribute("aria-current", "true");
+  // Once the row has scrolled (after hydration) the whole chip is inside the window.
+  await expect(async () => {
+    const box = (await active.boundingBox())!;
+    const width = page.viewportSize()!.width;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+  }).toPass();
+  // Only the row scrolled, not the page.
+  expect(await page.evaluate(() => window.scrollX)).toBe(0);
+});
+
+test("the Search button is visible while it has the keyboard focus", async ({ page }) => {
+  await page.goto("/search");
+  const button = page.getByRole("button", { name: "Search", exact: true });
+  await page.getByRole("searchbox").focus();
+  await page.keyboard.press("Tab");
+  await expect(button).toBeFocused();
+  // (The button animates its size a moment as it changes.)
+  await expect.poll(async () => (await button.boundingBox())?.height).toBeGreaterThan(40);
+  expect((await button.boundingBox())!.width).toBeGreaterThan(40);
 });
 
 test("the box is a search field with a keyboard that says Search", async ({ page }) => {
@@ -204,7 +289,7 @@ test("a file that matches only in its description shows a snippet with the word 
 
 test("words that name a type, session or year filter the files and select the chip", async ({ page }) => {
   await page.goto("/search?q=final+2024");
-  const line = page.getByText(/^Showing final exams from 2024-2025 · \d+ results?$/);
+  const line = shown(page, /^Showing final exams from 2024-2025 · \d+ results?$/);
   await expect(line).toBeVisible();
   await expect(line.locator("b")).toHaveText(["final", "2024-2025"]);
   await expect(chip(page, "Exams")).toHaveAttribute("aria-current", "true");
@@ -226,16 +311,16 @@ test("words that name a type, session or year filter the files and select the ch
 
   // French, and a long form of the year, say the same.
   await page.goto("/search?q=examen+partiel+2024%2F2025");
-  await expect(page.getByText(/^Showing partial exams from 2024-2025 · \d+ results?$/)).toBeVisible();
+  await expect(shown(page, /^Showing partial exams from 2024-2025 · \d+ results?$/)).toBeVisible();
 });
 
 test("a type word alone selects its chip and lists that kind", async ({ page }) => {
   await page.goto("/search?q=exercices");
-  await expect(page.getByText(/^Showing exercises · \d+ results?$/)).toBeVisible();
+  await expect(shown(page, /^Showing exercises · \d+ results?$/)).toBeVisible();
   await expect(chip(page, "Exercises")).toHaveAttribute("aria-current", "true");
   // "Solution" words filter the files while the chip stays All.
   await page.goto("/search?q=corrigé");
-  await expect(page.getByText(/^Showing solutions · \d+ results?$/)).toBeVisible();
+  await expect(shown(page, /^Showing solutions · \d+ results?$/)).toBeVisible();
   await expect(chip(page, "All")).toHaveAttribute("aria-current", "true");
   await expect(fileRows(page).first()).toContainText("Solution");
 });
@@ -339,7 +424,7 @@ test("unusable address values are ignored, not errors", async ({ page }) => {
   await expect(section(page, "Courses")).toBeVisible();
   const long = await page.goto(`/search?q=${"x".repeat(300)}`);
   expect(long?.status()).toBe(200);
-  await expect(page.getByText(/No results for/)).toBeVisible();
+  await expect(shown(page, /No results for/)).toBeVisible();
 });
 
 test("text that looks like search syntax or markup is just text", async ({ page }) => {

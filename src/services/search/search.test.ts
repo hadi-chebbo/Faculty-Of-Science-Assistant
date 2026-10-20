@@ -141,6 +141,26 @@ describe("matching", () => {
     expect((await searchCatalog("demo")).courses?.total).toBe(4);
   });
 
+  it("answers normally for letters that unaccent() turns into quotes or several letters", async () => {
+    await seed();
+    // unaccent('ŉ') is "'n": quoting must happen after it, or the tsquery breaks.
+    for (const query of ["ŉŉ", "aŉb", "ŉa", "ÆÆ", "Æ x", "ßß", "ß x", "ﬁﬁ", "ﬁnal", "œuvre", "ŉ & ŉ", "½½", "‰‰", "㎏㎏", "ǆǆ"]) {
+      await expect(searchCatalog(query), query).resolves.toMatchObject({ state: "results" });
+    }
+  });
+
+  it("finds a word through the letters unaccent() expands", async () => {
+    const { c302 } = await seed();
+    await getDb().Resource.create({ courseId: c302.id, type: "notes", title: "Straße und Æther", isPublished: true, fileKey: KEY });
+    expect(titles(await searchCatalog("strasse"))).toEqual(["Straße und Æther"]);
+    expect(titles(await searchCatalog("STRAßE aether"))).toEqual(["Straße und Æther"]);
+  });
+
+  it("accepts a query of 100 characters made of astral characters, and refuses 101", async () => {
+    await expect(searchCatalog("𝐀".repeat(100))).resolves.toMatchObject({ state: "results" });
+    await expect(searchCatalog("𝐀".repeat(101))).rejects.toBeInstanceOf(ValidationError);
+  });
+
   it("treats LIKE wildcards as plain punctuation", async () => {
     await seed();
     expect((await searchCatalog("demo%")).courses?.total).toBe(4);

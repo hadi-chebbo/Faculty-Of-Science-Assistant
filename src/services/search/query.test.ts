@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTsQuery, chipForTypes, filterTypes, highlightTerms, joinedCode, parseSearchQuery } from "./query";
+import { chipForTypes, clipQuery, filterTypes, highlightTerms, joinedCode, parseSearchQuery, SEARCH_MAX_LENGTH, searchLength } from "./query";
 
 describe("parseSearchQuery", () => {
   it("folds case and accents and splits into words", () => {
@@ -60,6 +60,18 @@ describe("parseSearchQuery", () => {
     expect(parseSearchQuery("&|!:()").words).toEqual([]);
   });
 
+  it("keeps a session word as text next to plain words, and as a filter otherwise", () => {
+    expect(parseSearchQuery("partial derivatives")).toMatchObject({ words: ["partial", "derivatives"], sessions: [] });
+    expect(parseSearchQuery("second order equations")).toMatchObject({ words: ["second", "order", "equations"], sessions: [] });
+    expect(parseSearchQuery("final 2024")).toMatchObject({ words: [], sessions: ["final"], year: 2024 });
+    expect(parseSearchQuery("final exam")).toMatchObject({ words: [], sessions: ["final"], types: ["exam"] });
+    expect(parseSearchQuery("final")).toMatchObject({ words: [], sessions: ["final"] });
+    expect(parseSearchQuery("partiel rattrapage")).toMatchObject({ words: [], sessions: ["partial", "second"] });
+    // With a year or a type word, session words are filters even beside other words.
+    expect(parseSearchQuery("partial derivatives 2024")).toMatchObject({ words: ["derivatives"], sessions: ["partial"] });
+    expect(parseSearchQuery("graphs final exam")).toMatchObject({ words: ["graphs"], sessions: ["final"] });
+  });
+
   it("limits the number of words", () => {
     expect(parseSearchQuery(Array.from({ length: 50 }, (_, i) => `w${i}`).join(" ")).words).toHaveLength(12);
   });
@@ -69,29 +81,19 @@ describe("parseSearchQuery", () => {
   });
 });
 
-describe("buildTsQuery", () => {
-  it("makes every word a quoted prefix and requires all of them", () => {
-    expect(buildTsQuery(["algo"])).toBe("'algo':*");
-    expect(buildTsQuery(["demo", "301"])).toBe("'demo':* & '301':*");
-    expect(buildTsQuery([])).toBe("");
+describe("the length of a query", () => {
+  it("counts characters, not UTF-16 units", () => {
+    expect(searchLength("𝐀𝐀")).toBe(2);
+    expect("𝐀𝐀".length).toBe(4);
+    expect(searchLength("e\u0301")).toBe(2);
   });
 
-  it("never lets a word out of its quotes", () => {
-    // These cannot come out of parseSearchQuery, but the builder does not depend on that.
-    expect(buildTsQuery(["it's"])).toBe("'it''s':*");
-    expect(buildTsQuery(["a\\b"])).toBe("'a\\\\b':*");
-    expect(buildTsQuery(["x' | 'y"])).toBe("'x'' | ''y':*");
-  });
-
-  it("builds a plain query from hostile input", () => {
-    const query = buildTsQuery(parseSearchQuery("'; DROP TABLE courses; -- & | ! : ( ) <-> \\ ***").words);
-    expect(query).toBe("'drop':* & 'table':* & 'courses':*");
-  });
-
-  it("copes with very long input", () => {
-    const long = "a".repeat(100);
-    expect(buildTsQuery(parseSearchQuery(long).words)).toBe(`'${long}':*`);
-    expect(buildTsQuery(parseSearchQuery("ab ".repeat(40)).words).split(" & ")).toHaveLength(12);
+  it("cuts to the longest length without splitting a character", () => {
+    const clipped = clipQuery("𝐀".repeat(150));
+    expect(searchLength(clipped)).toBe(SEARCH_MAX_LENGTH);
+    expect(clipped).toBe("𝐀".repeat(SEARCH_MAX_LENGTH));
+    expect(clipQuery("  hello  ")).toBe("hello");
+    expect(clipQuery(`${"a".repeat(99)} ${"b".repeat(10)}`)).toBe("a".repeat(99));
   });
 });
 

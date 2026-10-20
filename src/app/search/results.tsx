@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { SEMESTER_MAX, SEMESTER_MIN } from "@/db/constants";
 import type { ExamSession, ResourceType } from "@/db/constants";
-import { markText, snippetAround } from "@/lib/highlight";
+import { descriptionSnippet, markText } from "@/lib/highlight";
 import { RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
 import { readForPage } from "@/lib/page-errors";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ import { SEARCH_CHIPS, type SearchChip } from "@/services/search/query";
 import type { SearchSection } from "@/services/search/schemas";
 import { searchCatalog } from "@/services/search/search";
 import type { ChapterHit, CourseHit, FileHit, SearchFilters, SearchOutcome } from "@/services/search/types";
+import { ChipRow } from "./chips";
 import { searchHref, type SearchParams } from "./params";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
@@ -61,14 +62,23 @@ export async function SearchResults({ params }: { params: SearchParams }) {
   const outcome = await readForPage(() =>
     searchCatalog(params.q, { type: params.type, show: params.show, page: params.page }),
   );
-  if (outcome.state === "short") return <SearchHints />;
-
-  const groups = [outcome.courses, outcome.chapters, outcome.files];
-  const empty = groups.every((g) => g === null || g.total === 0);
+  const short = outcome.state === "short";
+  const empty = [outcome.courses, outcome.chapters, outcome.files].every((g) => g === null || g.total === 0);
   return (
     <div className="space-y-5">
-      <Chips outcome={outcome} params={params} />
-      {empty ? <NoResults outcome={outcome} params={params} /> : <Found outcome={outcome} params={params} />}
+      {/* The one live region of the page. It is always here, so a screen reader hears the summary
+          of each new result (including "No results") and nothing else on the page is live. */}
+      <p className="sr-only" aria-live="polite" role="status">
+        {short ? "" : summaryText(outcome)}
+      </p>
+      {short ? (
+        <SearchHints />
+      ) : (
+        <>
+          <Chips outcome={outcome} params={params} />
+          {empty ? <NoResults outcome={outcome} params={params} /> : <Found outcome={outcome} params={params} />}
+        </>
+      )}
     </div>
   );
 }
@@ -77,33 +87,13 @@ export async function SearchResults({ params }: { params: SearchParams }) {
 
 function Chips({ outcome, params }: { outcome: SearchOutcome; params: SearchParams }) {
   // "All" is written into the address only when the words of the query would otherwise select a chip.
-  return (
-    <nav aria-label="Result types" className="-mx-4">
-      <ul className="flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-        {SEARCH_CHIPS.map((chip) => {
-          const active = outcome.chip === chip;
-          const type = chip === "all" ? (outcome.impliedChip !== "all" ? "all" : undefined) : chip;
-          return (
-            <li key={chip} className="shrink-0">
-              <Link
-                href={searchHref({ q: params.q, type })}
-                aria-current={active ? "true" : undefined}
-                className={cn(
-                  "inline-flex min-h-11 items-center rounded-full border px-4 text-sm transition-colors md:min-h-9",
-                  FOCUS,
-                  active
-                    ? "border-primary bg-primary font-semibold text-primary-foreground"
-                    : "bg-card text-heading hover:border-primary/40 hover:bg-muted/60",
-                )}
-              >
-                {CHIP_LABELS[chip]}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
-  );
+  const chips = SEARCH_CHIPS.map((chip) => ({
+    key: chip,
+    label: CHIP_LABELS[chip],
+    href: searchHref({ q: params.q, type: chip === "all" ? (outcome.impliedChip !== "all" ? "all" : undefined) : chip }),
+    active: outcome.chip === chip,
+  }));
+  return <ChipRow chips={chips} />;
 }
 
 // ----- the words that act as filters
@@ -116,31 +106,54 @@ const TYPE_NOUNS: Record<ResourceType, string> = {
   solution: "solutions",
   other: "other files",
 };
-const SESSION_WORDS: Record<ExamSession, string> = { partial: "partial", final: "final", second: "second session" };
+const SESSION_PHRASES: Record<ExamSession, string> = { partial: "partial", final: "final", second: "second session" };
 
 const joinWords = (words: string[]) => (words.length < 3 ? words.join(" or ") : `${words.slice(0, -1).join(", ")} or ${words.at(-1)}`);
 
+function filterParts(filters: SearchFilters) {
+  const sessions = filters.sessions.map((s) => SESSION_PHRASES[s]);
+  return {
+    session: sessions.length > 0 ? joinWords(sessions) : null,
+    noun: filters.types.length > 0 ? joinWords(filters.types.map((t) => TYPE_NOUNS[t])) : "files",
+    year: filters.year === null ? null : formatAcademicYear(filters.year),
+  };
+}
+
+const resultCount = (total: number) => `${total} ${total === 1 ? "result" : "results"}`;
+const hasFilters = (filters: SearchFilters) => filters.types.length > 0 || filters.sessions.length > 0 || filters.year !== null;
+
+// What the live region says: the line below as plain text, or "No results for …", or the count.
+function summaryText(outcome: SearchOutcome): string {
+  const total = (outcome.courses?.total ?? 0) + (outcome.chapters?.total ?? 0) + (outcome.files?.total ?? 0);
+  if (total === 0) return `No results for “${outcome.query}”`;
+  if (hasFilters(outcome.filters)) {
+    const { session, noun, year } = filterParts(outcome.filters);
+    const files = outcome.files?.total ?? 0;
+    return `Showing ${[session, noun].filter(Boolean).join(" ")}${year ? ` from ${year}` : ""} · ${resultCount(files)}`;
+  }
+  return resultCount(total);
+}
+
 // "Showing final exams from 2024-2025 · 3 results": the filters found in the words of the query.
+// The live region says the same, so this copy is hidden from screen readers.
 function FilterLine({ filters, total }: { filters: SearchFilters; total: number }) {
-  const sessions = filters.sessions.map((s) => SESSION_WORDS[s]);
-  const noun = filters.types.length > 0 ? joinWords(filters.types.map((t) => TYPE_NOUNS[t])) : "files";
-  const nounOnly = sessions.length === 0 && filters.year === null;
+  const { session, noun, year } = filterParts(filters);
   return (
-    <p className="text-sm" aria-live="polite">
+    <p className="text-sm" aria-hidden>
       Showing{" "}
-      {sessions.length > 0 && (
+      {session && (
         <>
-          <b className="font-semibold text-heading">{joinWords(sessions)}</b>{" "}
+          <b className="font-semibold text-heading">{session}</b>{" "}
         </>
       )}
-      {nounOnly ? <b className="font-semibold text-heading">{noun}</b> : noun}
-      {filters.year !== null && (
+      {session === null && year === null ? <b className="font-semibold text-heading">{noun}</b> : noun}
+      {year && (
         <>
           {" "}
-          from <b className="font-semibold text-heading">{formatAcademicYear(filters.year)}</b>
+          from <b className="font-semibold text-heading">{year}</b>
         </>
       )}{" "}
-      · {total} {total === 1 ? "result" : "results"}
+      · {resultCount(total)}
     </p>
   );
 }
@@ -148,17 +161,9 @@ function FilterLine({ filters, total }: { filters: SearchFilters; total: number 
 // ----- results
 
 function Found({ outcome, params }: { outcome: SearchOutcome; params: SearchParams }) {
-  const hasFilters = outcome.filters.types.length > 0 || outcome.filters.sessions.length > 0 || outcome.filters.year !== null;
-  const total = (outcome.courses?.total ?? 0) + (outcome.chapters?.total ?? 0) + (outcome.files?.total ?? 0);
   return (
     <>
-      {hasFilters ? (
-        <FilterLine filters={outcome.filters} total={outcome.files?.total ?? 0} />
-      ) : (
-        <p className="sr-only" aria-live="polite">
-          {total} {total === 1 ? "result" : "results"}
-        </p>
-      )}
+      {hasFilters(outcome.filters) && <FilterLine filters={outcome.filters} total={outcome.files?.total ?? 0} />}
       {outcome.show && (
         <Link href={searchHref({ q: params.q, type: params.type })} className={`inline-flex min-h-11 items-center text-sm font-medium text-link underline-offset-4 hover:underline ${FOCUS}`}>
           &larr; All results
@@ -307,9 +312,7 @@ function ChapterRow({ chapter, terms }: { chapter: ChapterHit; terms: string[] }
 function FileRow({ hit, terms }: { hit: FileHit; terms: string[] }) {
   const { resource } = hit;
   const title = markText(resource.title, terms);
-  // A file that matched in its description for words its title lacks shows the part that did.
-  const missing = terms.filter((term) => markText(resource.title, [term]).ranges.length === 0);
-  const snippet = missing.length > 0 && resource.description ? snippetAround(resource.description, missing) : null;
+  const snippet = descriptionSnippet(resource.title, resource.description, terms);
   const chapter =
     hit.chapterPosition !== null ? `Chapter ${hit.chapterPosition}` : hit.courseHasChapters && resource.type !== "exam" ? "General" : null;
   const meta = [chapter, RESOURCE_TYPE_SINGULAR_LABELS[resource.type]].filter(Boolean).join(" · ");

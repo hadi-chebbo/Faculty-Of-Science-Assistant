@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildResult, countLabel, findMatches, firstMatchFrom, foldQuery, stepMatch } from "./reader-search";
+import { buildResult, countLabel, findMatches, firstMatchFrom, stepMatch } from "./reader-search";
+import { foldQuery } from "@/lib/text-fold";
 
 const items = (...strs: string[]) => strs.map((str) => ({ str }));
 

@@ -12,6 +12,14 @@ export function markText(text: string, terms: readonly string[]): Marked {
   return { text, ranges: findPrefixRanges(text, terms), before: false, after: false };
 }
 
+// A snippet of the description for the words the title lacks (a file may match through its
+// description); null when the title has them all, or the description has none of the others.
+export function descriptionSnippet(title: string, description: string | null, terms: readonly string[]): Marked | null {
+  if (!description) return null;
+  const missing = terms.filter((term) => findPrefixRanges(title, [term]).length === 0);
+  return missing.length > 0 ? snippetAround(description, missing) : null;
+}
+
 const SNIPPET_LENGTH = 120;
 // How much text to show before the first match.
 const LEAD = 40;
