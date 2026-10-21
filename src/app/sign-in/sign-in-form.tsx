@@ -120,7 +120,8 @@ export function SignInForm() {
             {showPassword ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
           </Button>
         </div>
-        <p aria-live="polite" className="min-h-5 text-sm text-muted-foreground">
+        {/* Always present so screen readers announce the hint; it takes no room while empty. */}
+        <p aria-live="polite" className="text-sm text-muted-foreground empty:mt-0">
           {capsLock ? "Caps Lock is on." : null}
         </p>
       </div>
