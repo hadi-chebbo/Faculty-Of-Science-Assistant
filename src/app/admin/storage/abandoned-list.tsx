@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { adminFetch } from "@/lib/admin-fetch";
+import { DELETE_KEYS_MAX } from "@/services/storage-cleanup/constants";
 
 interface Row {
   key: string;
@@ -36,24 +37,35 @@ export function AbandonedList({ files, summary, totalSize }: { files: Row[]; sum
     setConfirming(false);
     setPending(true);
     setMessage(null);
+    const deleted: string[] = [];
+    const skipped: string[] = [];
     try {
-      const response = await adminFetch(
-        "/api/v1/storage/cleanup",
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys: files.map((f) => f.key) }) },
-        () => router.replace("/sign-in"),
-      );
-      if (response.ok) {
+      // The route takes at most DELETE_KEYS_MAX keys per call.
+      for (let start = 0; start < files.length; start += DELETE_KEYS_MAX) {
+        const keys = files.slice(start, start + DELETE_KEYS_MAX).map((f) => f.key);
+        const response = await adminFetch(
+          "/api/v1/storage/cleanup",
+          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys }) },
+          () => router.replace("/sign-in"),
+        );
+        if (!response.ok) {
+          const done = deleted.length > 0 ? ` ${filesText(deleted.length)} were deleted before it stopped.` : "";
+          const text = response.status === 401 ? "Your session has ended. Redirecting to sign in." : `Something went wrong. Please try again.${done}`;
+          setMessage({ text, error: true });
+          if (deleted.length > 0) router.refresh();
+          setPending(false);
+          return;
+        }
         const data: { deleted: string[]; skipped: string[] } = await response.json();
-        const skipped = data.skipped.length > 0 ? ` ${data.skipped.length} skipped because they changed since the scan.` : "";
-        setMessage({ text: `Deleted ${filesText(data.deleted.length)}.${skipped}`, error: false });
-        router.refresh();
-      } else if (response.status === 401) {
-        setMessage({ text: "Your session has ended. Redirecting to sign in.", error: true });
-      } else {
-        setMessage({ text: "Something went wrong. Please try again.", error: true });
+        deleted.push(...data.deleted);
+        skipped.push(...data.skipped);
       }
+      const skippedText = skipped.length > 0 ? ` ${skipped.length} skipped because they changed since the scan.` : "";
+      setMessage({ text: `Deleted ${filesText(deleted.length)}.${skippedText}`, error: false });
+      router.refresh();
     } catch {
       setMessage({ text: "Could not reach the server. Check your connection and try again.", error: true });
+      if (deleted.length > 0) router.refresh();
     }
     setPending(false);
   }
