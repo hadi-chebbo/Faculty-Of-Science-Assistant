@@ -105,7 +105,7 @@ describe("processEmailJob", () => {
       expect(job.lastError).toBe("handler exploded for [address]");
       // Not due yet: nothing happens until its time.
       expect(await processEmailJob(id)).toBe("skipped");
-      await getDb().EmailJob.update({ nextAttemptAt: new Date() }, { where: { id } });
+      await getDb().EmailJob.update({ nextAttemptAt: new Date(Date.now() - MINUTE) }, { where: { id } });
     }
     expect(await processEmailJob(id)).toBe("failed");
     const job = await load(id);
