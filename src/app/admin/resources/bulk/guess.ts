@@ -20,7 +20,8 @@ export function guessFromFileName(name: string): FileNameGuess {
   const spaced = base.replace(/_/g, " ").replace(/(?<!\d)-|-(?!\d)/g, " ").replace(/\s+/g, " ").trim();
   const title = Array.from(spaced).slice(0, RESOURCE_TITLE_MAX_LENGTH).join("").trim();
 
-  const parsed = parseSearchQuery(spaced);
+  // File names glue words to numbers ("TD2", "Exam2024"); the words are read apart, the title keeps them.
+  const parsed = parseSearchQuery(spaced.replace(/(?<=\p{L})(?=\p{Nd})|(?<=\p{Nd})(?=\p{L})/gu, " "));
   const guess: FileNameGuess = { title };
   const type = parsed.types[0];
   const session = parsed.sessions[0];

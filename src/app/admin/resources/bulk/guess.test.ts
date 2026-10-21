@@ -15,7 +15,7 @@ describe("guessFromFileName", () => {
   it("reads English and French type words", () => {
     expect(guessFromFileName("lecture_3.pdf").type).toBe("lecture");
     expect(guessFromFileName("Cours 4.pdf").type).toBe("lecture");
-    expect(guessFromFileName("TD2.pdf").type).toBeUndefined();
+    expect(guessFromFileName("TD2.pdf")).toEqual({ title: "TD2", type: "exercise" });
     expect(guessFromFileName("TD 2.pdf").type).toBe("exercise");
     expect(guessFromFileName("exercices-series.pdf").type).toBe("exercise");
     expect(guessFromFileName("notes_week1.pdf").type).toBe("notes");
@@ -32,6 +32,12 @@ describe("guessFromFileName", () => {
     expect(guessFromFileName("examen_partiel_2022.pdf")).toMatchObject({ type: "exam", examSession: "partial", academicYearStart: 2022 });
     expect(guessFromFileName("rattrapage-2024/2025.pdf")).toMatchObject({ type: "exam", examSession: "second", academicYearStart: 2024 });
     expect(guessFromFileName("exam_2021.pdf")).toEqual({ title: "exam 2021", type: "exam", academicYearStart: 2021 });
+  });
+
+  it("reads words glued to numbers", () => {
+    expect(guessFromFileName("Exam2024.pdf")).toEqual({ title: "Exam2024", type: "exam", academicYearStart: 2024 });
+    expect(guessFromFileName("Final_Exam2023-2024.pdf")).toMatchObject({ type: "exam", examSession: "final", academicYearStart: 2023 });
+    expect(guessFromFileName("cours3_graphes.pdf")).toMatchObject({ title: "cours3 graphes", type: "lecture" });
   });
 
   it("keeps a lone year without a type", () => {
