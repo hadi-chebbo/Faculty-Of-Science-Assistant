@@ -3,9 +3,11 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { Client } from "pg";
+import { parseStorageConfig } from "../src/lib/storage/config";
 
-// Needs the demo data, an admin and STORAGE_DRIVER=local (the files are written straight into the
-// local storage folder, which this spec refuses to run without). It creates its own files under
+// Needs the demo data, an admin and the local storage driver (the files are written straight into
+// the local storage folder, which this spec refuses to run without). The driver follows the app's
+// own rule (parseStorageConfig): STORAGE_DRIVER, else r2 on Vercel and local elsewhere. It creates its own files under
 // fresh resources/<uuid>.pdf keys and removes them in a finally block. Desktop project only.
 try {
   process.loadEnvFile(".env");
@@ -15,11 +17,24 @@ try {
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
-const STORAGE_DIR = path.resolve(process.env.STORAGE_LOCAL_DIR ?? ".storage");
+function storageConfig() {
+  try {
+    return parseStorageConfig(process.env);
+  } catch {
+    return undefined; // invalid or incomplete config: beforeAll reports it
+  }
+}
 
-test.beforeAll(() => {
+// The same folder the server uses (STORAGE_LOCAL_DIR, default .storage, from the repo root).
+const STORAGE_DIR = storageConfig()?.localDir ?? path.resolve(".storage");
+
+test.beforeAll(({}, testInfo) => {
+  if (testInfo.project.name === "mobile") return; // skipped below; nothing to check
   expect(ADMIN_EMAIL && ADMIN_PASSWORD, "ADMIN_EMAIL and ADMIN_PASSWORD must be set").toBeTruthy();
-  expect(process.env.STORAGE_DRIVER, "run this spec with STORAGE_DRIVER=local").toBe("local");
+  expect(
+    storageConfig()?.driver,
+    "the app would use R2 here (STORAGE_DRIVER=r2, or VERCEL set); set STORAGE_DRIVER=local so no test file is written to R2",
+  ).toBe("local");
 });
 
 async function query<T>(sql: string): Promise<T[]> {
