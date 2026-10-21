@@ -29,9 +29,10 @@ In:
 - Search over course codes, titles and resource metadata.
 - Read every resource on a page of our own (the reader), and download it.
 - Admin-only upload and tagging of resources (one at a time, or in bulk per course).
+- Student sign-up with email confirmation (pulled forward by the owner, 2026-10-21).
 
 After launch, in this order:
-- Student accounts, bookmarks, explicit "mark as done".
+- Bookmarks, explicit "mark as done".
 - Per-course AI Q&A grounded in uploaded material, with source citations.
 
 Out until explicitly agreed: student uploads, interactive exercises, scoring,
@@ -126,6 +127,9 @@ mock exam generation, personalization.
   `addConstraint`, `addIndex`), not raw SQL; `Sequelize.literal` only for
   checks that need a function or compare columns; `up` in a transaction;
   timestamps default with `Sequelize.fn('now')`, never `Sequelize.NOW`.
+- Email: a Postgres `email_jobs` queue processed with `after()` and a daily Vercel Cron sweep
+  (`/api/cron/email-jobs`, `CRON_SECRET`); Brevo in production, a log driver off Vercel; payloads never
+  hold secrets. See `docs/backend-architecture.md`.
 - Error tracking: Sentry (`@sentry/nextjs`), errors only, nothing personal attached, browser SDK loaded lazily; enabled only when a DSN is set (production on Vercel), a no-op everywhere else.
 
 ## Design (confirmed)

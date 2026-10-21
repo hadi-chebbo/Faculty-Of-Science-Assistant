@@ -21,5 +21,7 @@ export default defineConfig({
     // Health is 503 without a database, which Playwright treats as not ready.
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,
+    // Lets e2e/cron-email-jobs.spec.ts reach the 401 path (the route answers 503 with no secret).
+    env: { CRON_SECRET: "e2e-only-cron-secret" },
   },
 });
