@@ -28,7 +28,7 @@ async function ownAddress(page: Page) {
 async function signInThroughForm(page: Page, email: string, password: string) {
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
 }
 
@@ -46,7 +46,7 @@ async function sessionCookies(page: Page) {
 test("a signed-out visitor to /admin is sent to /sign-in", async ({ page }) => {
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/sign-in$/);
-  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 });
 

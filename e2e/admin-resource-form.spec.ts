@@ -34,7 +34,7 @@ async function signInAsAdmin(page: Page) {
   await page.setExtraHTTPHeaders({ "x-forwarded-for": `10.${octet()}.${octet()}.${octet()}` });
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(ADMIN_EMAIL);
-  await page.getByLabel("Password").fill(ADMIN_PASSWORD);
+  await page.getByLabel("Password", { exact: true }).fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL(/\/admin$/);
 }
