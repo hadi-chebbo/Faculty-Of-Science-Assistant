@@ -73,6 +73,7 @@ Why `sequelize`, `pg` and `pg-hstore` are in `serverExternalPackages` (`next.con
 | `zod` | Checks that data has the expected shape and gives typed results. | CLAUDE.md: Zod for validating all external input. | `src/lib/env.ts`, `src/services/validation.ts`, `src/services/courses/schemas.ts`, `src/services/resources/schemas.ts`. | `^4.6.5` / 4.6.5 | Yes, runtime |
 | `jose` | Signs and verifies JWTs (HS256) with Web Crypto. | CLAUDE.md: access tokens are HS256 JWTs signed with `jose`, the one auth dependency; also signs upload tickets. | `src/services/auth/access-token.ts` (access tokens); `src/lib/storage/{token,upload-ticket}.ts` (storage tokens and upload tickets). | `^6.2.12` / 6.2.12 | Yes, runtime |
 | `@node-rs/argon2` | Password hashing with Argon2 (native code). | The users table stores a password hash and the seeders create hashes. No note records why Argon2 was chosen. | `db/seeders/20261011111938-demo-student.js`, `db/seeders/20261011111939-admin-user.js` (hashing); `src/db/seeders.test.ts` (verifying); `src/services/auth/auth.ts` (checking passwords at sign-in). | `^2.2.2` / 2.2.2 | Yes, runtime |
+| `@sentry/nextjs` | Sentry's SDK for Next.js: records and groups errors, with a build plugin for source maps and a tunnel route. | Error tracking in production: Vercel Hobby keeps runtime logs for about an hour, so errors would vanish. Errors only (no tracing, replay or profiling), nothing personal, enabled only when a DSN is set, and loaded lazily in the browser. | `next.config.ts` (`withSentryConfig`, from `@sentry/nextjs/config`), `src/instrumentation.ts` (server and edge), `src/instrumentation-client.ts` (browser, dynamic import), `src/lib/monitoring/*`. | `^11` / 11.8.0 | Yes, runtime |
 
 ## Testing
 
@@ -101,7 +102,6 @@ Taken only from `CLAUDE.md` and `docs/`. None of these are in `package.json` on 
 | Planned | Source | Note |
 |---|---|---|
 | An S3-compatible client for Cloudflare R2 (upload, short-lived signed URLs) | CLAUDE.md Stack (object storage, signed URLs, hosting on Cloudflare R2); `docs/backend-architecture.md` (uploads, signed download link) | No package is named in the docs. Choose one when the upload slice starts and record the reason here. |
-| Error tracking tool | CLAUDE.md: "Error tracking: not yet decided" | Undecided. |
 
 Refresh tokens need no extra package: CLAUDE.md says they are stored as SHA-256 hashes, which Node's built-in `crypto` can compute.
 
