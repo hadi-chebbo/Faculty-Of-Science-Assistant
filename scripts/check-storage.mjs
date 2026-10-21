@@ -77,6 +77,13 @@ try {
     const start = await storage.readStart(directKey, 5);
     expect(start !== null && new TextDecoder().decode(start) === "%PDF-", "unexpected first bytes");
   });
+  await step("list", async () => {
+    const listed = await storage.list("test/");
+    const found = listed.find((file) => file.key === directKey);
+    expect(found !== undefined, "object not listed");
+    expect(found.size === body.length, `listed size ${found.size}`);
+    expect(Number.isFinite(found.lastModified.getTime()), "listed time is not a date");
+  });
   await step("read URL", async () => {
     const url = await storage.createReadUrl(directKey, { expiresInSeconds: 60, disposition: "inline" });
     const response = await fetch(url);

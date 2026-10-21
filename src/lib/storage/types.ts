@@ -21,4 +21,6 @@ export interface FileStorage {
   put(key: string, body: Uint8Array, contentType: string): Promise<void>;
   // Removes a file; removing a missing file is not an error.
   delete(key: string): Promise<void>;
+  // Every stored object whose key starts with `prefix` (all pages, in no particular order).
+  list(prefix: string): Promise<{ key: string; size: number; lastModified: Date }[]>;
 }
