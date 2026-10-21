@@ -149,6 +149,47 @@ describe("r2 driver requests", () => {
   });
 });
 
+describe("r2 list", () => {
+  const page = (keys: string[], next?: string) =>
+    `<?xml version="1.0"?><ListBucketResult><IsTruncated>${next ? "true" : "false"}</IsTruncated>` +
+    keys
+      .map((k) => `<Contents><Key>${k}</Key><LastModified>2026-10-01T10:00:00.000Z</LastModified><Size>42</Size></Contents>`)
+      .join("") +
+    (next ? `<NextContinuationToken>${next}</NextContinuationToken>` : "") +
+    `</ListBucketResult>`;
+
+  it("follows continuation tokens and decodes entities in keys", async () => {
+    const { storage, requests } = setup((request) => {
+      const token = new URL(request.url).searchParams.get("continuation-token");
+      return new Response(token ? page(["resources/b&amp;c.pdf"]) : page(["resources/a.pdf"], "tok/1+="), { status: 200 });
+    });
+    const listed = await storage.list("resources/");
+    expect(listed).toEqual([
+      { key: "resources/a.pdf", size: 42, lastModified: new Date("2026-10-01T10:00:00.000Z") },
+      { key: "resources/b&c.pdf", size: 42, lastModified: new Date("2026-10-01T10:00:00.000Z") },
+    ]);
+    expect(requests).toHaveLength(2);
+    const first = new URL(requests[0].url);
+    expect(requests[0].method).toBe("GET");
+    expect(first.pathname).toBe("/my-bucket");
+    expect(first.searchParams.get("list-type")).toBe("2");
+    expect(first.searchParams.get("prefix")).toBe("resources/");
+    expect(new URL(requests[1].url).searchParams.get("continuation-token")).toBe("tok/1+=");
+    expect(requests[0].headers.get("authorization")).toContain("AWS4-HMAC-SHA256");
+  });
+
+  it("returns an empty list for an empty bucket", async () => {
+    const { storage } = setup(() => new Response(page([]), { status: 200 }));
+    expect(await storage.list("resources/")).toEqual([]);
+  });
+
+  it("throws naming the operation and status only", async () => {
+    const { storage } = setup(() => new Response("secret body", { status: 403 }));
+    const error = await storage.list("resources/").catch((e: Error) => e);
+    expect((error as Error).message).toBe("R2 list failed with HTTP 403");
+  });
+});
+
 describe("r2 signed URLs", () => {
   const { storage, requests } = setup(() => new Response(null, { status: 200 }));
 

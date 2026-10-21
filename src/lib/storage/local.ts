@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { assertStorageKey } from "./keys";
+import { assertStorageKey, assertStoragePrefix } from "./keys";
 import { signStorageToken } from "./token";
 import type { FileStorage } from "./types";
 
@@ -70,6 +70,29 @@ export function createLocalStorage(dir: string): FileStorage {
       const file = fileOf(key);
       await fs.rm(file, { force: true });
       await fs.rm(`${file}.meta.json`, { force: true });
+    },
+    async list(prefix) {
+      assertStoragePrefix(prefix);
+      const found: { key: string; size: number; lastModified: Date }[] = [];
+      const walk = async (relative: string): Promise<void> => {
+        let entries;
+        try {
+          entries = await fs.readdir(path.join(/*turbopackIgnore: true*/ root, relative), { withFileTypes: true });
+        } catch {
+          return;
+        }
+        for (const entry of entries) {
+          const key = relative === "" ? entry.name : `${relative}/${entry.name}`;
+          if (entry.isDirectory()) {
+            await walk(key);
+          } else if (entry.isFile() && key.startsWith(prefix) && !key.endsWith(".meta.json") && !key.endsWith(".tmp")) {
+            const info = await fs.stat(path.join(/*turbopackIgnore: true*/ root, key));
+            found.push({ key, size: info.size, lastModified: info.mtime });
+          }
+        }
+      };
+      await walk("");
+      return found;
     },
     async createUploadUrl(key, { contentType, maxBytes, expiresInSeconds }) {
       assertStorageKey(key);

@@ -13,3 +13,10 @@ export function isStorageKey(key: string): boolean {
 export function assertStorageKey(key: string): void {
   if (!isStorageKey(key)) throw new Error("Invalid storage key");
 }
+
+// A prefix for `list`: the same characters as a key, but it may end in "/" or be empty.
+export function assertStoragePrefix(prefix: string): void {
+  if (!/^[a-z0-9._/-]*$/.test(prefix) || prefix.split("/").some((segment) => segment === "..")) {
+    throw new Error("Invalid storage prefix");
+  }
+}

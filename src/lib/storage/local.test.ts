@@ -48,6 +48,20 @@ describe("local driver", () => {
     expect((await fs.readdir(dir)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
   });
 
+  it("lists the files under a prefix with size and modified time, without sidecars", async () => {
+    await storage.put("lister/one.pdf", bytes("12345"), "application/pdf");
+    await storage.put("lister/sub/two.pdf", bytes("1"), "application/pdf");
+    await storage.put("other/three.pdf", bytes("1"), "application/pdf");
+    const old = new Date("2026-01-01T00:00:00.000Z");
+    await fs.utimes(path.join(dir, "lister", "one.pdf"), old, old);
+    const listed = (await storage.list("lister/")).sort((a, b) => a.key.localeCompare(b.key));
+    expect(listed.map((f) => f.key)).toEqual(["lister/one.pdf", "lister/sub/two.pdf"]);
+    expect(listed[0].size).toBe(5);
+    expect(listed[0].lastModified.getTime()).toBe(old.getTime());
+    expect(await storage.list("nothing-here/")).toEqual([]);
+    await expect(storage.list("../")).rejects.toThrow();
+  });
+
   it("rejects an invalid key in every method, before touching the disk", async () => {
     const bad = "../escape.pdf";
     const url = { expiresInSeconds: 60, disposition: "inline" as const };

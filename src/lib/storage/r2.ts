@@ -1,7 +1,17 @@
 import { AwsClient } from "aws4fetch";
 import { attachmentDisposition } from "./filename";
-import { assertStorageKey } from "./keys";
+import { assertStorageKey, assertStoragePrefix } from "./keys";
 import type { FileStorage } from "./types";
+
+const XML_ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" };
+const decodeXml = (text: string) =>
+  text.replace(/&(?:#(\d+)|#x([0-9a-fA-F]+)|(amp|lt|gt|quot|apos));/g, (_, dec, hex, name) =>
+    name ? XML_ENTITIES[name] : String.fromCodePoint(dec ? Number(dec) : parseInt(hex, 16)),
+  );
+const tagOf = (xml: string, tag: string) => {
+  const match = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(xml);
+  return match ? decodeXml(match[1]) : null;
+};
 
 export type R2Config = { accountId: string; bucket: string; accessKeyId: string; secretAccessKey: string };
 
@@ -85,6 +95,30 @@ export function createR2Storage(
     async delete(key) {
       const response = await call(key, { method: "DELETE" });
       if (!response.ok && response.status !== 404) fail("delete", response);
+    },
+
+    // ListObjectsV2, following continuation tokens until the listing is no longer truncated.
+    async list(prefix) {
+      assertStoragePrefix(prefix);
+      const found: { key: string; size: number; lastModified: Date }[] = [];
+      let token: string | null = null;
+      do {
+        const url = new URL(`https://${config.accountId}.r2.cloudflarestorage.com/${config.bucket}`);
+        url.searchParams.set("list-type", "2");
+        url.searchParams.set("prefix", prefix);
+        if (token) url.searchParams.set("continuation-token", token);
+        const response = await fetchImpl(await client.sign(url, { method: "GET", aws: { datetime: datetime() } }));
+        if (!response.ok) fail("list", response);
+        const xml = await response.text();
+        for (const block of xml.match(/<Contents>[\s\S]*?<\/Contents>/g) ?? []) {
+          const key = tagOf(block, "Key");
+          const modified = tagOf(block, "LastModified");
+          if (key === null || modified === null) continue;
+          found.push({ key, size: Number(tagOf(block, "Size") ?? 0), lastModified: new Date(modified) });
+        }
+        token = tagOf(xml, "IsTruncated") === "true" ? tagOf(xml, "NextContinuationToken") : null;
+      } while (token);
+      return found;
     },
 
     async createReadUrl(key, { expiresInSeconds, disposition, filename }) {
