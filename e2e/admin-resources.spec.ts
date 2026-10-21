@@ -25,7 +25,7 @@ async function signInAsAdmin(page: Page) {
   await ownAddress(page);
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill(ADMIN_EMAIL);
-  await page.getByLabel("Password").fill(ADMIN_PASSWORD);
+  await page.getByLabel("Password", { exact: true }).fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL(/\/admin$/);
 }
@@ -109,7 +109,7 @@ test("a signed-in student cannot open a draft", async ({ page }) => {
   await ownAddress(page);
   await page.goto("/sign-in");
   await page.getByLabel("Email").fill("demo.student@example.com");
-  await page.getByLabel("Password").fill("demo-student-password");
+  await page.getByLabel("Password", { exact: true }).fill("demo-student-password");
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"));
 

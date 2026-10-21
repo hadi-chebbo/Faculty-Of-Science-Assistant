@@ -225,6 +225,7 @@ mock exam generation, personalization.
   otherwise to the course (Other material when the course has chapters). Resource rows and solution
   links on public pages open the reader in the same tab. There is no AI panel yet and no text about
   one.
+- Sign-in page (`/sign-in`): a split card. On desktop (md and up) a deep-blue panel (the `brand-panel` token, white text, same in both themes) with the brand name, the home headline and three feature lines sits beside the form; on a phone the brand name sits above the form and the panel is hidden. The form shows errors in one destructive alert, clears and focuses the password after a wrong one, has a show/hide password button and a Caps Lock hint. The layout is `AuthShell` in `src/components/auth`.
 - Branding is the plain text "University Assistant". No university logo, crest or name as
   branding. The footer says: "Independent student project. Not an official Lebanese
   University website."
