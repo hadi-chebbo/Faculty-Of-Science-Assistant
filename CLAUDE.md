@@ -126,7 +126,7 @@ mock exam generation, personalization.
   `addConstraint`, `addIndex`), not raw SQL; `Sequelize.literal` only for
   checks that need a function or compare columns; `up` in a transaction;
   timestamps default with `Sequelize.fn('now')`, never `Sequelize.NOW`.
-- Error tracking: not yet decided.
+- Error tracking: Sentry (`@sentry/nextjs`), errors only, nothing personal attached, browser SDK loaded lazily; enabled only when a DSN is set (production on Vercel), a no-op everywhere else.
 
 ## Design (confirmed)
 
