@@ -49,7 +49,7 @@ async function setup() {
     admin: { id: admin.id, role: admin.role } as Viewer,
     student: { id: student.id, role: student.role } as Viewer,
     useKey: (key: string, published = false) =>
-      Resource.create({ courseId: course.id, type: "lecture", title: "R", language: "en", fileKey: key, published }),
+      Resource.create({ courseId: course.id, type: "lecture", title: "R", language: "en", fileKey: key, isPublished: published }),
   };
 }
 
