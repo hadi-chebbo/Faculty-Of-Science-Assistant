@@ -1,4 +1,4 @@
-import { ExternalLink, Pencil, Plus } from "lucide-react";
+import { ExternalLink, Pencil, Plus, Upload } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -42,10 +42,19 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
             <span className="text-sm font-normal text-muted-foreground"> - page {result.page} of {pages}</span>
           )}
         </h2>
-        <Link href="/admin/resources/new" className={buttonVariants({ className: "h-11 px-4 md:h-9 md:px-3" })}>
-          <Plus aria-hidden />
-          New resource
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={params.course ? `/admin/resources/bulk?course=${encodeURIComponent(params.course)}` : "/admin/resources/bulk"}
+            className={buttonVariants({ variant: "outline", className: "h-11 px-4 md:h-9 md:px-3" })}
+          >
+            <Upload aria-hidden />
+            Bulk upload
+          </Link>
+          <Link href="/admin/resources/new" className={buttonVariants({ className: "h-11 px-4 md:h-9 md:px-3" })}>
+            <Plus aria-hidden />
+            New resource
+          </Link>
+        </div>
       </div>
 
       <form action="/admin" method="get" className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-end">

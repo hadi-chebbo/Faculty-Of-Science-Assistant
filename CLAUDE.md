@@ -28,7 +28,7 @@ In:
 - Previous exams filterable by course, academic year and session.
 - Search over course codes, titles and resource metadata.
 - Read every resource on a page of our own (the reader), and download it.
-- Admin-only upload and tagging of resources.
+- Admin-only upload and tagging of resources (one at a time, or in bulk per course).
 
 After launch, in this order:
 - Student accounts, bookmarks, explicit "mark as done".
