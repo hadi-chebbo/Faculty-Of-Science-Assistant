@@ -29,10 +29,10 @@ In:
 - Search over course codes, titles and resource metadata.
 - Read every resource on a page of our own (the reader), and download it.
 - Admin-only upload and tagging of resources (one at a time, or in bulk per course).
+- Student sign-up with email confirmation (pulled forward by the owner, 2026-10-21).
 
 After launch, in this order:
-- Student sign-up with email confirmation is being built now (owner's decision 2026-10-21);
-  bookmarks and explicit "mark as done" come after launch.
+- Bookmarks, explicit "mark as done".
 - Per-course AI Q&A grounded in uploaded material, with source citations.
 
 Out until explicitly agreed: student uploads, interactive exercises, scoring,
