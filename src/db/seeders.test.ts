@@ -97,12 +97,29 @@ describe("seeders", () => {
     expect(await verify(admin[0].password_hash as string, ADMIN_PASSWORD)).toBe(true);
     expect(first.output).not.toContain(ADMIN_PASSWORD);
 
+    // Both seeded accounts are confirmed, so they can sign in.
+    expect(await query("SELECT 1 FROM users WHERE email_confirmed_at IS NULL")).toHaveLength(0);
+
     const afterFirst = await counts();
     expect(afterFirst.users).toBe(2);
 
     const second = runCli("db:seed:all", FULL_ENV);
     expect(second.status, second.output).toBe(0);
     expect(await counts()).toEqual(afterFirst);
+  });
+
+  it("confirms an existing admin whose confirmation is unset, and keeps a time already set", async () => {
+    expect(runCli("db:seed:all", FULL_ENV).status).toBe(0);
+    const { sequelize } = getDb();
+    await sequelize.query("UPDATE users SET email_confirmed_at = NULL WHERE email = 'admin@example.com'");
+    expect(runCli("db:seed:all", FULL_ENV).status).toBe(0);
+    const [rows] = await sequelize.query("SELECT email_confirmed_at FROM users WHERE email = 'admin@example.com'");
+    const confirmedAt = (rows[0] as { email_confirmed_at: Date | null }).email_confirmed_at;
+    expect(confirmedAt).toBeInstanceOf(Date);
+
+    expect(runCli("db:seed:all", FULL_ENV).status).toBe(0);
+    const [again] = await sequelize.query("SELECT email_confirmed_at FROM users WHERE email = 'admin@example.com'");
+    expect((again[0] as { email_confirmed_at: Date }).email_confirmed_at).toEqual(confirmedAt);
   });
 
   it("stores one placeholder PDF per sourced resource, and replaces them when seeded again", async () => {

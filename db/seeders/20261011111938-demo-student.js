@@ -24,7 +24,7 @@ module.exports = {
 
       await queryInterface.bulkInsert(
         'users',
-        [{ email: EMAIL, name: 'Demo Student', password_hash: passwordHash, role: 'student', created_at: now, updated_at: now }],
+        [{ email: EMAIL, name: 'Demo Student', password_hash: passwordHash, role: 'student', email_confirmed_at: now, created_at: now, updated_at: now }],
         { transaction },
       );
 

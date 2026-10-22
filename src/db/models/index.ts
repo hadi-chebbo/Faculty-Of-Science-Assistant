@@ -4,13 +4,27 @@ import { Bookmark, initBookmark } from "./bookmark";
 import { Chapter, initChapter } from "./chapter";
 import { Completion, initCompletion } from "./completion";
 import { Course, initCourse } from "./course";
+import { EmailConfirmation, initEmailConfirmation } from "./email-confirmation";
 import { EmailJob, initEmailJob } from "./email-job";
 import { FailedSignIn, initFailedSignIn } from "./failed-sign-in";
+import { RateLimitEvent, initRateLimitEvent } from "./rate-limit-event";
 import { RefreshToken, initRefreshToken } from "./refresh-token";
 import { Resource, initResource } from "./resource";
 import { User, initUser } from "./user";
 
-export { Bookmark, Chapter, Completion, Course, EmailJob, FailedSignIn, RefreshToken, Resource, User };
+export {
+  Bookmark,
+  Chapter,
+  Completion,
+  Course,
+  EmailConfirmation,
+  EmailJob,
+  FailedSignIn,
+  RateLimitEvent,
+  RefreshToken,
+  Resource,
+  User,
+};
 
 export interface Db {
   sequelize: Sequelize;
@@ -23,6 +37,8 @@ export interface Db {
   Completion: typeof Completion;
   FailedSignIn: typeof FailedSignIn;
   EmailJob: typeof EmailJob;
+  EmailConfirmation: typeof EmailConfirmation;
+  RateLimitEvent: typeof RateLimitEvent;
 }
 
 // Cached on globalThis together with the connection, so hot reload never re-initialises models.
@@ -42,6 +58,8 @@ export function getDb(): Db {
   initCompletion(sequelize);
   initFailedSignIn(sequelize);
   initEmailJob(sequelize);
+  initEmailConfirmation(sequelize);
+  initRateLimitEvent(sequelize);
 
   Course.hasMany(Resource, { foreignKey: "courseId", as: "resources" });
   Resource.belongsTo(Course, { foreignKey: "courseId", as: "course" });
@@ -66,6 +84,6 @@ export function getDb(): Db {
   Resource.hasMany(Bookmark, { foreignKey: "resourceId", as: "bookmarks" });
   Resource.hasMany(Completion, { foreignKey: "resourceId", as: "completions" });
 
-  globalForDb.__db = { sequelize, Course, Chapter, Resource, User, RefreshToken, Bookmark, Completion, FailedSignIn, EmailJob };
+  globalForDb.__db = { sequelize, Course, Chapter, Resource, User, RefreshToken, Bookmark, Completion, FailedSignIn, EmailJob, EmailConfirmation, RateLimitEvent };
   return globalForDb.__db;
 }

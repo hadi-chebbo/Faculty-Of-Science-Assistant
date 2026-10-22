@@ -19,6 +19,7 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   declare name: CreationOptional<string | null>;
   declare passwordHash: string;
   declare role: CreationOptional<UserRole>;
+  declare emailConfirmedAt: CreationOptional<Date | null>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 
@@ -47,6 +48,7 @@ export function initUser(sequelize: Sequelize): typeof User {
         defaultValue: "student",
         validate: { isIn: [[...USER_ROLES]] },
       },
+      emailConfirmedAt: { type: DataTypes.DATE, allowNull: true },
       createdAt: DataTypes.DATE,
       updatedAt: DataTypes.DATE,
     },

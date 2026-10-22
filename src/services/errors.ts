@@ -58,3 +58,20 @@ export class UnavailableError extends Error {
     this.name = "UnavailableError";
   }
 }
+
+// The confirmation link is unknown, expired or already used. One error for all of them.
+export class InvalidConfirmationTokenError extends Error {
+  constructor() {
+    super("Invalid confirmation token");
+    this.name = "InvalidConfirmationTokenError";
+  }
+}
+
+// The password was right but the email address has not been confirmed yet. Only raised after the
+// password check, so it reveals nothing to someone who does not know the password.
+export class EmailNotConfirmedError extends Error {
+  constructor() {
+    super("Email not confirmed");
+    this.name = "EmailNotConfirmedError";
+  }
+}

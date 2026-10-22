@@ -27,6 +27,17 @@ export function clientIp(request: Request): string {
   return real ? real.slice(0, 64) : "unknown";
 }
 
+// The JSON body as an object, or an empty object when it is missing, malformed or not an object.
+// Services validate the fields, so values are passed on as they came.
+export async function readJsonObject(request: Request): Promise<Record<string, unknown>> {
+  const body: unknown = await request.json().catch(() => null);
+  return typeof body === "object" && body !== null && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
+}
+
+export function tooManyAttemptsBody(retryAfterSeconds: number) {
+  return { error: "Too many attempts", retryAfterSeconds };
+}
+
 // Where to send the visitor after restoring a session. Only a same-site relative path is allowed
 // (one leading slash, no "//" or backslash tricks, no scheme); anything else becomes the fallback.
 export function safeNextPath(value: string | null | undefined, fallback = "/admin"): string {

@@ -79,7 +79,12 @@ mock exam generation, personalization.
   General), published flag.
 - Chapter: belongs to one course; position unique within the course; title.
 - User: email (stored lowercase), optional name, password hash, role
-  (student or admin).
+  (student or admin), `email_confirmed_at` (null until the emailed link is used;
+  signing in needs it; the seeded admin and demo student are confirmed).
+- EmailConfirmation (`email_confirmations`): belongs to a user; SHA-256 hash of the
+  link token, expiry (24 h), used-at. Single use; the raw token is never stored.
+- RateLimitEvent (`rate_limit_events`): action (`sign-up` per IP, `confirmation-email`
+  per address), subject, time. No link to users; rows older than 2 days are pruned.
 - RefreshToken: belongs to a user; token hash, family id, expiry, revoked-at.
 - FailedSignIn (`failed_sign_ins`): normalised email, IP, time. Only failures are
   stored; no link to users, so unknown emails are counted too. Old rows are pruned.
