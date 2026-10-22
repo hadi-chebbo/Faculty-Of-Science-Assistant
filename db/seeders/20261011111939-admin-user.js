@@ -44,11 +44,16 @@ module.exports = {
           { email },
           { transaction },
         );
+        // Set it if missing, never overwrite an existing confirmation time.
+        await queryInterface.sequelize.query(
+          'UPDATE users SET email_confirmed_at = :now WHERE email = :email AND email_confirmed_at IS NULL',
+          { transaction, replacements: { now, email } },
+        );
         console.log('admin-user: updated existing admin');
       } else {
         await queryInterface.bulkInsert(
           'users',
-          [{ email, name: null, password_hash: passwordHash, role: 'admin', created_at: now, updated_at: now }],
+          [{ email, name: null, password_hash: passwordHash, role: 'admin', email_confirmed_at: now, created_at: now, updated_at: now }],
           { transaction },
         );
         console.log('admin-user: created admin');

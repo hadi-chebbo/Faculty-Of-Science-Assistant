@@ -39,7 +39,7 @@ afterAll(async () => {
 });
 
 async function createUser(role: UserRole = "admin", email = EMAIL) {
-  return getDb().User.create({ email, passwordHash, role });
+  return getDb().User.create({ email, passwordHash, role, emailConfirmedAt: new Date() });
 }
 
 const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
