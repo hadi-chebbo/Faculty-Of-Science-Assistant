@@ -5,6 +5,7 @@ import {
   type InferAttributes,
   type InferCreationAttributes,
   type Sequelize,
+  fn,
 } from "sequelize";
 
 export type EmailJobStatus = "pending" | "sent" | "failed";
@@ -34,7 +35,9 @@ export function initEmailJob(sequelize: Sequelize): typeof EmailJob {
       payload: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
       status: { type: DataTypes.STRING, allowNull: false, defaultValue: "pending" },
       attempts: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
-      nextAttemptAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+      // The database's clock, not the app's: claims compare with now() in SQL, and an app clock even a
+      // millisecond ahead would make a new job "not due yet" so it waited for the daily sweep.
+      nextAttemptAt: { type: DataTypes.DATE, allowNull: false, defaultValue: fn("now") },
       lastError: { type: DataTypes.STRING(500), allowNull: true },
       sentAt: { type: DataTypes.DATE, allowNull: true },
       createdAt: DataTypes.DATE,
