@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
+import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { GET } from "./route";
 
@@ -37,6 +38,35 @@ describe("GET /api/cron/email-jobs", () => {
     const response = await call("Bearer right-secret");
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(await response.json()).toEqual({ processed: 0, sent: 0, retried: 0, failed: 0, pruned: 0 });
+    expect(await response.json()).toEqual({ processed: 0, sent: 0, retried: 0, failed: 0, cancelled: 0, pruned: 0, deletedUnconfirmed: 0 });
+  });
+
+  it("knows the auth email kinds (never 'unknown kind') and sends the confirmation", async () => {
+    process.env.CRON_SECRET = "right-secret";
+    const { User, EmailJob } = getDb();
+    const user = await User.create({ email: "sweep@example.com", passwordHash: "x" });
+    const job = await EmailJob.create({ kind: "confirm-email", toEmail: "sweep@example.com", payload: { userId: user.id } });
+    const other = await EmailJob.create({ kind: "already-registered", toEmail: "sweep@example.com" });
+
+    const body = await (await call("Bearer right-secret")).json();
+    expect(body).toMatchObject({ processed: 2, sent: 2, failed: 0 });
+    for (const id of [job.id, other.id]) {
+      const row = (await EmailJob.findByPk(id))!;
+      expect(row.status).toBe("sent");
+      expect(row.lastError).toBeNull();
+    }
+  });
+
+  it("deletes students never confirmed within 7 days and reports the count", async () => {
+    process.env.CRON_SECRET = "right-secret";
+    const { User } = getDb();
+    const old = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+    await User.create({ email: "stale@example.com", passwordHash: "x", createdAt: old });
+    await User.create({ email: "admin@example.com", passwordHash: "x", role: "admin", createdAt: old });
+    await User.create({ email: "fresh@example.com", passwordHash: "x" });
+
+    const body = await (await call("Bearer right-secret")).json();
+    expect(body.deletedUnconfirmed).toBe(1);
+    expect((await User.findAll()).map((u) => u.email).sort()).toEqual(["admin@example.com", "fresh@example.com"]);
   });
 });

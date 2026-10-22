@@ -1,5 +1,6 @@
 import { after } from "next/server";
 import { processEmailJob } from "@/services/email-jobs/process";
+import "@/services/register-email-handlers";
 
 // Schedules the job to be sent once the response has been sent (on Vercel `after` uses waitUntil,
 // so the work is bounded by the route's max duration). Call it only after the transaction that

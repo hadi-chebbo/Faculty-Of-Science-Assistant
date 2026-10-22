@@ -1,8 +1,8 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { verify } from "@node-rs/argon2";
 import { Op, type Transaction } from "sequelize";
 import { getDb } from "@/db/models";
-import { InvalidCredentialsError, InvalidSessionError, TooManyAttemptsError } from "../errors";
+import { EmailNotConfirmedError, InvalidCredentialsError, InvalidSessionError, TooManyAttemptsError } from "../errors";
 import { parseInput } from "../validation";
 import type { Viewer } from "../viewer";
 import { signAccessToken } from "./access-token";
@@ -15,6 +15,7 @@ import {
   REFRESH_TOKEN_TTL_SECONDS,
 } from "./constants";
 import { rawTokenSchema, signInSchema } from "./schemas";
+import { hashToken } from "./token-hash";
 import type { AccountSummary, Session, SessionTokens } from "./types";
 
 export { verifyAccessToken } from "./access-token";
@@ -25,11 +26,6 @@ const DUMMY_PASSWORD_HASH =
   "$argon2id$v=19$m=19456,t=2,p=1$Eh2E0gdAF9xip2/2qdpIwQ$RO6HuLfTYISQ1eV6bRkkZdJUTb7E9VNPbmScvDIqZhw";
 
 const seconds = (n: number) => n * 1000;
-
-// The database only ever sees this hash; the raw token lives in the cookie alone.
-function hashToken(rawToken: string): string {
-  return createHash("sha256").update(rawToken).digest("hex");
-}
 
 function toAccountSummary(user: { id: string; email: string; name: string | null; role: AccountSummary["role"] }): AccountSummary {
   return { id: user.id, email: user.email, name: user.name, role: user.role };
@@ -119,6 +115,9 @@ export async function signIn(
     await recordFailure(email, ip, now);
     throw new InvalidCredentialsError();
   }
+  // Only after the password is right, so this reveals nothing to someone who does not know it. It
+  // is not a failed attempt: the student did nothing wrong, and earlier failures are kept.
+  if (!user.emailConfirmedAt) throw new EmailNotConfirmedError();
 
   await FailedSignIn.destroy({ where: { email } });
   const tokens = await issueTokens(user, randomUUID(), now);

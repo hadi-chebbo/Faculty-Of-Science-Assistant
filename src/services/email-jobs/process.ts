@@ -58,6 +58,10 @@ export async function processEmailJob(id: string): Promise<EmailJobOutcome> {
     // The mailer first: with mail unconfigured nothing is built (no token is minted for nothing).
     const mailer = getMailer();
     const content = await handler(job);
+    if (content === null) {
+      await sequelize.query("DELETE FROM email_jobs WHERE id = $1", { bind: [id] });
+      return "cancelled";
+    }
     await mailer.send({ to: job.toEmail, ...content });
   } catch (error) {
     return fail(reasonOf(error), job.attempts >= MAX_ATTEMPTS);

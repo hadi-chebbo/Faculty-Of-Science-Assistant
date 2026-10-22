@@ -1,7 +1,13 @@
+import os from "node:os";
+import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 // Override when another checkout already uses 3100 (it would be reused as the test server).
 const port = Number(process.env.PLAYWRIGHT_PORT ?? 3100);
+
+// The server runs with the log mail driver and writes every email here; e2e/sign-up-api.spec.ts
+// reads the confirmation link from it (same expression there). Outside the repo, so Playwright cleaning cannot touch it.
+const mailLogFile = path.join(os.tmpdir(), `ua-e2e-mail-${port}.jsonl`);
 
 export default defineConfig({
   testDir: "e2e",
@@ -22,6 +28,11 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,
     // Lets e2e/cron-email-jobs.spec.ts reach the 401 path (the route answers 503 with no secret).
-    env: { CRON_SECRET: "e2e-only-cron-secret" },
+    env: {
+      CRON_SECRET: "e2e-only-cron-secret",
+      MAIL_DRIVER: "log",
+      MAIL_LOG_FILE: mailLogFile,
+      APP_URL: `http://localhost:${port}`,
+    },
   },
 });

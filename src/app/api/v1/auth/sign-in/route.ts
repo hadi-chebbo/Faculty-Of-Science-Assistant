@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { setSessionCookies } from "@/lib/auth/cookies";
 import { clientIp, isSameOrigin, NO_STORE } from "@/lib/auth/request";
-import { InvalidCredentialsError, TooManyAttemptsError, ValidationError } from "@/services/errors";
+import { EmailNotConfirmedError, InvalidCredentialsError, TooManyAttemptsError, ValidationError } from "@/services/errors";
 import { signIn } from "@/services/auth/auth";
 
 const reply = (body: object, status: number, headers: Record<string, string> = {}) =>
@@ -23,6 +23,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof ValidationError) return reply({ error: "Invalid request" }, 400);
     if (error instanceof InvalidCredentialsError) return reply({ error: "Invalid email or password" }, 401);
+    if (error instanceof EmailNotConfirmedError) {
+      return reply({ error: "Email not confirmed", code: "email_not_confirmed" }, 403);
+    }
     if (error instanceof TooManyAttemptsError) {
       return reply(
         { error: "Too many attempts", retryAfterSeconds: error.retryAfterSeconds },

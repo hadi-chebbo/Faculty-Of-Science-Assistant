@@ -24,6 +24,7 @@ beforeAll(async () => {
     text: `Hi ${String(job.payload.name)}`,
     html: `<p>Hi ${String(job.payload.name)}</p>`,
   }));
+  registerEmailHandler("test-nothing", () => null);
   registerEmailHandler("test-boom", () => {
     throw new Error("handler exploded for a@example.com");
   });
@@ -114,6 +115,14 @@ describe("processEmailJob", () => {
     expect(await sentLines()).toHaveLength(0);
   });
 
+  it("deletes the job and sends nothing when the handler returns null", async () => {
+    const id = await enqueue("test-nothing");
+    expect(await processEmailJob(id)).toBe("cancelled");
+    expect(await getDb().EmailJob.findByPk(id)).toBeNull();
+    expect(await sentLines()).toHaveLength(0);
+    expect(await processEmailJob(id)).toBe("skipped");
+  });
+
   it("fails a job of an unknown kind at once", async () => {
     const id = await enqueue("nobody-handles-this");
     expect(await processEmailJob(id)).toBe("failed");
@@ -173,10 +182,16 @@ describe("processDueEmailJobs", () => {
     expect((await sentLines()).map((l) => l.to)).toEqual(["first@example.com", "second@example.com"]);
   });
 
+  it("counts cancelled jobs separately", async () => {
+    await enqueue("test-nothing");
+    await enqueue("test-ok");
+    expect(await processDueEmailJobs()).toMatchObject({ processed: 2, sent: 1, cancelled: 1, failed: 0 });
+  });
+
   it("counts retries and failures", async () => {
     await enqueue("test-boom");
     await enqueue("nobody-handles-this");
-    expect(await processDueEmailJobs()).toMatchObject({ processed: 2, sent: 0, retried: 1, failed: 1 });
+    expect(await processDueEmailJobs()).toMatchObject({ processed: 2, sent: 0, retried: 1, failed: 1, cancelled: 0 });
   });
 
   it("deletes sent jobs older than 30 days and failed ones older than 90, nothing else", async () => {

@@ -12,13 +12,14 @@ export async function processDueEmailJobs({ limit = SWEEP_LIMIT }: { limit?: num
      ORDER BY next_attempt_at, created_at LIMIT $1`,
     { bind: [limit], type: QueryTypes.SELECT },
   );
-  const result: SweepResult = { processed: 0, sent: 0, retried: 0, failed: 0, pruned: 0 };
+  const result: SweepResult = { processed: 0, sent: 0, retried: 0, failed: 0, cancelled: 0, pruned: 0 };
   for (const { id } of due) {
     const outcome = await processEmailJob(id);
     if (outcome === "skipped") continue; // another runner took it
     result.processed += 1;
     if (outcome === "sent") result.sent += 1;
     else if (outcome === "retry") result.retried += 1;
+    else if (outcome === "cancelled") result.cancelled += 1;
     else result.failed += 1;
   }
   const [, meta] = await sequelize.query(
