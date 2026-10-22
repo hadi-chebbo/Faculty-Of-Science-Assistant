@@ -7,13 +7,18 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RESEND_MESSAGES, requestNewLink } from "@/lib/auth/resend-client";
 import { announceSessionChange } from "@/lib/auth/session-events";
+import { maskEmail } from "@/lib/mask-email";
 
 // The route sets the session cookies; this page never sees a token.
 export function SignInForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // The address whose password was right but whose email is not confirmed yet.
+  const [unconfirmed, setUnconfirmed] = useState<string | null>(null);
+  const [resend, setResend] = useState<{ pending: boolean; text: string | null }>({ pending: false, text: null });
   const [showPassword, setShowPassword] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
   const refocusPassword = useRef(false);
@@ -34,13 +39,16 @@ export function SignInForm() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "");
     setPending(true);
     setError(null);
+    setUnconfirmed(null);
+    setResend({ pending: false, text: null });
     try {
       const response = await fetch("/api/v1/auth/sign-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.get("email"), password: form.get("password") }),
+        body: JSON.stringify({ email, password: form.get("password") }),
       });
       if (response.ok) {
         const body: { user?: { role?: string } } | null = await response.json().catch(() => null);
@@ -51,6 +59,10 @@ export function SignInForm() {
       }
       if (response.status === 429) {
         setError("Too many failed attempts. Please wait a few minutes and try again.");
+      } else if (response.status === 403) {
+        const body: { code?: string } | null = await response.json().catch(() => null);
+        if (body?.code === "email_not_confirmed") setUnconfirmed(email);
+        else setError("Something went wrong. Please try again.");
       } else if (response.status === 401) {
         setError("Invalid email or password.");
         if (passwordRef.current) passwordRef.current.value = "";
@@ -65,10 +77,26 @@ export function SignInForm() {
     setPending(false);
   }
 
+  async function sendNewLink() {
+    if (!unconfirmed) return;
+    setResend({ pending: true, text: null });
+    const result = await requestNewLink(unconfirmed);
+    const text =
+      result === "network"
+        ? RESEND_MESSAGES.network
+        : result.kind === "sent" || result.kind === "wait" || result.kind === "invalid" || result.kind === "error"
+          ? RESEND_MESSAGES[result.kind]
+          : null;
+    setResend({ pending: false, text });
+  }
+
   return (
     <form
       onSubmit={onSubmit}
-      onChange={() => setError(null)}
+      onChange={() => {
+        setError(null);
+        setUnconfirmed(null);
+      }}
       aria-busy={pending}
       className="space-y-5"
     >
@@ -76,6 +104,20 @@ export function SignInForm() {
         <Alert variant="destructive">
           <AlertCircle aria-hidden />
           <AlertDescription className="font-medium text-destructive">{error}</AlertDescription>
+        </Alert>
+      )}
+      {unconfirmed && (
+        <Alert>
+          <AlertDescription className="space-y-3 text-foreground">
+            <p>Confirm your email first. We sent a link to {maskEmail(unconfirmed)}.</p>
+            <Button type="button" variant="outline" onClick={sendNewLink} disabled={resend.pending} className="h-11">
+              {resend.pending && <Loader2 className="animate-spin" aria-hidden />}
+              Send a new link
+            </Button>
+            <p role="status" className="font-medium text-heading empty:hidden">
+              {resend.text}
+            </p>
+          </AlertDescription>
         </Alert>
       )}
       <div className="space-y-2">
