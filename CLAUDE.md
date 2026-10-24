@@ -96,8 +96,10 @@ mock exam generation, personalization.
 - Todo (proposed, `todos`): a card on a student's to-do board. Belongs to a user;
   status (todo, in_progress, done), position within its status, title (≤200,
   optional when a resource is linked), optional note (≤2000), optional resource
-  (set to null if the resource is deleted). At most 500 per user. Moving a card
-  to Done never creates or removes a completion.
+  (set to null if the resource is deleted), created/updated/status-changed times,
+  soft-delete time (kept a day so Undo works). At most 500 per user. Moving a
+  card to Done never creates or removes a completion. Spec:
+  `docs/specs/saved-and-todo.md`.
 
 ## Stack (proposed)
 
