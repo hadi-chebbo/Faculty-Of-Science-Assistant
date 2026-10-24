@@ -150,7 +150,7 @@ test("unusable parameters are ignored", async ({ page }) => {
 });
 
 // 43 demo exams at 20 per page make three pages. The paging maths is covered in
-// src/app/exams/params.test.ts; this checks the pager on the real list and its edges.
+// src/app/(site)/exams/params.test.ts; this checks the pager on the real list and its edges.
 test("paging: the pager walks the pages, and a page past the end shows the empty state", async ({ page }) => {
   await page.goto("/exams");
   await expect(page.getByRole("link", { name: /^(Go to )?next/i })).toHaveCount(1);

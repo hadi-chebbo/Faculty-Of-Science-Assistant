@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import pg from "pg";
-import { ZOOM_LEVELS } from "../src/app/resources/[id]/reader-zoom";
+import { ZOOM_LEVELS } from "../src/app/(site)/resources/[id]/reader-zoom";
 import { samplePdf } from "../src/lib/storage/sample-pdf";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed (with STORAGE_DRIVER=local).
