@@ -30,9 +30,11 @@ In:
 - Read every resource on a page of our own (the reader), and download it.
 - Admin-only upload and tagging of resources (one at a time, or in bulk per course).
 - Student sign-up with email confirmation (pulled forward by the owner, 2026-10-21).
+- Saved resources and a private to-do board, for signed-in users only (pulled forward by the
+  owner, 2026-10-24; terms in `GLOSSARY.md`).
 
 After launch, in this order:
-- Bookmarks, explicit "mark as done".
+- Explicit "mark as done".
 - Per-course AI Q&A grounded in uploaded material, with source citations.
 
 Out until explicitly agreed: student uploads, interactive exercises, scoring,
@@ -90,6 +92,12 @@ mock exam generation, personalization.
   stored; no link to users, so unknown emails are counted too. Old rows are pruned.
 - Bookmark and Completion: each one row per (user, resource). A completion
   means the student explicitly marked the resource done; un-marking deletes it.
+  A bookmark is shown to students as a "Saved resource".
+- Todo (proposed, `todos`): a card on a student's to-do board. Belongs to a user;
+  status (todo, in_progress, done), position within its status, title (≤200,
+  optional when a resource is linked), optional note (≤2000), optional resource
+  (set to null if the resource is deleted). At most 500 per user. Moving a card
+  to Done never creates or removes a completion.
 
 ## Stack (proposed)
 
