@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   await page.setExtraHTTPHeaders({ "x-forwarded-for": `10.${octet()}.${octet()}.${octet()}` });
 });
 
-test("the brand panel shows on desktop; a phone shows the form only (the brand is in the bar)", async ({ page, isMobile }) => {
+test("the brand panel shows on desktop; a phone shows the brand in the bar and the form", async ({ page, isMobile }) => {
   await page.goto("/sign-in");
   const panel = page.getByTestId("auth-panel");
   await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();

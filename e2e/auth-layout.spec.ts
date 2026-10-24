@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
-// The account pages have their own layout (slim bar, no site navigation); site pages keep the full chrome.
+// The account pages are full-screen (no site header, navigation or footer); site pages keep the full chrome.
 const DISCLAIMER =
   "Independent student project. Not an official Lebanese University website.";
 
@@ -11,7 +11,7 @@ for (const path of [
   "/sign-up/check-email",
   "/confirm-email",
 ]) {
-  test(`${path} uses the slim account layout`, async ({ page }) => {
+  test(`${path} is a full-screen account page`, async ({ page }) => {
     await page.goto(path);
     await expect(page.getByRole("banner")).toHaveCount(1);
     await expect(page.locator('nav[aria-label="Main"]')).toHaveCount(0);
@@ -21,10 +21,9 @@ for (const path of [
     await expect(
       page.getByRole("banner").getByRole("link", { name: "Sign in" }),
     ).toHaveCount(0);
+    // The brand links home: in the panel on desktop, in the bar on a phone.
     await expect(
-      page
-        .getByRole("banner")
-        .getByRole("link", { name: "University Assistant" }),
+      page.getByRole("link", { name: "University Assistant" }).filter({ visible: true }),
     ).toHaveAttribute("href", "/");
     await expect(
       page.getByRole("banner").getByRole("button", { name: /theme/i }),
@@ -38,10 +37,11 @@ test("a site page keeps the full navigation", async ({ page }) => {
   await expect(page.locator('nav[aria-label="Main"]')).toHaveCount(2);
 });
 
-for (const path of ["/does-not-exist", `/resources/${randomUUID()}`]) {
-  test(`${path.replace(/[0-9a-f-]{36}/, "<uuid>")} shows Page not found with the header once`, async ({
-    page,
-  }) => {
+for (const { path, label } of [
+  { path: "/does-not-exist", label: "an unmatched URL" },
+  { path: `/resources/${randomUUID()}`, label: "notFound() from a site page" },
+]) {
+  test(`${label} shows Page not found with the header once`, async ({ page }) => {
     await page.goto(path);
     await expect(
       page.getByRole("heading", { name: "Page not found" }),

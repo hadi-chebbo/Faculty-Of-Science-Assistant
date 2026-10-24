@@ -15,7 +15,7 @@ const linkClass =
 
 export default function SignInPage() {
   return (
-    <main>
+    <>
       <AuthShell panel={<BrandPanel />}>
         <PageTitle description="Sign in to continue.">Welcome back</PageTitle>
         <SignInForm />
@@ -34,6 +34,6 @@ export default function SignInPage() {
       <Suspense fallback={null}>
         <RedirectIfSignedIn />
       </Suspense>
-    </main>
+    </>
   );
 }

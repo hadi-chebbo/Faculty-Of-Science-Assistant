@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Create your account", robots: { inde
 
 export default function SignUpPage() {
   return (
-    <main>
+    <>
       <AuthShell panel={<BrandPanel />}>
         <PageTitle description="Free. Confirm your email to start.">Create your account</PageTitle>
         <SignUpForm />
@@ -28,6 +28,6 @@ export default function SignUpPage() {
       <Suspense fallback={null}>
         <RedirectIfSignedIn />
       </Suspense>
-    </main>
+    </>
   );
 }
