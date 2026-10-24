@@ -51,6 +51,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { useRichBoard, VariantD, VariantE } from "./rich-board";
 
 // ---------- fake data ----------
 
@@ -704,12 +706,26 @@ const VARIANTS = [
   { key: "A", name: "Jira columns" },
   { key: "B", name: "Grouped list" },
   { key: "C", name: "Focus on now" },
+  { key: "D", name: "Rich columns" },
+  { key: "E", name: "Course lanes" },
 ];
 
 export function TodoPrototype() {
   const board = useBoard();
-  const variant = useSearchParams().get("variant") ?? "A";
-  const wide = variant === "A";
+  const rich = useRichBoard();
+  const variant = useSearchParams().get("variant") ?? "D";
+  const wide = ["A", "D", "E"].includes(variant);
+  if (variant === "D" || variant === "E") {
+    return (
+      <TooltipProvider>
+        <main className="mx-auto w-full max-w-7xl px-4 py-6 md:py-8">
+          <PageTitle description="Your own plan. Only you can see it.">To-do</PageTitle>
+          {variant === "D" ? <VariantD board={rich} /> : <VariantE board={rich} />}
+          <PrototypeSwitcher variants={VARIANTS} fallback="D" />
+        </main>
+      </TooltipProvider>
+    );
+  }
   return (
     <main className={`mx-auto w-full px-4 py-6 md:py-8 ${wide ? "max-w-6xl" : "max-w-4xl"}`}>
       <PageTitle description="Your own plan. Only you can see it.">To-do</PageTitle>
@@ -727,7 +743,7 @@ export function TodoPrototype() {
           )}
         </pre>
       </details>
-      <PrototypeSwitcher variants={VARIANTS} />
+      <PrototypeSwitcher variants={VARIANTS} fallback="D" />
     </main>
   );
 }

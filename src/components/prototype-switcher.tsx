@@ -5,11 +5,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
-export function PrototypeSwitcher({ variants }: { variants: { key: string; name: string }[] }) {
+export function PrototypeSwitcher({ variants, fallback }: { variants: { key: string; name: string }[]; fallback?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const current = params.get("variant") ?? variants[0].key;
+  const current = params.get("variant") ?? fallback ?? variants[0].key;
   const index = Math.max(0, variants.findIndex((v) => v.key === current));
 
   function go(step: number) {
