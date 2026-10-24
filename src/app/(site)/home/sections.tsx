@@ -1,6 +1,6 @@
 import { ClipboardCheck, ListTree, PencilLine, Smartphone } from "lucide-react";
 import Link from "next/link";
-import { examsHref } from "@/app/exams/params";
+import { examsHref } from "@/app/(site)/exams/params";
 import type { ExamSession } from "@/db/constants";
 import { SectionTitle } from "./section-title";
 

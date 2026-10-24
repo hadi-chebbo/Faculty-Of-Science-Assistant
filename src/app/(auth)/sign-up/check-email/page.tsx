@@ -8,11 +8,11 @@ export const metadata: Metadata = { title: "Check your inbox", robots: { index: 
 
 export default function CheckEmailPage() {
   return (
-    <main>
+    <>
       <AuthShell panel={<BrandPanel />}>
         <PageTitle>Check your inbox</PageTitle>
         <CheckEmail />
       </AuthShell>
-    </main>
+    </>
   );
 }

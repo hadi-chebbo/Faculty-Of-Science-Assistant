@@ -1,22 +1,12 @@
-import { FileQuestion } from "lucide-react";
-import Link from "next/link";
-import { StateBlock } from "@/components/site/state-block";
-import { Button } from "@/components/ui/button";
+import { NotFoundContent } from "@/components/site/not-found-content";
+import { SiteChrome } from "@/components/site/site-chrome";
 
+// Unmatched URLs only: they render outside the (site) layout, so this adds the site frame.
+// notFound() called from a site page uses (site)/not-found.tsx, which sits inside that layout.
 export default function NotFound() {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
-      <StateBlock
-        icon={FileQuestion}
-        title="Page not found"
-        actions={
-          <Button asChild className="h-11 md:h-9">
-            <Link href="/">Back to home</Link>
-          </Button>
-        }
-      >
-        The page you are looking for does not exist or has moved.
-      </StateBlock>
-    </main>
+    <SiteChrome>
+      <NotFoundContent />
+    </SiteChrome>
   );
 }

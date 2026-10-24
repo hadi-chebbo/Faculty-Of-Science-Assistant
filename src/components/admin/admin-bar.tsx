@@ -1,6 +1,6 @@
 import { ExternalLink } from "lucide-react";
 import Link from "next/link";
-import { SignOutButton } from "@/app/admin/sign-out-button";
+import { SignOutButton } from "@/app/(site)/admin/sign-out-button";
 import { cn } from "@/lib/utils";
 
 const SECTIONS = [

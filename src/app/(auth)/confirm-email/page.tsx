@@ -12,10 +12,10 @@ export const metadata: Metadata = {
 
 export default function ConfirmEmailPage() {
   return (
-    <main>
+    <>
       <AuthShell panel={<BrandPanel />}>
         <ConfirmEmail />
       </AuthShell>
-    </main>
+    </>
   );
 }

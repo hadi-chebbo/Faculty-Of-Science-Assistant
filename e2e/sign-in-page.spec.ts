@@ -7,14 +7,14 @@ test.beforeEach(async ({ page }) => {
   await page.setExtraHTTPHeaders({ "x-forwarded-for": `10.${octet()}.${octet()}.${octet()}` });
 });
 
-test("the brand panel shows on desktop; a phone shows the brand name and the form only", async ({ page, isMobile }) => {
+test("the brand panel shows on desktop; a phone shows the brand in the bar and the form", async ({ page, isMobile }) => {
   await page.goto("/sign-in");
   const panel = page.getByTestId("auth-panel");
   await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
   await expect(page.getByLabel("Email")).toBeVisible();
   if (isMobile) {
     await expect(panel).toBeHidden();
-    await expect(page.getByRole("main").getByText("University Assistant", { exact: true }).filter({ visible: true })).toHaveCount(1);
+    await expect(page.getByRole("banner").getByRole("link", { name: "University Assistant" })).toBeVisible();
   } else {
     await expect(panel).toBeVisible();
     await expect(panel.getByText("Every course, chapter and past exam in one place.")).toBeVisible();
