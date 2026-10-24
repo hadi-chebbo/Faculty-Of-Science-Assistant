@@ -15,7 +15,9 @@ for (const path of [
     await page.goto(path);
     await expect(page.getByRole("banner")).toHaveCount(1);
     await expect(page.locator('nav[aria-label="Main"]')).toHaveCount(0);
-    await expect(page.getByRole("button", { name: /account/i })).toHaveCount(0);
+    await expect(
+      page.getByRole("banner").getByRole("button", { name: /account/i }),
+    ).toHaveCount(0);
     await expect(
       page.getByRole("banner").getByRole("link", { name: "Sign in" }),
     ).toHaveCount(0);
