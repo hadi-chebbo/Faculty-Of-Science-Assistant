@@ -45,7 +45,7 @@ async function sessionCookies(page: Page) {
 
 test("a signed-out visitor to /admin is sent to /sign-in", async ({ page }) => {
   await page.goto("/admin");
-  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin$/);
   await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 });
@@ -112,14 +112,14 @@ test("signing out ends the session and clears the cookies", async ({ page }) => 
   expect(await sessionCookies(page)).toEqual({ access: undefined, refresh: undefined });
 
   await page.goto("/admin");
-  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin[^&]*$/);
 
   // The old refresh token is dead on the server too, not only removed from the browser.
   await page.context().addCookies([
     { name: "ua_refresh", value: refresh!.value, domain: "localhost", path: "/api/v1/auth", httpOnly: true, sameSite: "Lax" },
   ]);
   await page.goto("/admin");
-  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin[^&]*$/);
 });
 
 test("an expired access token is renewed silently from the refresh cookie", async ({ page }) => {
@@ -144,7 +144,7 @@ test("a rejected refresh cookie sends the visitor to /sign-in and clears the coo
     { name: "ua_refresh", value: "not-a-real-token", domain: "localhost", path: "/api/v1/auth", httpOnly: true, sameSite: "Lax" },
   ]);
   await page.goto("/admin");
-  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin[^&]*$/);
   expect((await sessionCookies(page)).refresh).toBeUndefined();
 });
 
@@ -243,4 +243,43 @@ test("public pages render the same signed in and signed out", async ({ page }) =
   expect(signedIn).toEqual(signedOut);
   // Drafts only ever appear inside /admin.
   expect(signedIn.join("\n")).not.toContain("Sample draft lecture");
+});
+
+test("sign-in returns to the page named by ?next", async ({ page }) => {
+  await ownAddress(page);
+  await page.goto("/sign-in?next=/courses/DEMO301");
+  await page.getByLabel("Email").fill(STUDENT_EMAIL);
+  await page.getByLabel("Password", { exact: true }).fill(STUDENT_PASSWORD);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/courses\/DEMO301$/);
+});
+
+test("an unsafe ?next is ignored and the default destination is used", async ({ page }) => {
+  await ownAddress(page);
+  await page.goto(`/sign-in?next=${encodeURIComponent("//evil.example")}`);
+  await page.getByLabel("Email").fill(STUDENT_EMAIL);
+  await page.getByLabel("Password", { exact: true }).fill(STUDENT_PASSWORD);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL((url) => url.pathname === "/");
+  expect(new URL(page.url()).hostname).not.toContain("evil");
+});
+
+test("a signed-in visitor opening /sign-in?next=... is sent there", async ({ page }) => {
+  await ownAddress(page);
+  await signInThroughForm(page, STUDENT_EMAIL, STUDENT_PASSWORD);
+  await expect(page).toHaveURL((url) => url.pathname === "/");
+  await page.goto("/sign-in?next=/courses/DEMO301");
+  await expect(page).toHaveURL(/\/courses\/DEMO301$/);
+  await page.goto(`/sign-in?next=${encodeURIComponent("//evil.example")}`);
+  await expect(page).toHaveURL((url) => url.pathname === "/");
+});
+
+test("a signed-out visitor to an admin page signs in and returns to it", async ({ page }) => {
+  await ownAddress(page);
+  await page.goto("/admin/resources/new");
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin%2Fresources%2Fnew$/);
+  await page.getByLabel("Email").fill(ADMIN_EMAIL);
+  await page.getByLabel("Password", { exact: true }).fill(ADMIN_PASSWORD);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/admin\/resources\/new$/);
 });

@@ -11,7 +11,7 @@ export async function requireAdminPage(nextPath: string) {
   // No valid access token (never signed in, or it expired): the restore route either renews the
   // session from the refresh cookie and returns here, or sends the visitor to /sign-in.
   const account = await getAccount(viewer);
-  if (!account) redirect(`/api/v1/auth/restore?next=${nextPath}`);
+  if (!account) redirect(`/api/v1/auth/restore?next=${encodeURIComponent(nextPath)}`);
 
   const admin: Viewer = { id: account.id, role: account.role };
 

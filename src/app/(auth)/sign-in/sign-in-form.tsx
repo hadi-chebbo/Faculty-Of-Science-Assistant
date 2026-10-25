@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RESEND_MESSAGES, requestNewLink } from "@/lib/auth/resend-client";
+import { safeNextPath } from "@/lib/auth/request";
 import { announceSessionChange } from "@/lib/auth/session-events";
 import { maskEmail } from "@/lib/mask-email";
 
@@ -54,7 +55,9 @@ export function SignInForm() {
         const body: { user?: { role?: string } } | null = await response.json().catch(() => null);
         announceSessionChange();
         // Stay in the loading state until the navigation replaces this page.
-        router.replace(body?.user?.role === "admin" ? "/admin" : "/");
+        // `next` is only ever used as a path here, after the same-site check; it is never rendered.
+        const next = new URLSearchParams(window.location.search).get("next");
+        router.replace(safeNextPath(next, body?.user?.role === "admin" ? "/admin" : "/"));
         return;
       }
       if (response.status === 429) {

@@ -48,6 +48,19 @@ describe("safeNextPath", () => {
     expect(safeNextPath("/admin/resources?page=2")).toBe("/admin/resources?page=2");
   });
 
+  it("keeps a course page path and its query", () => {
+    expect(safeNextPath("/courses/DEMO301")).toBe("/courses/DEMO301");
+    expect(safeNextPath("/exams?course=DEMO301&page=2", "/")).toBe("/exams?course=DEMO301&page=2");
+  });
+
+  it("returns the given fallback instead of /admin", () => {
+    expect(safeNextPath("//evil", "/")).toBe("/");
+    expect(safeNextPath(null, "/")).toBe("/");
+    expect(safeNextPath("https:evil.example", "/")).toBe("/");
+    expect(safeNextPath("/ok\\evil", "/")).toBe("/");
+    expect(safeNextPath("javascript:alert(1)", "")).toBe("");
+  });
+
   it("falls back for anything that could leave the site", () => {
     for (const value of [
       "//evil.example",

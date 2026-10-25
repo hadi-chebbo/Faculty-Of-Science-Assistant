@@ -14,11 +14,14 @@ const redirectTo = (request: NextRequest, path: string) =>
 // link on another site cannot make it rotate the visitor's tokens). `next` must be a same-site
 // relative path; anything else becomes /admin.
 export async function GET(request: NextRequest) {
-  const next = safeNextPath(request.nextUrl.searchParams.get("next"));
+  const rawNext = request.nextUrl.searchParams.get("next");
+  const next = safeNextPath(rawNext);
+  // Sent along to /sign-in so the visitor returns here after signing in (only when it is a safe path).
+  const signIn = safeNextPath(rawNext, "") ? `/sign-in?next=${encodeURIComponent(next)}` : "/sign-in";
   if (request.headers.get("sec-fetch-site") === "cross-site") return redirectTo(request, "/sign-in");
 
   const refreshToken = readRefreshCookie(request);
-  if (!refreshToken) return redirectTo(request, "/sign-in");
+  if (!refreshToken) return redirectTo(request, signIn);
 
   try {
     const session = await refreshSession(refreshToken);
@@ -26,7 +29,7 @@ export async function GET(request: NextRequest) {
     setSessionCookies(response, request, session);
     return response;
   } catch (error) {
-    const response = redirectTo(request, "/sign-in");
+    const response = redirectTo(request, signIn);
     if (error instanceof InvalidSessionError) {
       // Leaves no valid cookie behind, so /admin and /sign-in cannot bounce the visitor in a loop.
       clearSessionCookies(response, request);
