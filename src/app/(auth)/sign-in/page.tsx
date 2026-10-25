@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Sign in", robots: { index: false, fo
 const linkClass =
   "inline-flex min-h-11 items-center gap-1.5 rounded-md text-sm font-medium text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
-export default function SignInPage() {
+export default function SignInPage({ searchParams }: { searchParams: Promise<{ next?: string | string[] }> }) {
   return (
     <>
       <AuthShell panel={<BrandPanel />}>
@@ -32,7 +32,7 @@ export default function SignInPage() {
       </AuthShell>
       {/* Reads the cookie, so it streams in; the form itself is part of the static shell. */}
       <Suspense fallback={null}>
-        <RedirectIfSignedIn />
+        <RedirectIfSignedIn searchParams={searchParams} />
       </Suspense>
     </>
   );
