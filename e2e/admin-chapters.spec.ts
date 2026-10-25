@@ -104,7 +104,7 @@ async function expectCAB(page: Page, courseId: string) {
 
 test("a signed-out visitor to /admin/chapters ends on /sign-in", async ({ page }) => {
   await page.goto("/admin/chapters");
-  await expect(page).toHaveURL(/\/sign-in(\?next=%2Fadmin[^&]*)?$/);
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin[^&]*$/);
 });
 
 test("the admin bar leads to the chapters page, which asks for a course", async ({ page }) => {

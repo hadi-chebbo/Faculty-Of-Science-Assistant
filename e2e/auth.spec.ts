@@ -45,7 +45,7 @@ async function sessionCookies(page: Page) {
 
 test("a signed-out visitor to /admin is sent to /sign-in", async ({ page }) => {
   await page.goto("/admin");
-  await expect(page).toHaveURL(/\/sign-in(\?next=%2Fadmin)?$/);
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin$/);
   await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 });
@@ -112,14 +112,14 @@ test("signing out ends the session and clears the cookies", async ({ page }) => 
   expect(await sessionCookies(page)).toEqual({ access: undefined, refresh: undefined });
 
   await page.goto("/admin");
-  await expect(page).toHaveURL(/\/sign-in(\?next=%2Fadmin[^&]*)?$/);
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin[^&]*$/);
 
   // The old refresh token is dead on the server too, not only removed from the browser.
   await page.context().addCookies([
     { name: "ua_refresh", value: refresh!.value, domain: "localhost", path: "/api/v1/auth", httpOnly: true, sameSite: "Lax" },
   ]);
   await page.goto("/admin");
-  await expect(page).toHaveURL(/\/sign-in(\?next=%2Fadmin[^&]*)?$/);
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin[^&]*$/);
 });
 
 test("an expired access token is renewed silently from the refresh cookie", async ({ page }) => {
@@ -144,7 +144,7 @@ test("a rejected refresh cookie sends the visitor to /sign-in and clears the coo
     { name: "ua_refresh", value: "not-a-real-token", domain: "localhost", path: "/api/v1/auth", httpOnly: true, sameSite: "Lax" },
   ]);
   await page.goto("/admin");
-  await expect(page).toHaveURL(/\/sign-in(\?next=%2Fadmin[^&]*)?$/);
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin[^&]*$/);
   expect((await sessionCookies(page)).refresh).toBeUndefined();
 });
 

@@ -32,7 +32,7 @@ async function signInAsAdmin(page: Page) {
 
 test("a signed-out visitor to /admin ends on /sign-in", async ({ page }) => {
   await page.goto("/admin");
-  await expect(page).toHaveURL(/\/sign-in(\?next=%2Fadmin[^&]*)?$/);
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fadmin[^&]*$/);
 });
 
 test("the admin sees drafts and published rows, filtered by course", async ({ page }) => {
