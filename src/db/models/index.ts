@@ -10,6 +10,7 @@ import { FailedSignIn, initFailedSignIn } from "./failed-sign-in";
 import { RateLimitEvent, initRateLimitEvent } from "./rate-limit-event";
 import { RefreshToken, initRefreshToken } from "./refresh-token";
 import { Resource, initResource } from "./resource";
+import { Todo, initTodo } from "./todo";
 import { User, initUser } from "./user";
 
 export {
@@ -23,6 +24,7 @@ export {
   RateLimitEvent,
   RefreshToken,
   Resource,
+  Todo,
   User,
 };
 
@@ -39,6 +41,7 @@ export interface Db {
   EmailJob: typeof EmailJob;
   EmailConfirmation: typeof EmailConfirmation;
   RateLimitEvent: typeof RateLimitEvent;
+  Todo: typeof Todo;
 }
 
 // Cached on globalThis together with the connection, so hot reload never re-initialises models.
@@ -60,6 +63,7 @@ export function getDb(): Db {
   initEmailJob(sequelize);
   initEmailConfirmation(sequelize);
   initRateLimitEvent(sequelize);
+  initTodo(sequelize);
 
   Course.hasMany(Resource, { foreignKey: "courseId", as: "resources" });
   Resource.belongsTo(Course, { foreignKey: "courseId", as: "course" });
@@ -84,6 +88,11 @@ export function getDb(): Db {
   Resource.hasMany(Bookmark, { foreignKey: "resourceId", as: "bookmarks" });
   Resource.hasMany(Completion, { foreignKey: "resourceId", as: "completions" });
 
-  globalForDb.__db = { sequelize, Course, Chapter, Resource, User, RefreshToken, Bookmark, Completion, FailedSignIn, EmailJob, EmailConfirmation, RateLimitEvent };
+  User.hasMany(Todo, { foreignKey: "userId", as: "todos" });
+  Todo.belongsTo(User, { foreignKey: "userId", as: "user" });
+  Todo.belongsTo(Resource, { foreignKey: "resourceId", as: "resource" });
+  Resource.hasMany(Todo, { foreignKey: "resourceId", as: "todos" });
+
+  globalForDb.__db = { sequelize, Course, Chapter, Resource, User, RefreshToken, Bookmark, Completion, FailedSignIn, EmailJob, EmailConfirmation, RateLimitEvent, Todo };
   return globalForDb.__db;
 }

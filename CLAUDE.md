@@ -93,13 +93,14 @@ mock exam generation, personalization.
 - Bookmark and Completion: each one row per (user, resource). A completion
   means the student explicitly marked the resource done; un-marking deletes it.
   A bookmark is shown to students as a "Saved resource".
-- Todo (proposed, `todos`): a card on a student's to-do board. Belongs to a user;
-  status (todo, in_progress, done), position within its status, title (≤200,
-  optional when a resource is linked), optional note (≤2000), optional resource
-  (set to null if the resource is deleted), created/updated/status-changed times,
-  soft-delete time (kept a day so Undo works). At most 500 per user. Moving a
-  card to Done never creates or removes a completion. Spec:
-  `docs/specs/saved-and-todo.md`.
+- Todo (`todos`; a "card" in the interface): a card on a student's to-do board. Belongs to a user
+  (cascade); status (todo, in_progress, done; check constraint), position within its status (0 is
+  the top, renumbered on write), title (≤200, "" allowed in the table: the service requires a title
+  until cards can link a file), note (≤2000, "" when none), optional resource (set to null if the
+  resource is deleted), created/updated/status-changed times, soft-delete time (kept a day so
+  Undo works; the user's old ones are purged whenever their board is loaded). At most 500 live
+  cards per user (`BoardFullError`, 409 `board_full`). Moving a card to Done never creates or
+  removes a completion. Spec: `docs/specs/saved-and-todo.md`.
 
 ## Stack (proposed)
 
@@ -160,6 +161,9 @@ mock exam generation, personalization.
   - Yellow `#FDB91F`: decorative only (a short 4px bar under page titles). Never text. The one other
     use (owner-approved in the reader mockup) is a pale yellow background behind text for search
     highlights in the reader; the text itself is never yellow.
+  - Success green (`--success` / `--success-foreground`: `#166534` on white text in light, `#4ADE80`
+    on `#0B1A10` text in dark; 7.1:1 and 10.3:1): for Done on the to-do board only (column bar,
+    check marks, later the Done button). Not a general positive colour.
   - Light theme: headings `#41454F`, body text `#575757`, page `#F5F5F5`, muted `#F8F8F8`,
     cards white. The dark theme uses dark neutral surfaces with light text.
   - Text contrast is at least 4.5:1 in both themes.
@@ -169,7 +173,7 @@ mock exam generation, personalization.
   (Browse, Exams, Search). Desktop (md and up): the same items inline in the top bar and a
   breadcrumb trail on inner pages. An item without a page would be shown disabled. The account pages (sign-in, sign-up, check-email, confirm-email) are the exception: see the Sign-in page bullet. The top bar
   also shows a "Sign in" link or, when signed in, an account button with the user's name
-  (never the email) and a menu with Saved (everyone signed in), Admin (admins only) and Sign out.
+  (never the email) and a menu with Saved and To-do (everyone signed in), Admin (admins only) and Sign out.
 - Home is a landing page: a hero (headline, description, "Browse courses" and "Previous exams"
   buttons, three facts, and a decorative course preview), a numbers strip (only from 5 courses), the
   semester cards (an empty semester is a muted card, not a link), how it works, what you will find,
@@ -275,6 +279,25 @@ mock exam generation, personalization.
   static: the browser asks `GET /api/v1/saved/ids` once per page load (never for a visitor) and all
   icons share the answer; toasts are the reader's. The row's `action` slot is for extra controls
   beside the bookmark.
+- To-do board (`/todo`): private like `/saved` (server-rendered, `noindex`, `no-store`, same
+  `requireSignedInPage` / restore / `/sign-in?next=%2Ftodo` path), reached from "To-do" in the account
+  menu (nothing in the phone tab bar). Look follows prototype variant D. Desktop (md and up): breadcrumb
+  Home › To-do, a "New card" button (shortcut N, only when focus is not in a field and no modifier is
+  held) and three tinted columns side by side, each with a coloured top bar, icon, label and count, and
+  a friendly empty text; "Add a card" at the bottom of each column opens a
+  small form with one title field: Enter adds the card and keeps the form open, an empty title does
+  nothing, Esc or Cancel closes it and returns focus to "Add a card". Phone: three tabs (icon, label,
+  count, coloured underline) show one column at a time, and a round 56px `+` button above the bottom
+  tab bar (safe-area aware) opens the form of the tab shown. A card has the note icon, the title, a
+  two-line note preview when there is a note, and "Added 2 hours ago" (Done cards: "Done …" from the
+  status-changed time, with a green check); times come from the server's clock at first render and
+  refresh every minute. Adding is optimistic: the card appears at the top of its column at once, is
+  replaced by the server's card, or removed with a toast ("Couldn't add the card. Try again." / "Your
+  board is full (500 cards). Delete some to add more."); a 401 renews the session once, then goes to
+  sign-in. Requests are sent one after another so cards keep the order they were added in. API:
+  `GET` / `POST /api/v1/todos` (`{ title, note?, status? }`, 201 `{ card }`, 400 `fields`, 409
+  `board_full`). Not built yet: card view, editing, delete and Undo, Start / Done, moving, drag and
+  drop, linked files, filters (see the spec).
 - Sign-in page (`/sign-in`): a full-screen split. On desktop (md and up) a deep-blue panel (the `brand-panel` token, white text, same in both themes) with the brand name, the home headline and three feature lines sits beside the form; on a phone the panel is hidden. The account pages (in the `src/app/(auth)` route group) are full-screen pages without the site header, footer or tab bar: the panel fills the left side on desktop, and the right side has a slim bar (the brand linking home on a phone, the theme toggle), the form centred, and the disclaimer under it. The form shows errors in one destructive alert, clears and focuses the password after a wrong one, has a show/hide password button and a Caps Lock hint. The split is `AuthShell` in `src/components/auth`. It also shows "New here? Create an account" (to `/sign-up`) above "Back to courses". When the password is right but the email is not confirmed (403 `email_not_confirmed`) it shows a default (not destructive) alert, "Confirm your email first. We sent a link to s•••@gmail.com.", with a "Send a new link" button that posts the typed address to the resend endpoint and answers "A new link is on its way." (429: "Please wait before asking for another link."); the password is kept. The header still shows only "Sign in"; sign-up is reached from the sign-in page. `?next=` (a same-site path checked by `safeNextPath`) is where sign-in sends the visitor afterwards, also when already signed in (`/admin` pages send a signed-out visitor there with their own path); otherwise admins go to `/admin` and students to `/`. Sign-up does not carry it.
 - The account pages share `BrandPanel` (the panel content) and `AuthShell`; each is `noindex`, has 44px touch targets and shows errors in one destructive alert.
 - Sign-up page (`/sign-up`; a signed-in visitor is redirected, like on `/sign-in`): "Create your account", fields Name (optional), Email and Password (show/hide, hint "At least 10 characters.", length also validated in the browser; no repeat field), "Create account", and a link to `/sign-in`. Field errors from a 400 show on the fields; a 429 says there were too many sign-ups from this network. On 202 the address is kept in `sessionStorage` (`signup:email`, never in the URL) and the page goes to `/sign-up/check-email`.

@@ -3,10 +3,10 @@ import { getViewer } from "@/lib/auth/viewer";
 import { isSameOrigin } from "@/lib/auth/request";
 import { reply } from "@/lib/resources-api";
 import { getAccount } from "@/services/auth/auth";
-import { NotFoundError } from "@/services/errors";
+import { BoardFullError, NotFoundError, ValidationError } from "@/services/errors";
 import type { Viewer } from "@/services/viewer";
 
-// Shared by the saved-resource routes, which any signed-in user may call (the admin write routes
+// Shared by the saved-resource and to-do routes, which any signed-in user may call (the admin write routes
 // use `adminWrite`). `request` is given for writes, which need the same-origin check first. The
 // viewer is the account that still exists, with the role from the database; no or an expired
 // token, or a deleted user, is 401. A not-found error is 404; anything else is 500.
@@ -23,7 +23,9 @@ export async function signedIn(
     return await action({ id: account.id, role: account.role });
   } catch (error) {
     if (error instanceof NotFoundError) return reply({ error: "Resource not found" }, 404);
-    console.error("saved resources failed", error);
+    if (error instanceof ValidationError) return reply({ error: "Invalid input", fields: error.fields }, 400);
+    if (error instanceof BoardFullError) return reply({ error: "board_full" }, 409);
+    console.error("signed-in request failed", error);
     return reply({ error: "Internal error" }, 500);
   }
 }

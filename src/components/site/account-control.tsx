@@ -72,6 +72,9 @@ export function AccountControl() {
         <DropdownMenuItem asChild className="min-h-11 md:min-h-8">
           <Link href="/saved">Saved</Link>
         </DropdownMenuItem>
+        <DropdownMenuItem asChild className="min-h-11 md:min-h-8">
+          <Link href="/todo">To-do</Link>
+        </DropdownMenuItem>
         {account.role === "admin" && (
           <DropdownMenuItem asChild className="min-h-11 md:min-h-8">
             <Link href="/admin">Admin</Link>

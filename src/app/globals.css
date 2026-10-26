@@ -8,6 +8,8 @@
   --color-heading: var(--heading);
   --color-link: var(--link);
   --color-highlight: var(--highlight);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-brand-panel: var(--brand-panel);
   --color-brand-panel-foreground: var(--brand-panel-foreground);
   --color-reader-surface: var(--reader-surface);
@@ -68,6 +70,9 @@
   --primary-foreground: #ffffff;
   --link: #3e4eb8;
   --highlight: #fdb91f;
+  /* Green for Done on the to-do board only (column bar, check marks, the Done button). */
+  --success: #166534;
+  --success-foreground: #ffffff;
   /* Auth side panel: deep blue with white text in both themes (white on the dark primary fails AA). */
   --brand-panel: #3e4eb8;
   --brand-panel-foreground: #ffffff;
@@ -116,6 +121,8 @@
   --primary-foreground: #0e1220;
   --link: #8da2ff;
   --highlight: #fdb91f;
+  --success: #4ade80;
+  --success-foreground: #0b1a10;
   --brand-panel: #3e4eb8;
   --brand-panel-foreground: #ffffff;
   --secondary: #252936;
