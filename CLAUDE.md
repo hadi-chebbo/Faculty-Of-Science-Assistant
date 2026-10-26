@@ -96,8 +96,8 @@ mock exam generation, personalization.
 - Todo (`todos`; a "card" in the interface): a card on a student's to-do board. Belongs to a user
   (cascade); status (todo, in_progress, done; check constraint), position within its status (0 is
   the top, renumbered on write), title (≤200, "" allowed in the table: the service requires a title
-  until cards can link a file), note (≤2000, "" when none), optional resource (set to null if the
-  resource is deleted), created/updated/status-changed times, soft-delete time (kept a day so
+  unless a resource is linked), note (≤2000, "" when none), optional resource (only a published one can be linked, else 404; set to null if the
+  resource is deleted; a card whose resource is later unpublished shows it as unavailable), created/updated/status-changed times, soft-delete time (kept a day so
   Undo works; the user's old ones are purged whenever their board is loaded). At most 500 live
   cards per user (`BoardFullError`, 409 `board_full`). Moving a card to Done never creates or
   removes a completion. Spec: `docs/specs/saved-and-todo.md`.
@@ -237,7 +237,7 @@ mock exam generation, personalization.
   the percentage shown in a fit mode is the computed one, and zoom steps leave the fit mode. Zoom
   keeps the reader on the same page. The "More actions" menu (a dropdown on desktop, a bottom sheet
   on a phone) has Fit width, Fit page, Focus mode, then Save for later (or Remove from saved when it
-  is saved), Download and Open outside the reader. Focus mode
+  is saved), Add to to-do, Download and Open outside the reader. Focus mode
   makes the card cover the whole viewport (and asks for real fullscreen where available, but does
   not depend on it); Esc leaves it (or closes an open search first). Keys (when not typing): arrows,
   PageUp/PageDown, Home/End, `+`/`-`, `0`. The page being read is remembered per resource in
@@ -246,7 +246,9 @@ mock exam generation, personalization.
   the course area that lists the resource, the title with its type and language on one line, the
   card at a fixed height with the pages scrolling inside it, and a narrow details column (plain text
   under small headings) beside it, with a full-width "Save for later" button at its top that becomes
-  "Saved" (filled bookmark) once saved; pressing "Saved" removes it. Phone: a back link (the course code) above the title, the card's
+  "Saved" (filled bookmark) once saved; pressing "Saved" removes it. Under it an outline "Add to to-do" button
+  makes a card in To do linked to this file (toast "Added to To do" with "View board"; the same file may be
+  added again; signed out it goes to sign-in like Save). Phone: a back link (the course code) above the title, the card's
   top row sticky under the site bar with the window scrolling the pages, then the details below
   (so the Save button is below the card there).
   Back leads to Previous exams for an exam, to the chapter page for a resource in a chapter,
@@ -266,7 +268,8 @@ mock exam generation, personalization.
   session or goes to `/sign-in?next=/saved`. Saved files are grouped by course (semester, then
   course code; "DEMO301 Title" with the semester muted), newest save first inside a course, published
   files only (a withdrawn file simply disappears). Each item is the shared resource row (opens the
-  reader in the same tab, solutions below) with its filled bookmark icon (see "Save bookmark on rows"). The icon
+  reader in the same tab, solutions below) with its filled bookmark icon (see "Save bookmark on rows") and
+  an "Add to to-do" icon beside it (`ListPlus`, label "Add TITLE to to-do", same action as in the reader). The icon
   removes the item: it leaves the page at once, with the toast "Removed from saved." and no reload,
   and a course with nothing left disappears. Empty state: a bookmark icon, "Nothing saved yet. Tap
   the bookmark on any file to keep it here." and a "Browse courses" button. `GET /api/v1/saved` returns the same
@@ -327,8 +330,15 @@ mock exam generation, personalization.
   `globals.css`, only under `prefers-reduced-motion: no-preference`; the toast still shows). Done cards
   have a struck-through title and "Done … ago". Moving a card to Done never creates or changes a
   completion. After a move the focus follows the card; on a phone, when it leaves the tab on screen,
-  the focus stays on the selected tab. Not built yet: drag and drop, linked files, filters (see the
-  spec).
+  the focus stays on the selected tab. Linked files: a card made from "Add to to-do" (or `POST /api/v1/todos` / `PATCH /api/v1/todos/ID`
+  with `resourceId`; `null` removes the link) shows the file's type icon, course code and type
+  instead of "Note", and an **Open** link to the reader (same tab, above the title overlay, 44px on a phone, 32px on md and up; Tab order: title, Open, Start/Done, "…"). With no title of its own
+  the card shows the file's title; a file that was deleted leaves the card with its title and note
+  ("A file that was removed" if it had neither); a file no longer published shows "This file is no
+  longer available", never its title or a link. The card view shows the file read-only (the title
+  may be empty, with the file's title as placeholder). Cards carry `resource`: null,
+  `{ available: true, id, title, type, courseCode }` or `{ available: false }`. Not built yet: drag and drop, linking or
+  removing a file in the card view and the composer, filters (see the spec).
 - Sign-in page (`/sign-in`): a full-screen split. On desktop (md and up) a deep-blue panel (the `brand-panel` token, white text, same in both themes) with the brand name, the home headline and three feature lines sits beside the form; on a phone the panel is hidden. The account pages (in the `src/app/(auth)` route group) are full-screen pages without the site header, footer or tab bar: the panel fills the left side on desktop, and the right side has a slim bar (the brand linking home on a phone, the theme toggle), the form centred, and the disclaimer under it. The form shows errors in one destructive alert, clears and focuses the password after a wrong one, has a show/hide password button and a Caps Lock hint. The split is `AuthShell` in `src/components/auth`. It also shows "New here? Create an account" (to `/sign-up`) above "Back to courses". When the password is right but the email is not confirmed (403 `email_not_confirmed`) it shows a default (not destructive) alert, "Confirm your email first. We sent a link to s•••@gmail.com.", with a "Send a new link" button that posts the typed address to the resend endpoint and answers "A new link is on its way." (429: "Please wait before asking for another link."); the password is kept. The header still shows only "Sign in"; sign-up is reached from the sign-in page. `?next=` (a same-site path checked by `safeNextPath`) is where sign-in sends the visitor afterwards, also when already signed in (`/admin` pages send a signed-out visitor there with their own path); otherwise admins go to `/admin` and students to `/`. Sign-up does not carry it.
 - The account pages share `BrandPanel` (the panel content) and `AuthShell`; each is `noindex`, has 44px touch targets and shows errors in one destructive alert.
 - Sign-up page (`/sign-up`; a signed-in visitor is redirected, like on `/sign-in`): "Create your account", fields Name (optional), Email and Password (show/hide, hint "At least 10 characters.", length also validated in the browser; no repeat field), "Create account", and a link to `/sign-in`. Field errors from a 400 show on the fields; a 429 says there were too many sign-ups from this network. On 202 the address is kept in `sessionStorage` (`signup:email`, never in the URL) and the page goes to `/sign-up/check-email`.
