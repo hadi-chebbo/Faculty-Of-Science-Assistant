@@ -5,7 +5,15 @@ import type { Todo } from "@/db/models/todo";
 import { BoardFullError, NotFoundError, ValidationError } from "../errors";
 import { parseInput } from "../validation";
 import type { Viewer } from "../viewer";
-import { cardIdSchema, createCardSchema, updateCardSchema, type CreateCardInput, type UpdateCardInput } from "./schemas";
+import {
+  cardIdSchema,
+  createCardSchema,
+  moveCardSchema,
+  updateCardSchema,
+  type CreateCardInput,
+  type MoveCardInput,
+  type UpdateCardInput,
+} from "./schemas";
 import type { TodoCard } from "./types";
 
 // Every function acts only on the viewer's own rows.
@@ -120,6 +128,44 @@ export async function restoreCard(viewer: NonNullable<Viewer>, id: string): Prom
     row.position = position;
     row.deletedAt = null;
     await row.save({ transaction });
+    return toTodoCard(row);
+  });
+}
+
+// Moves a live card to `index` (0 = top) of a column, which may be its own. The index is clamped
+// to the column's length. Both columns are renumbered from 0 in the same transaction, so they stay
+// gapless. `statusChangedAt` changes only when the column changes. A move to the place the card
+// already has changes nothing. Completions are never touched: Done on the board is not "done" on a
+// file.
+export async function moveCard(viewer: NonNullable<Viewer>, id: string, input: MoveCardInput): Promise<TodoCard> {
+  const data = parseInput(moveCardSchema, input);
+  const { sequelize, Todo } = getDb();
+  return sequelize.transaction(async (transaction) => {
+    const row = await lockedCard(viewer, id, transaction);
+    if (row.deletedAt) throw new NotFoundError("Card not found");
+    const column = (status: string) =>
+      Todo.findAll({ where: { userId: viewer.id, status, deletedAt: null }, order: [["position", "ASC"]], transaction });
+    const source = await column(row.status);
+    const sameColumn = data.status === row.status;
+    const target = sameColumn ? source : await column(data.status);
+    const others = target.filter((c) => c.id !== row.id);
+    const index = Math.min(data.index, others.length);
+    if (sameColumn && source.findIndex((c) => c.id === row.id) === index) return toTodoCard(row);
+
+    const placed = [...others.slice(0, index), row, ...others.slice(index)];
+    const closed = sameColumn ? [] : source.filter((c) => c.id !== row.id);
+    for (const list of [placed, closed]) {
+      for (const [position, card] of list.entries()) {
+        const isMoved = card.id === row.id;
+        if (card.position === position && !isMoved) continue;
+        card.position = position;
+        if (isMoved && !sameColumn) {
+          card.status = data.status;
+          card.statusChangedAt = new Date();
+        }
+        await card.save({ transaction });
+      }
+    }
     return toTodoCard(row);
   });
 }
