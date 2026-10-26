@@ -129,8 +129,9 @@ test("a student saves from a course page row, sees it filled after a reload and 
   await expect(
     page.getByRole("link", { name: new RegExp(title) }),
   ).toHaveAttribute("href", `/resources/${id}`);
-  // Exactly one bookmark on the row, filled.
-  await expect(page.getByRole("main").getByRole("button")).toHaveCount(1);
+  // Exactly one bookmark on the row, filled (the row also has an "Add to to-do" button).
+  await expect(page.getByRole("main").getByRole("button", { name: /from saved$|^Save / })).toHaveCount(1);
+  await expect(page.getByRole("main").getByRole("button", { name: `Add ${title} to to-do` })).toHaveCount(1);
   await expect(
     page.getByRole("button", { name: `Remove ${title} from saved` }),
   ).toHaveAttribute("aria-pressed", "true");

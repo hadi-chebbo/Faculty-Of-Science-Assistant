@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TODO_STATUSES, type TodoStatus } from "@/db/constants";
 import { showUndoToast } from "@/lib/undo-toast";
 import type { TodoCard } from "@/services/todos/types";
-import { BOARD_FULL_MESSAGE, boardRequest } from "./board-api";
+import { BOARD_FULL_MESSAGE, boardRequest } from "@/lib/board-api";
 import { CardComposer } from "./card-composer";
 import { CardViewDialog } from "./card-view-dialog";
 import { moveMessage, TodoCardView, type BoardCard, type MoveHow } from "./todo-card";
@@ -136,7 +136,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
     const tempId = `pending-${++tempCounter.current}`;
     const stamp = new Date().toISOString();
     const temp: BoardCard = {
-      id: tempId, status, position: 0, title, note: "", createdAt: stamp, updatedAt: stamp, statusChangedAt: stamp, pending: true,
+      id: tempId, status, position: 0, title, note: "", createdAt: stamp, updatedAt: stamp, statusChangedAt: stamp, resource: null, pending: true,
     };
     setCards((all) => [temp, ...all]);
     const drop = () => setCards((all) => all.filter((c) => c.id !== tempId));

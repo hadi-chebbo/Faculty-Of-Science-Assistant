@@ -104,7 +104,13 @@ test("a student saves from the reader, finds it under Saved, removes it and sees
   await page.reload();
   await expect(page.getByText("Nothing saved yet. Tap the bookmark on any file to keep it here.")).toBeVisible();
   expect(
-    await withDb(async (client) => (await client.query(`SELECT count(*)::int AS n FROM bookmarks WHERE resource_id = $1`, [id])).rows[0].n),
+    await withDb(async (client) => (
+        await client.query(
+          `SELECT count(*)::int AS n FROM bookmarks b JOIN users u ON u.id = b.user_id WHERE b.resource_id = $1 AND u.email = $2`,
+          [id, emailFor(isMobile)],
+        )
+      ).rows[0].n,
+    ),
   ).toBe(0);
 });
 

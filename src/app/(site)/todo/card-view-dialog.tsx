@@ -1,13 +1,16 @@
 "use client";
 
-import { Check, Trash2, X } from "lucide-react";
+import { BookOpen, Check, FileText, Trash2, X } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
+import { TYPE_ICONS } from "@/components/site/resource-row";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { TODO_NOTE_MAX_LENGTH, TODO_STATUSES, TODO_TITLE_MAX_LENGTH, type TodoStatus } from "@/db/constants";
+import { RESOURCE_TYPE_SINGULAR_LABELS } from "@/lib/labels";
 import { relativeTime } from "@/lib/relative-time";
-import { titleOf, type BoardCard } from "./todo-card";
+import { FILE_UNAVAILABLE, titleOf, type BoardCard } from "./todo-card";
 import { STATUS_LOOK } from "./todo-status";
 import type { Edit, SaveInfo } from "./use-card-saver";
 
@@ -87,7 +90,9 @@ function CardViewBody({
   const [confirming, setConfirming] = useState(false);
   const look = STATUS_LOOK[card.status];
   const line = saveLine(info);
-  const titleInvalid = info?.invalidFields.includes("title") ?? false;
+  const file = card.resource;
+  // A card with a file may have no title of its own; the file's title then shows as the placeholder.
+  const titleInvalid = (info?.invalidFields.includes("title") ?? false) && !file;
   const noteInvalid = info?.invalidFields.includes("note") ?? false;
   const unsafe = info?.status === "retrying" || info?.status === "failed";
 
@@ -113,7 +118,7 @@ function CardViewBody({
               value={card.title}
               rows={1}
               maxLength={TODO_TITLE_MAX_LENGTH}
-              placeholder="What do you want to do?"
+              placeholder={file?.available ? file.title : "What do you want to do?"}
               aria-invalid={titleInvalid || undefined}
               aria-describedby={titleInvalid ? "card-title-error" : undefined}
               onChange={(event) => onEdit(card.id, { title: event.target.value.replace(/\s*\n\s*/g, " ") })}
@@ -139,6 +144,39 @@ function CardViewBody({
               {unsafe ? line.text : ""}
             </p>
           </div>
+
+          {file && (
+            <section>
+              <h4 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">File</h4>
+              <div className="flex items-center gap-3 rounded-xl border bg-muted/40 p-3">
+                {(() => {
+                  const Icon = file.available ? TYPE_ICONS[file.type] : FileText;
+                  return (
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-link" aria-hidden>
+                      <Icon className="size-5" />
+                    </span>
+                  );
+                })()}
+                {file.available ? (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-heading">{file.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-mono">{file.courseCode}</span> · {RESOURCE_TYPE_SINGULAR_LABELS[file.type]}
+                      </p>
+                    </div>
+                    <Button asChild size="sm" className="h-11 md:h-9">
+                      <Link href={`/resources/${file.id}`}>
+                        <BookOpen aria-hidden /> Open
+                      </Link>
+                    </Button>
+                  </>
+                ) : (
+                  <p className="min-w-0 flex-1 text-sm text-muted-foreground">{FILE_UNAVAILABLE}</p>
+                )}
+              </div>
+            </section>
+          )}
 
           <section>
             <label htmlFor="card-note" className="mb-2 block text-xs font-semibold tracking-wide text-muted-foreground uppercase">

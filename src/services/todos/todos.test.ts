@@ -2,9 +2,9 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { TODO_MAX_CARDS } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
-import { BoardFullError, ValidationError } from "../errors";
+import { BoardFullError, NotFoundError, ValidationError } from "../errors";
 import type { Viewer } from "../viewer";
-import { createCard, deleteCard, listBoard, restoreCard, updateCard } from "./todos";
+import { createCard, deleteCard, listBoard, moveCard, restoreCard, updateCard } from "./todos";
 
 beforeEach(async () => {
   await truncateAllTables();
@@ -258,5 +258,82 @@ describe("deleteCard and restoreCard", () => {
     const theirs = await createCard(other, { title: "theirs" });
     await expect(deleteCard(me, theirs.id)).rejects.toMatchObject({ name: "NotFoundError" });
     expect(await listBoard(other)).toHaveLength(1);
+  });
+});
+
+describe("linked files", () => {
+  async function files() {
+    const { Course, Resource } = getDb();
+    const course = await Course.create({ code: "TEST301", title: "Course A", semester: 3 });
+    const make = (title: string, isPublished: boolean) =>
+      Resource.create({ courseId: course.id, type: "exercise", title, fileKey: "k", isPublished });
+    return { pub: await make("Published file", true), draft: await make("Draft file", false) };
+  }
+  const MISSING = "33333333-3333-4333-8333-333333333333";
+
+  it("creates a card with a file and an empty title, showing the file", async () => {
+    const me = await student("a@example.com");
+    const { pub } = await files();
+    const card = await createCard(me, { resourceId: pub.id });
+    expect(card).toMatchObject({
+      title: "",
+      resource: { available: true, id: pub.id, title: "Published file", type: "exercise", courseCode: "TEST301" },
+    });
+    expect((await listBoard(me))[0].resource).toEqual(card.resource);
+  });
+
+  it("refuses a draft, unknown or malformed resource on create and update", async () => {
+    const me = await student("a@example.com");
+    const { draft } = await files();
+    for (const resourceId of [draft.id, MISSING, "nope"]) {
+      await expect(createCard(me, { title: "t", resourceId })).rejects.toBeInstanceOf(NotFoundError);
+    }
+    const card = await createCard(me, { title: "t" });
+    for (const resourceId of [draft.id, MISSING, "nope"]) {
+      await expect(updateCard(me, card.id, { resourceId })).rejects.toBeInstanceOf(NotFoundError);
+    }
+    expect(await getDb().Todo.count()).toBe(1);
+  });
+
+  it("requires a title without a resource", async () => {
+    const me = await student("a@example.com");
+    await expect(createCard(me, { title: "  " })).rejects.toMatchObject({ fields: ["title"] });
+    await expect(createCard(me, {})).rejects.toMatchObject({ fields: ["title"] });
+  });
+
+  it("links and unlinks on update; unlinking an empty-title card is refused", async () => {
+    const me = await student("a@example.com");
+    const { pub } = await files();
+    const card = await createCard(me, { title: "own" });
+    const linked = await updateCard(me, card.id, { resourceId: pub.id });
+    expect(linked.resource).toMatchObject({ available: true, id: pub.id });
+    expect((await updateCard(me, card.id, { note: "n" })).resource).toMatchObject({ available: true });
+    expect((await updateCard(me, card.id, { resourceId: null })).resource).toBeNull();
+
+    const bare = await createCard(me, { resourceId: pub.id });
+    await expect(updateCard(me, bare.id, { resourceId: null })).rejects.toMatchObject({ fields: ["title"] });
+    expect((await listBoard(me)).find((c) => c.id === bare.id)?.resource).toMatchObject({ available: true });
+  });
+
+  it("keeps the card with no file when the resource is deleted", async () => {
+    const me = await student("a@example.com");
+    const { pub } = await files();
+    const card = await createCard(me, { title: "own", note: "keep me", resourceId: pub.id });
+    await pub.destroy();
+    const [after] = await listBoard(me);
+    expect(after).toMatchObject({ id: card.id, title: "own", note: "keep me", resource: null });
+  });
+
+  it("shows an unpublished resource as unavailable, without its title or id", async () => {
+    const me = await student("a@example.com");
+    const { pub } = await files();
+    const card = await createCard(me, { resourceId: pub.id });
+    await pub.update({ isPublished: false });
+    const [after] = await listBoard(me);
+    expect(after.resource).toEqual({ available: false });
+    expect(JSON.stringify(after)).not.toContain("Published file");
+    expect((await moveCard(me, card.id, { status: "done", index: 0 })).resource).toEqual({ available: false });
+    await deleteCard(me, card.id);
+    expect((await restoreCard(me, card.id)).resource).toEqual({ available: false });
   });
 });

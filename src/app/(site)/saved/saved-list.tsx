@@ -2,6 +2,7 @@
 
 import { Bookmark } from "lucide-react";
 import Link from "next/link";
+import { AddToTodoIconButton } from "@/components/site/add-to-todo-icon-button";
 import { ResourceRow } from "@/components/site/resource-row";
 import { StateBlock } from "@/components/site/state-block";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,7 @@ export function SavedList({ groups }: { groups: SavedCourseGroup[] }) {
           </h2>
           <ul className="space-y-2">
             {group.items.map((resource) => (
-              <ResourceRow key={resource.id} resource={resource} />
+              <ResourceRow key={resource.id} resource={resource} action={<AddToTodoIconButton resourceId={resource.id} title={resource.title} />} />
             ))}
           </ul>
         </section>

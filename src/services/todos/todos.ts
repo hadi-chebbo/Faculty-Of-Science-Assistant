@@ -14,12 +14,45 @@ import {
   type MoveCardInput,
   type UpdateCardInput,
 } from "./schemas";
-import type { TodoCard } from "./types";
+import type { LinkedFile, TodoCard } from "./types";
 
 // Every function acts only on the viewer's own rows.
 
 // Deleted cards are kept this long so Undo can bring them back.
 const SOFT_DELETE_KEEP_MS = 24 * 60 * 60 * 1000;
+
+function linkedFile(row: Todo): LinkedFile | null {
+  const resource = row.resource;
+  if (!resource) return null;
+  if (!resource.isPublished) return { available: false };
+  return { available: true, id: resource.id, title: resource.title, type: resource.type, courseCode: resource.course?.code ?? "" };
+}
+
+// Loads the resource and its course with the card, so the linked file needs no extra queries.
+function withFile(transaction?: Transaction) {
+  const { Resource, Course } = getDb();
+  return {
+    transaction,
+    include: [{ model: Resource, as: "resource", include: [{ model: Course, as: "course", attributes: ["code"] }] }],
+  };
+}
+
+async function reload(id: string, transaction: Transaction): Promise<Todo> {
+  const row = await getDb().Todo.findByPk(id, withFile(transaction));
+  if (!row) throw new NotFoundError("Card not found");
+  return row;
+}
+
+// The resource a card may be linked to: published only. A malformed, unknown or unpublished id is
+// "not found".
+async function linkableResource(resourceId: string, transaction: Transaction): Promise<string> {
+  const { Resource } = getDb();
+  const found = cardIdSchema.safeParse(resourceId).success
+    ? await Resource.findOne({ where: { id: resourceId, isPublished: true }, attributes: ["id"], transaction })
+    : null;
+  if (!found) throw new NotFoundError("Resource not found");
+  return found.id;
+}
 
 export function toTodoCard(row: Todo): TodoCard {
   return {
@@ -31,6 +64,7 @@ export function toTodoCard(row: Todo): TodoCard {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     statusChangedAt: row.statusChangedAt.toISOString(),
+    resource: linkedFile(row),
   };
 }
 
@@ -41,7 +75,7 @@ export async function listBoard(viewer: NonNullable<Viewer>): Promise<TodoCard[]
   await Todo.destroy({
     where: { userId: viewer.id, deletedAt: { [Op.lt]: new Date(Date.now() - SOFT_DELETE_KEEP_MS) } },
   });
-  const rows = await Todo.findAll({ where: { userId: viewer.id, deletedAt: null }, order: [["position", "ASC"]] });
+  const rows = await Todo.findAll({ where: { userId: viewer.id, deletedAt: null }, order: [["position", "ASC"]], ...withFile() });
   const rank = (status: string) => TODO_STATUSES.indexOf(status as (typeof TODO_STATUSES)[number]);
   return rows.map(toTodoCard).sort((a, b) => rank(a.status) - rank(b.status) || a.position - b.position);
 }
@@ -59,11 +93,12 @@ export async function createCard(viewer: NonNullable<Viewer>, input: CreateCardI
       "UPDATE todos SET position = position + 1 WHERE user_id = :userId AND status = :status AND deleted_at IS NULL",
       { replacements: { userId: viewer.id, status: data.status }, type: QueryTypes.UPDATE, transaction },
     );
-    const row = await Todo.create(
-      { userId: viewer.id, status: data.status, position: 0, title: data.title, note: data.note },
+    const resourceId = data.resourceId === undefined ? null : await linkableResource(data.resourceId, transaction);
+    const created = await Todo.create(
+      { userId: viewer.id, status: data.status, position: 0, title: data.title, note: data.note, resourceId },
       { transaction },
     );
-    return toTodoCard(row);
+    return toTodoCard(await reload(created.id, transaction));
   });
 }
 
@@ -72,12 +107,15 @@ export async function createCard(viewer: NonNullable<Viewer>, input: CreateCardI
 async function lockedCard(viewer: NonNullable<Viewer>, id: string, transaction: Transaction): Promise<Todo> {
   const { User, Todo } = getDb();
   await User.findByPk(viewer.id, { attributes: ["id"], transaction, lock: transaction.LOCK.UPDATE });
-  const row = cardIdSchema.safeParse(id).success ? await Todo.findOne({ where: { id, userId: viewer.id }, transaction }) : null;
+  const row = cardIdSchema.safeParse(id).success
+    ? await Todo.findOne({ where: { id, userId: viewer.id }, ...withFile(transaction) })
+    : null;
   if (!row) throw new NotFoundError("Card not found");
   return row;
 }
 
-// Changes the title and/or note of a live card. A card with no linked file must keep a title.
+// Changes the title, note and/or linked file of a live card (`resourceId: null` removes the link).
+// A card with no linked file must keep a title.
 export async function updateCard(viewer: NonNullable<Viewer>, id: string, input: UpdateCardInput): Promise<TodoCard> {
   const data = parseInput(updateCardSchema, input);
   const { sequelize } = getDb();
@@ -85,11 +123,15 @@ export async function updateCard(viewer: NonNullable<Viewer>, id: string, input:
     const row = await lockedCard(viewer, id, transaction);
     if (row.deletedAt) throw new NotFoundError("Card not found");
     const title = data.title ?? row.title;
-    if (title === "" && !row.resourceId) throw new ValidationError(["title"]);
+    const resourceId =
+      data.resourceId === undefined ? row.resourceId : data.resourceId === null ? null : await linkableResource(data.resourceId, transaction);
+    if (title === "" && !resourceId) throw new ValidationError(["title"]);
     row.title = title;
     if (data.note !== undefined) row.note = data.note;
+    const relinked = resourceId !== row.resourceId;
+    row.resourceId = resourceId;
     await row.save({ transaction });
-    return toTodoCard(row);
+    return toTodoCard(relinked ? await reload(row.id, transaction) : row);
   });
 }
 

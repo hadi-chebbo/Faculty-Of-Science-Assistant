@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, BookmarkCheck, Check, Download, ExternalLink, Maximize, MoreHorizontal, Minimize, MoveVertical, MoveHorizontal } from "lucide-react";
+import { Bookmark, BookmarkCheck, Check, Download, ExternalLink, ListPlus, Maximize, MoreHorizontal, Minimize, MoveVertical, MoveHorizontal } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Fragment, type Ref } from "react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ export interface ReaderMenuProps {
   onFocus: () => void;
   saved: boolean;
   onToggleSaved: () => void;
+  onAddToTodo: () => void;
+  addingToTodo: boolean;
   triggerRef: Ref<HTMLButtonElement>;
 }
 
@@ -32,10 +34,10 @@ export interface ReaderMenuProps {
 // `<a>` (not next/link): both targets are API routes that redirect to the file, and Link would
 // prefetch them.
 type Entry =
-  | { kind: "action"; label: string; icon: LucideIcon; selected?: boolean; run: () => void }
+  | { kind: "action"; label: string; icon: LucideIcon; selected?: boolean; disabled?: boolean; run: () => void }
   | { kind: "link"; label: string; icon: LucideIcon; href: string; newTab?: boolean };
 
-function entriesOf({ id, fit, focus, onFit, onFocus, saved, onToggleSaved }: ReaderMenuProps): { group: Entry[] }[] {
+function entriesOf({ id, fit, focus, onFit, onFocus, saved, onToggleSaved, onAddToTodo, addingToTodo }: ReaderMenuProps): { group: Entry[] }[] {
   return [
     {
       group: [
@@ -52,6 +54,7 @@ function entriesOf({ id, fit, focus, onFit, onFocus, saved, onToggleSaved }: Rea
           icon: saved ? BookmarkCheck : Bookmark,
           run: onToggleSaved,
         },
+        { kind: "action", label: "Add to to-do", icon: ListPlus, disabled: addingToTodo, run: onAddToTodo },
         { kind: "link", label: "Download", icon: Download, href: `/api/v1/resources/${id}/download` },
         { kind: "link", label: "Open outside the reader", icon: ExternalLink, href: `/api/v1/resources/${id}/open`, newTab: true },
       ],
@@ -80,7 +83,7 @@ export function ReaderMenu(props: ReaderMenuProps) {
         <SheetContent side="bottom" showCloseButton={false} className="gap-0 rounded-t-2xl px-2 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <SheetHeader className="sr-only">
             <SheetTitle>More actions</SheetTitle>
-            <SheetDescription>Zoom, focus mode, save for later, download and open outside the reader.</SheetDescription>
+            <SheetDescription>Zoom, focus mode, save for later, add to to-do, download and open outside the reader.</SheetDescription>
           </SheetHeader>
           <div aria-hidden className="mx-auto mt-2.5 mb-2 h-1 w-10 rounded-full bg-border" />
           {groups.map(({ group }, g) => (
@@ -98,7 +101,8 @@ export function ReaderMenu(props: ReaderMenuProps) {
                     key={entry.label}
                     type="button"
                     aria-current={entry.selected || undefined}
-                    className={SHEET_ITEM}
+                    disabled={entry.disabled}
+                    className={`${SHEET_ITEM} disabled:opacity-50`}
                     onClick={() => {
                       onOpenChange(false);
                       entry.run();
@@ -134,7 +138,7 @@ export function ReaderMenu(props: ReaderMenuProps) {
                   </a>
                 </DropdownMenuItem>
               ) : (
-                <DropdownMenuItem key={entry.label} aria-current={entry.selected || undefined} onSelect={entry.run}>
+                <DropdownMenuItem key={entry.label} aria-current={entry.selected || undefined} disabled={entry.disabled} onSelect={entry.run}>
                   <entry.icon aria-hidden />
                   <span className="flex-1">{entry.label}</span>
                   {entry.selected && <Check aria-hidden />}
