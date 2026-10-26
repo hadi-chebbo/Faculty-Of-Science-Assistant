@@ -4,7 +4,7 @@ import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { BoardFullError, ValidationError } from "../errors";
 import type { Viewer } from "../viewer";
-import { createCard, listBoard } from "./todos";
+import { createCard, deleteCard, listBoard, restoreCard, updateCard } from "./todos";
 
 beforeEach(async () => {
   await truncateAllTables();
@@ -115,5 +115,148 @@ describe("listBoard", () => {
     const left = (await Todo.findAll({ attributes: ["title"] })).map((r) => r.title).sort();
     // The recent soft delete stays for Undo; another user's old one is only purged on their own load.
     expect(left).toEqual(["live", "others old", "recent"]);
+  });
+});
+
+describe("updateCard", () => {
+  it("changes the title and note, trims the title and keeps what was not sent", async () => {
+    const me = await student("a@example.com");
+    const card = await createCard(me, { title: "old", note: "keep me" });
+    const edited = await updateCard(me, card.id, { title: "  new  " });
+    expect(edited).toMatchObject({ title: "new", note: "keep me" });
+    await updateCard(me, card.id, { note: "second" });
+    expect((await listBoard(me))[0]).toMatchObject({ title: "new", note: "second" });
+    expect(Date.parse(edited.updatedAt)).toBeGreaterThanOrEqual(Date.parse(card.updatedAt));
+  });
+
+  it("refuses an empty title on a card with no file, and a note over 2000 characters", async () => {
+    const me = await student("a@example.com");
+    const card = await createCard(me, { title: "keep" });
+    for (const title of ["", "   "]) {
+      await expect(updateCard(me, card.id, { title })).rejects.toMatchObject({ name: "ValidationError", fields: ["title"] });
+    }
+    await expect(updateCard(me, card.id, { note: "n".repeat(2001) })).rejects.toMatchObject({ fields: ["note"] });
+    await expect(updateCard(me, card.id, { title: "x".repeat(201) })).rejects.toMatchObject({ fields: ["title"] });
+    await expect(updateCard(me, card.id, { note: "n".repeat(2000) })).resolves.toBeDefined();
+    expect((await listBoard(me))[0].title).toBe("keep");
+  });
+
+  it("allows an empty title when a file is linked", async () => {
+    const me = await student("a@example.com");
+    const { Todo, Course, Resource } = getDb();
+    const course = await Course.create({ code: "TEST301", title: "Course A", semester: 3 });
+    const resource = await Resource.create({ courseId: course.id, type: "lecture", title: "Slides", fileKey: "k", isPublished: true });
+    const row = await Todo.create({ userId: me.id, position: 0, title: "t", resourceId: resource.id });
+    await expect(updateCard(me, row.id, { title: "" })).resolves.toMatchObject({ title: "" });
+  });
+
+  it("treats another user's, an unknown, a malformed and a deleted card as not found", async () => {
+    const me = await student("a@example.com");
+    const other = await student("b@example.com");
+    const theirs = await createCard(other, { title: "theirs" });
+    const mine = await createCard(me, { title: "mine" });
+    await deleteCard(me, mine.id);
+    for (const id of [theirs.id, "00000000-0000-4000-8000-000000000000", "not-an-id", mine.id]) {
+      await expect(updateCard(me, id, { title: "x" })).rejects.toMatchObject({ name: "NotFoundError", message: "Card not found" });
+    }
+    expect((await listBoard(other))[0].title).toBe("theirs");
+  });
+});
+
+describe("deleteCard and restoreCard", () => {
+  // Creates a, b, c (top to bottom, positions 0..2) and returns them in that order.
+  async function three(me: NonNullable<Viewer>) {
+    await createCard(me, { title: "c" });
+    await createCard(me, { title: "b" });
+    await createCard(me, { title: "a" });
+    return listBoard(me);
+  }
+
+  it("hides the card and closes the gap", async () => {
+    const me = await student("a@example.com");
+    const [, middle] = await three(me);
+    await deleteCard(me, middle.id);
+    expect(await positions(me, "todo")).toEqual([["a", 0], ["c", 1]]);
+    const row = await getDb().Todo.findByPk(middle.id);
+    expect(row).toMatchObject({ status: "todo", position: 1 });
+    expect(row?.deletedAt).toBeInstanceOf(Date);
+  });
+
+  it("is idempotent, and does not move other cards a second time", async () => {
+    const me = await student("a@example.com");
+    const [, middle] = await three(me);
+    await deleteCard(me, middle.id);
+    await expect(deleteCard(me, middle.id)).resolves.toBeUndefined();
+    expect(await positions(me, "todo")).toEqual([["a", 0], ["c", 1]]);
+  });
+
+  it("restores into the same column and place, putting the others back", async () => {
+    const me = await student("a@example.com");
+    const [, middle] = await three(me);
+    await deleteCard(me, middle.id);
+    const back = await restoreCard(me, middle.id);
+    expect(back).toMatchObject({ title: "b", status: "todo", position: 1 });
+    expect(await positions(me, "todo")).toEqual([["a", 0], ["b", 1], ["c", 2]]);
+  });
+
+  it("restores the first and the last card too", async () => {
+    const me = await student("a@example.com");
+    const [first, , last] = await three(me);
+    await deleteCard(me, first.id);
+    await deleteCard(me, last.id);
+    await restoreCard(me, last.id);
+    await restoreCard(me, first.id);
+    expect(await positions(me, "todo")).toEqual([["a", 0], ["b", 1], ["c", 2]]);
+  });
+
+  it("clamps to the bottom when the column has become shorter", async () => {
+    const me = await student("a@example.com");
+    const [first, , last] = await three(me);
+    await deleteCard(me, last.id);
+    await deleteCard(me, first.id);
+    // Only "b" is left; "c" was at 2 and goes to the end, not into a gap.
+    const back = await restoreCard(me, last.id);
+    expect(back.position).toBe(1);
+    expect(await positions(me, "todo")).toEqual([["b", 0], ["c", 1]]);
+  });
+
+  it("restoring a live card does nothing", async () => {
+    const me = await student("a@example.com");
+    const [first] = await three(me);
+    await expect(restoreCard(me, first.id)).resolves.toMatchObject({ id: first.id, position: 0 });
+    expect(await positions(me, "todo")).toEqual([["a", 0], ["b", 1], ["c", 2]]);
+  });
+
+  it("refuses to restore into a full board", async () => {
+    const me = await student("a@example.com");
+    const card = await createCard(me, { title: "gone" });
+    await deleteCard(me, card.id);
+    await getDb().Todo.bulkCreate(
+      Array.from({ length: TODO_MAX_CARDS }, (_, i) => ({ userId: me.id, status: "done" as const, position: i, title: `c${i}` })),
+    );
+    await expect(restoreCard(me, card.id)).rejects.toBeInstanceOf(BoardFullError);
+    expect(await getDb().Todo.count({ where: { userId: me.id, deletedAt: null } })).toBe(TODO_MAX_CARDS);
+  });
+
+  it("cannot restore a purged card, another user's card or a malformed id", async () => {
+    const me = await student("a@example.com");
+    const other = await student("b@example.com");
+    const card = await createCard(me, { title: "old" });
+    await deleteCard(me, card.id);
+    await expect(restoreCard(other, card.id)).rejects.toMatchObject({ name: "NotFoundError" });
+    await expect(restoreCard(me, "nope")).rejects.toMatchObject({ name: "NotFoundError" });
+    await getDb().Todo.update({ deletedAt: new Date(Date.now() - 25 * 60 * 60 * 1000) }, { where: { id: card.id } });
+    await expect(restoreCard(me, card.id)).rejects.toMatchObject({ name: "NotFoundError" });
+    await listBoard(me);
+    expect(await getDb().Todo.count()).toBe(0);
+    await expect(restoreCard(me, card.id)).rejects.toMatchObject({ name: "NotFoundError" });
+  });
+
+  it("another user's card cannot be deleted", async () => {
+    const me = await student("a@example.com");
+    const other = await student("b@example.com");
+    const theirs = await createCard(other, { title: "theirs" });
+    await expect(deleteCard(me, theirs.id)).rejects.toMatchObject({ name: "NotFoundError" });
+    expect(await listBoard(other)).toHaveLength(1);
   });
 });

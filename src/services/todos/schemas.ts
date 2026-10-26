@@ -9,3 +9,14 @@ export const createCardSchema = z.object({
 });
 
 export type CreateCardInput = z.input<typeof createCardSchema>;
+
+// Both fields are optional, so the card view can send only what changed. Whether the title may be
+// empty depends on the card (a linked file can stand in), so the service checks that.
+export const updateCardSchema = z.object({
+  title: z.string().trim().max(TODO_TITLE_MAX_LENGTH).optional(),
+  note: z.string().max(TODO_NOTE_MAX_LENGTH).optional(),
+});
+
+export type UpdateCardInput = z.input<typeof updateCardSchema>;
+
+export const cardIdSchema = z.uuid();
