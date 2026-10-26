@@ -5,6 +5,7 @@ import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import type { Viewer } from "@/services/viewer";
 import { GET, POST } from "./route";
+import { PATCH } from "./[id]/route";
 
 // The session cookie is read through next/headers, which needs a real request; the tests set who
 // is signed in directly.
@@ -101,5 +102,42 @@ describe("todo routes", () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({ error: "board_full" });
     expect(await getDb().Todo.count()).toBe(TODO_MAX_CARDS);
+  });
+
+  describe("linked files", () => {
+    async function resources() {
+      const { Course, Resource } = getDb();
+      const course = await Course.create({ code: "TEST301", title: "Course A", semester: 3 });
+      const make = (title: string, isPublished: boolean) =>
+        Resource.create({ courseId: course.id, type: "lecture", title, fileKey: "k", isPublished });
+      return { pub: await make("Pub", true), draft: await make("Draft", false) };
+    }
+
+    it("create a card (201) linked to a published file with no title", async () => {
+      await signIn();
+      const { pub } = await resources();
+      const response = await post({ resourceId: pub.id });
+      expect(response.status).toBe(201);
+      const { card } = await response.json();
+      expect(card).toMatchObject({ title: "", resource: { available: true, id: pub.id, title: "Pub", courseCode: "TEST301" } });
+    });
+
+    it("answer 404 for a draft resource on POST and PATCH", async () => {
+      await signIn();
+      const { draft } = await resources();
+      const created = await post({ resourceId: draft.id });
+      expect(created.status).toBe(404);
+      expect(await created.json()).toEqual({ error: "Resource not found" });
+      const { card } = await (await post({ title: "t" })).json();
+      const patched = await PATCH(
+        new NextRequest(`${ORIGIN}/api/v1/todos/${card.id}`, {
+          method: "PATCH",
+          headers: { origin: ORIGIN, "content-type": "application/json" },
+          body: JSON.stringify({ resourceId: draft.id }),
+        }),
+        { params: Promise.resolve({ id: card.id }) },
+      );
+      expect(patched.status).toBe(404);
+    });
   });
 });

@@ -136,7 +136,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
     const tempId = `pending-${++tempCounter.current}`;
     const stamp = new Date().toISOString();
     const temp: BoardCard = {
-      id: tempId, status, position: 0, title, note: "", createdAt: stamp, updatedAt: stamp, statusChangedAt: stamp, pending: true,
+      id: tempId, status, position: 0, title, note: "", createdAt: stamp, updatedAt: stamp, statusChangedAt: stamp, resource: null, pending: true,
     };
     setCards((all) => [temp, ...all]);
     const drop = () => setCards((all) => all.filter((c) => c.id !== tempId));
