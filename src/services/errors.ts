@@ -67,6 +67,14 @@ export class InvalidConfirmationTokenError extends Error {
   }
 }
 
+// The student already has the most cards a board may hold.
+export class BoardFullError extends Error {
+  constructor() {
+    super("Board full");
+    this.name = "BoardFullError";
+  }
+}
+
 // The password was right but the email address has not been confirmed yet. Only raised after the
 // password check, so it reveals nothing to someone who does not know the password.
 export class EmailNotConfirmedError extends Error {
