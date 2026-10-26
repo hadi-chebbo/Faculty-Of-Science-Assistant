@@ -1,8 +1,8 @@
 "use client";
 
-import { BookOpen, Check, FileText, Trash2, X } from "lucide-react";
+import { BookOpen, Bookmark, Check, FileText, Trash2, X } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TYPE_ICONS } from "@/components/site/resource-row";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { TODO_NOTE_MAX_LENGTH, TODO_STATUSES, TODO_TITLE_MAX_LENGTH, type TodoStatus } from "@/db/constants";
 import { RESOURCE_TYPE_SINGULAR_LABELS } from "@/lib/labels";
 import { relativeTime } from "@/lib/relative-time";
+import { SavedFilePicker, type PickedFile } from "./saved-file-picker";
 import { FILE_UNAVAILABLE, titleOf, type BoardCard } from "./todo-card";
 import { STATUS_LOOK } from "./todo-status";
 import type { Edit, SaveInfo } from "./use-card-saver";
@@ -42,6 +43,7 @@ export function CardViewDialog({
   now,
   info,
   onEdit,
+  onLinkFile,
   onClose,
   onDelete,
   onMove,
@@ -51,6 +53,7 @@ export function CardViewDialog({
   now: string;
   info: SaveInfo | undefined;
   onEdit: (id: string, change: Edit) => void;
+  onLinkFile: (id: string, file: PickedFile | null) => void;
   onClose: () => void;
   onDelete: (id: string) => void;
   onMove: (id: string, status: TodoStatus) => void;
@@ -60,13 +63,17 @@ export function CardViewDialog({
     <Dialog open={card !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         showCloseButton={false}
+        onEscapeKeyDown={(event) => {
+          // Esc closes an open file picker first, and only that.
+          if (document.querySelector("[data-saved-picker]")) event.preventDefault();
+        }}
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           onCloseFocus();
         }}
         className="inset-0 flex max-h-none w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-y-auto rounded-none p-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:max-h-[92vh] sm:max-w-3xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl"
       >
-        {card && <CardViewBody key={card.id} card={card} now={now} info={info} onEdit={onEdit} onDelete={onDelete} onMove={onMove} />}
+        {card && <CardViewBody key={card.id} card={card} now={now} info={info} onEdit={onEdit} onLinkFile={onLinkFile} onDelete={onDelete} onMove={onMove} />}
       </DialogContent>
     </Dialog>
   );
@@ -77,6 +84,7 @@ function CardViewBody({
   now,
   info,
   onEdit,
+  onLinkFile,
   onDelete,
   onMove,
 }: {
@@ -84,10 +92,22 @@ function CardViewBody({
   now: string;
   info: SaveInfo | undefined;
   onEdit: (id: string, change: Edit) => void;
+  onLinkFile: (id: string, file: PickedFile | null) => void;
   onDelete: (id: string) => void;
   onMove: (id: string, status: TodoStatus) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const linkButton = useRef<HTMLButtonElement>(null);
+  // Where the focus goes after the file changed: the button that now stands in its place.
+  const focusAfter = useRef<"remove" | "link" | null>(null);
+  const hasFile = card.resource !== null;
+  useEffect(() => {
+    const target = focusAfter.current;
+    focusAfter.current = null;
+    if (target === "remove") document.getElementById("card-file-remove")?.focus();
+    else if (target === "link") linkButton.current?.focus();
+  }, [hasFile]);
   const look = STATUS_LOOK[card.status];
   const line = saveLine(info);
   const file = card.resource;
@@ -145,9 +165,9 @@ function CardViewBody({
             </p>
           </div>
 
-          {file && (
-            <section>
+          <section>
               <h4 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">File</h4>
+              {file ? (
               <div className="flex items-center gap-3 rounded-xl border bg-muted/40 p-3">
                 {(() => {
                   const Icon = file.available ? TYPE_ICONS[file.type] : FileText;
@@ -174,9 +194,46 @@ function CardViewBody({
                 ) : (
                   <p className="min-w-0 flex-1 text-sm text-muted-foreground">{FILE_UNAVAILABLE}</p>
                 )}
+                <Button
+                  id="card-file-remove"
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-11 md:h-9"
+                  disabled={!file.available && !card.title.trim()}
+                  aria-describedby={!file.available && !card.title.trim() ? "card-file-remove-hint" : undefined}
+                  onClick={() => {
+                    focusAfter.current = "link";
+                    onLinkFile(card.id, null);
+                  }}
+                >
+                  Remove
+                </Button>
               </div>
+              ) : (
+                <Button ref={linkButton} type="button" variant="outline" className="h-11 w-full justify-start md:h-9" aria-expanded={picking} onClick={() => setPicking((open) => !open)}>
+                  <Bookmark aria-hidden /> Link one of your saved files
+                </Button>
+              )}
+              {file && !file.available && !card.title.trim() && (
+                <p id="card-file-remove-hint" className="mt-1 text-xs text-muted-foreground">
+                  Give the card a title before removing the file.
+                </p>
+              )}
+              {!file && picking && (
+                <SavedFilePicker
+                  onClose={() => {
+                    setPicking(false);
+                    setTimeout(() => linkButton.current?.focus());
+                  }}
+                  onPick={(picked) => {
+                    focusAfter.current = "remove";
+                    setPicking(false);
+                    onLinkFile(card.id, picked);
+                  }}
+                />
+              )}
             </section>
-          )}
 
           <section>
             <label htmlFor="card-note" className="mb-2 block text-xs font-semibold tracking-wide text-muted-foreground uppercase">

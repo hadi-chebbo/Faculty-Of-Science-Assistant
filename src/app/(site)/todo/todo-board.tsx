@@ -12,6 +12,7 @@ import type { TodoCard } from "@/services/todos/types";
 import { BOARD_FULL_MESSAGE, boardRequest } from "@/lib/board-api";
 import { CardComposer } from "./card-composer";
 import { CardViewDialog } from "./card-view-dialog";
+import type { PickedFile } from "./saved-file-picker";
 import { moveMessage, TodoCardView, type BoardCard, type MoveHow } from "./todo-card";
 import { STATUS_LOOK } from "./todo-status";
 import { useCardSaver, type Edit } from "./use-card-saver";
@@ -45,6 +46,8 @@ function focusAfterRemoval(id: string, status: TodoStatus): (delay?: number) => 
   const nextId = neighbour?.querySelector<HTMLElement>("[data-card-open]")?.dataset.cardOpen;
   return (delay = 0) => (nextId ? focusCard(nextId, delay) : focusAddControl(status, delay));
 }
+
+const sameFile = (a: BoardCard["resource"], b: BoardCard["resource"]) => JSON.stringify(a) === JSON.stringify(b);
 
 // Puts a card back among the cards of its column at `index` (0 = top), wherever the array keeps
 // that column's cards.
@@ -89,7 +92,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
   // Undo is always sent after its delete.
   const queue = useRef<Promise<void>>(Promise.resolve());
   // What the server has for each card, to put back a title it refused.
-  const saved = useRef(new Map(initialCards.map((c) => [c.id, { title: c.title, note: c.note }])));
+  const saved = useRef(new Map(initialCards.map((c) => [c.id, { title: c.title, note: c.note, resource: c.resource }])));
   // The newest cards, for moves started from an Undo button whose closure is older than the board.
   const latest = useRef(cards);
   useEffect(() => {
@@ -98,8 +101,21 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
   const closeFocus = useRef<(() => void) | null>(null);
   const lastOpened = useRef<string | null>(null);
   const saver = useCardSaver({
-    onSaved: (card) => saved.current.set(card.id, { title: card.title, note: card.note }),
+    onSaved: (card, stillWaiting) => {
+      saved.current.set(card.id, { title: card.title, note: card.note, resource: card.resource });
+      // The server's answer replaces the file shown, unless a newer choice is still on its way.
+      if (!stillWaiting.includes("resourceId")) {
+        setCards((all) => all.map((c) => (c.id === card.id && !sameFile(c.resource, card.resource) ? { ...c, resource: card.resource } : c)));
+      }
+    },
     onSignedOut: () => router.push(SIGN_IN),
+    onLinkRefused: (id, newerLink) => {
+      if (!newerLink) {
+        const back = saved.current.get(id)?.resource ?? null;
+        setCards((all) => all.map((c) => (c.id === id ? { ...c, resource: back } : c)));
+      }
+      toast.error("This file can no longer be linked.");
+    },
   });
 
   useEffect(() => {
@@ -132,21 +148,21 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  function add(status: TodoStatus, title: string) {
+  function add(status: TodoStatus, title: string, file: PickedFile | null = null) {
     const tempId = `pending-${++tempCounter.current}`;
     const stamp = new Date().toISOString();
     const temp: BoardCard = {
-      id: tempId, status, position: 0, title, note: "", createdAt: stamp, updatedAt: stamp, statusChangedAt: stamp, resource: null, pending: true,
+      id: tempId, status, position: 0, title, note: "", createdAt: stamp, updatedAt: stamp, statusChangedAt: stamp, resource: file, pending: true,
     };
     setCards((all) => [temp, ...all]);
     const drop = () => setCards((all) => all.filter((c) => c.id !== tempId));
 
     queue.current = queue.current.then(async () => {
       try {
-        const response = await boardRequest("POST", "", { title, status });
+        const response = await boardRequest("POST", "", file ? { title, status, resourceId: file.id } : { title, status });
         if (response.ok) {
           const { card } = (await response.json()) as { card: TodoCard };
-          saved.current.set(card.id, { title: card.title, note: card.note });
+          saved.current.set(card.id, { title: card.title, note: card.note, resource: card.resource });
           setCards((all) => all.map((c) => (c.id === tempId ? card : c)));
         } else if (response.status === 401) {
           drop();
@@ -154,6 +170,9 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
         } else if (response.status === 409) {
           drop();
           toast.error(BOARD_FULL_MESSAGE);
+        } else if (response.status === 404 && file) {
+          drop();
+          toast.error("This file can no longer be added.");
         } else {
           drop();
           toast.error("Couldn't add the card. Try again.");
@@ -183,6 +202,21 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
   function editCard(id: string, change: Edit) {
     setCards((all) => all.map((c) => (c.id === id ? { ...c, ...change } : c)));
     saver.edit(id, change);
+  }
+
+  // Links a saved file to a card, or removes the file (`file` null), at once on the board and sent
+  // straight away. A card with no title of its own keeps the file's title when the file goes.
+  function linkFile(id: string, file: PickedFile | null) {
+    const card = latest.current.find((c) => c.id === id);
+    if (!card || card.pending) return;
+    const change: Edit = { resourceId: file?.id ?? null };
+    let title = card.title;
+    if (!file && !card.title.trim() && card.resource?.available) {
+      title = card.resource.title;
+      change.title = title;
+    }
+    setCards((all) => all.map((c) => (c.id === id ? { ...c, title, resource: file } : c)));
+    saver.edit(id, change, { immediate: true });
   }
 
   // A title the server refused (the answer can arrive after the card view has closed) goes back to
@@ -239,7 +273,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
         const response = await boardRequest("POST", `/${id}/restore`);
         if (response.ok) {
           const { card } = (await response.json()) as { card: TodoCard };
-          saved.current.set(card.id, { title: card.title, note: card.note });
+          saved.current.set(card.id, { title: card.title, note: card.note, resource: card.resource });
           // Back in its old column and place (the server's position counts from the top).
           setCards((all) => (all.some((c) => c.id === id) ? all : insertInColumn(all, card, card.position)));
         } else if (response.status === 401) {
@@ -409,6 +443,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
         now={now}
         info={openId ? saver.info[openId] : undefined}
         onEdit={editCard}
+        onLinkFile={linkFile}
         onClose={closeCard}
         onDelete={(id) => removeCard(id)}
         onMove={(id, status) => move(id, status, 0, { message: moveMessage(status), keepFocus: true })}
