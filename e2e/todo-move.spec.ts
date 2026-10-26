@@ -263,8 +263,10 @@ test("Done never creates a completion, and a failed move rolls back with a messa
     { title: "Moves", status: "in_progress" },
   ]);
   await signInOnBoard(page, isMobile);
+  const moved = page.waitForResponse(isMove);
   await card(page, "Moves").getByRole("button", { name: "Done", exact: true }).click();
   await expect(cardsIn(page, "Done")).toHaveText(["Moves"]);
+  await moved;
   await page.reload();
   await expect(cardsIn(page, "Done")).toHaveText(["Moves"]);
   const completions = await withDb((client) =>
