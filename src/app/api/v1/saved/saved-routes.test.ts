@@ -5,6 +5,7 @@ import { closeDb, truncateAllTables } from "@/db/test-utils";
 import type { Viewer } from "@/services/viewer";
 import { DELETE, PUT } from "./[resourceId]/route";
 import { GET as listIds } from "./ids/route";
+import { GET as listSaved } from "./route";
 
 // The session cookie is read through next/headers, which needs a real request; the tests set who
 // is signed in directly.
@@ -44,7 +45,7 @@ describe("saved routes", () => {
   it("answer 401 when nobody is signed in", async () => {
     const { published } = await seed();
     session.viewer = null;
-    for (const response of [await call("PUT", published.id), await call("DELETE", published.id), await ids()]) {
+    for (const response of [await call("PUT", published.id), await call("DELETE", published.id), await ids(), await listSaved()]) {
       expect(response.status).toBe(401);
       expect(response.headers.get("cache-control")).toBe("no-store");
       expect(await response.json()).toEqual({ error: "Not signed in" });
@@ -74,6 +75,20 @@ describe("saved routes", () => {
       expect(response.status).toBe(404);
       expect(await response.json()).toEqual({ error: "Resource not found" });
     }
+  });
+
+  it("list the saved resources grouped by course", async () => {
+    const { published } = await seed();
+    await call("PUT", published.id);
+    const response = await listSaved();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const body = (await response.json()) as {
+      courses: { courseCode: string; semester: number; items: { id: string; title: string }[] }[];
+    };
+    expect(body.courses).toHaveLength(1);
+    expect(body.courses[0]).toMatchObject({ courseCode: "TEST301", semester: 3 });
+    expect(body.courses[0].items.map((item) => [item.id, item.title])).toEqual([[published.id, "A"]]);
   });
 
   it("answer 204 with no body for save and unsave, twice each, and list the ids", async () => {

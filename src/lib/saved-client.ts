@@ -113,6 +113,14 @@ async function change(resourceId: string, save: boolean): Promise<"done" | "sign
   return "done";
 }
 
+// For a list built on the server from the saved list (the Saved page): true once the store knows
+// the user's saved ids and this one is not among them. Until then the server list is trusted.
+export function useSavedLookup(): { isRemoved: (resourceId: string) => boolean } {
+  const snapshot = useSyncExternalStore(subscribe, () => store, () => UNKNOWN);
+  useEffect(ensureLoaded, []);
+  return { isRemoved: (resourceId) => snapshot.status === "ready" && !snapshot.ids.has(resourceId) };
+}
+
 // The saved state of one resource, and a toggle. Signed out, the toggle goes to sign-in and back
 // to this page; nothing is saved automatically afterwards.
 export function useSavedResource(resourceId: string): {

@@ -4,7 +4,7 @@ import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { NotFoundError } from "../errors";
 import type { Viewer } from "../viewer";
-import { listSavedResourceIds, saveResource, unsaveResource } from "./saved";
+import { listSavedResourceIds, listSavedResources, saveResource, unsaveResource } from "./saved";
 
 const MISSING_ID = "33333333-3333-4333-8333-333333333333";
 
@@ -82,6 +82,95 @@ describe("unsaveResource", () => {
     await unsaveResource(one, a.id);
     expect(await listSavedResourceIds(one)).toEqual([]);
     expect(await listSavedResourceIds(two)).toEqual([a.id]);
+  });
+});
+
+describe("listSavedResources", () => {
+  async function course(code: string, semester: number) {
+    return getDb().Course.create({ code, title: `Title ${code}`, semester });
+  }
+  async function resource(courseId: string, title: string) {
+    return getDb().Resource.create({ courseId, type: "lecture", title, fileKey: "k", isPublished: true });
+  }
+  async function saveAt(viewer: NonNullable<Viewer>, resourceId: string, at: string) {
+    await getDb().Bookmark.create({ userId: viewer.id, resourceId, createdAt: new Date(at) });
+  }
+  const itemIds = async (viewer: NonNullable<Viewer>) =>
+    (await listSavedResources(viewer)).flatMap((group) => group.items.map((item) => item.id));
+
+  it("is empty when nothing is saved", async () => {
+    const student = await user("student", "s@example.com");
+    expect(await listSavedResources(student)).toEqual([]);
+  });
+
+  it("groups by course, ordered by semester then code, newest save first inside a course", async () => {
+    const student = await user("student", "s@example.com");
+    const s5 = await course("TEST501", 5);
+    const b = await course("TEST302", 3);
+    const a = await course("TEST301", 3);
+    const r5 = await resource(s5.id, "Five");
+    const rb = await resource(b.id, "B");
+    const a1 = await resource(a.id, "A1");
+    const a2 = await resource(a.id, "A2");
+    const a3 = await resource(a.id, "A3");
+    await saveAt(student, r5.id, "2026-01-01T10:00:00Z");
+    await saveAt(student, rb.id, "2026-01-02T10:00:00Z");
+    await saveAt(student, a1.id, "2026-01-03T10:00:00Z");
+    await saveAt(student, a3.id, "2026-01-05T10:00:00Z");
+    await saveAt(student, a2.id, "2026-01-04T10:00:00Z");
+
+    const groups = await listSavedResources(student);
+    expect(groups.map((g) => [g.courseCode, g.semester, g.courseTitle])).toEqual([
+      ["TEST301", 3, "Title TEST301"],
+      ["TEST302", 3, "Title TEST302"],
+      ["TEST501", 5, "Title TEST501"],
+    ]);
+    expect(groups[0].items.map((i) => i.title)).toEqual(["A3", "A2", "A1"]);
+    expect(groups[0].items[0].courseCode).toBe("TEST301");
+  });
+
+  it("includes the published solutions of a saved resource", async () => {
+    const student = await user("student", "s@example.com");
+    const c = await course("TEST301", 3);
+    const exam = await resource(c.id, "Exam");
+    const solution = await getDb().Resource.create({
+      courseId: c.id, type: "solution", title: "Sol", fileKey: "k", isPublished: true, solutionOfId: exam.id,
+    });
+    await saveResource(student, exam.id);
+    const [group] = await listSavedResources(student);
+    expect(group.items[0].solutions).toEqual([{ id: solution.id, type: "solution", title: "Sol" }]);
+  });
+
+  it("hides an unpublished resource and its empty course, and shows it again when republished", async () => {
+    const student = await user("student", "s@example.com");
+    const { a, b } = await seed();
+    await saveResource(student, a.id);
+    await saveResource(student, b.id);
+    await a.update({ isPublished: false });
+    expect(await itemIds(student)).toEqual([b.id]);
+    await b.update({ isPublished: false });
+    expect(await listSavedResources(student)).toEqual([]);
+    await a.update({ isPublished: true });
+    expect(await itemIds(student)).toEqual([a.id]);
+  });
+
+  it("loses the save when the resource is deleted", async () => {
+    const student = await user("student", "s@example.com");
+    const { a } = await seed();
+    await saveResource(student, a.id);
+    await a.destroy();
+    expect(await listSavedResources(student)).toEqual([]);
+    expect(await getDb().Bookmark.count()).toBe(0);
+  });
+
+  it("never shows another user's saves", async () => {
+    const one = await user("student", "one@example.com");
+    const two = await user("student", "two@example.com");
+    const { a, b } = await seed();
+    await saveResource(one, a.id);
+    await saveResource(two, b.id);
+    expect(await itemIds(one)).toEqual([a.id]);
+    expect(await itemIds(two)).toEqual([b.id]);
   });
 });
 
