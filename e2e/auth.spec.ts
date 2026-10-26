@@ -270,6 +270,9 @@ test("a signed-in visitor opening /sign-in?next=... is sent there", async ({ pag
   await expect(page).toHaveURL((url) => url.pathname === "/");
   await page.goto("/sign-in?next=/courses/DEMO301");
   await expect(page).toHaveURL(/\/courses\/DEMO301$/);
+  // The redirect is streamed, so the address changes before the course page has loaded. Wait for
+  // the page itself, or the next goto can be interrupted by the end of this navigation.
+  await expect(page.getByRole("heading", { level: 1, name: "Sample Course A" })).toBeVisible();
   await page.goto(`/sign-in?next=${encodeURIComponent("//evil.example")}`);
   await expect(page).toHaveURL((url) => url.pathname === "/");
 });

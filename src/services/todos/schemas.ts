@@ -20,3 +20,11 @@ export const updateCardSchema = z.object({
 export type UpdateCardInput = z.input<typeof updateCardSchema>;
 
 export const cardIdSchema = z.uuid();
+
+// `index` is the place in the target column, 0 = top; one past the end is clamped by the service.
+export const moveCardSchema = z.object({
+  status: z.enum(TODO_STATUSES),
+  index: z.number().int().min(0),
+});
+
+export type MoveCardInput = z.input<typeof moveCardSchema>;

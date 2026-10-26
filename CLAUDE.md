@@ -298,8 +298,8 @@ mock exam generation, personalization.
   `GET` / `POST /api/v1/todos` (`{ title, note?, status? }`, 201 `{ card }`, 400 `fields`, 409
   `board_full`). Card view: clicking a card (its title is a button stretched over the card) or
   Enter / Space opens one `CardViewDialog` owned by the board (a full-screen sheet on a phone). Left: a
-  large one-line title and the note with "N / 2000"; right: the status, read-only for now (icon and
-  colour of its column), "Added" and "In this column since", and "Delete card". There is no Save button:
+  large one-line title and the note with "N / 2000"; right: the status as a list of the three columns (the current one marked, `aria-pressed`; choosing
+  another moves the card to the top of it and the card view stays open), "Added" and "In this column since", and "Delete card". There is no Save button:
   about 500 ms after typing stops, `PATCH /api/v1/todos/ID` sends only the fields that changed
   (`use-card-saver`), one request at a time per card; a quiet line shows "Saving…", "Saved" or "Couldn't
   save, retrying" (retries after 1, 2, 4, 8 s, then every 15 s; only problems are announced to screen
@@ -307,13 +307,28 @@ mock exam generation, personalization.
   400 (an empty title on a note card) shows "A card needs a title." under the title, is not retried, and
   the board goes back to the last saved title. Delete: "Delete card" asks "Delete this card?" first; the
   "…" menu on each card has Delete with no question. Either hides the card at once and shows "Card
-  deleted" with Undo for 5 seconds (`showUndoToast`, `src/lib/undo-toast.ts`, shared with moving later);
+  deleted" with Undo for 5 seconds (`showUndoToast`, `src/lib/undo-toast.ts`, shared with moving);
   `DELETE /api/v1/todos/ID` (204) soft-deletes the card keeping its column and position, and
   `POST /api/v1/todos/ID/restore` puts it back there (or at the bottom of a shorter column; 409
   `board_full` at 500). Deleted cards are kept a day and purged when the owner loads the board. Focus
   returns to the card after the card view closes, and goes to the next card (or "Add a card") after a
-  delete. Not built yet: Start / Done, moving and changing the status, drag and drop, linked files,
-  filters (see the spec).
+  delete. Moving: a To do card has a "Start" button (to In progress) and an In progress card a green
+  "Done" button (to Done); neither is on a Done card. Both are 44px tall on a phone and sit before the
+  "…" menu in the Tab order. The menu has Move to (the two other columns), Move up, Move down (disabled
+  at the ends), Open card and Delete. Start, Done, Move to and the card view's status list put the
+  card at the top of the new column; its "since" date restarts. `POST /api/v1/todos/ID/move`
+  (`{ status, index }`, 0 = top, clamped; 200 `{ card }`) renumbers both columns gapless in one
+  transaction, and sets `statusChangedAt` only when the column changes. The board moves the card at
+  once and rolls it back with "Couldn't move the card. Try again." if the server refuses; moves are
+  queued with the other requests. Every move shows an Undo toast ("Moved to In progress", "Moved to
+  To do", "Nice, that's done.", "Moved up", "Moved down"); Undo returns the card to its earlier column
+  and place (its "since" date becomes the time of the undo) and is not itself undoable. A card that
+  reaches Done gets a ~600 ms green ring and its check pops in (`done-ring`, `done-check` in
+  `globals.css`, only under `prefers-reduced-motion: no-preference`; the toast still shows). Done cards
+  have a struck-through title and "Done … ago". Moving a card to Done never creates or changes a
+  completion. After a move the focus follows the card; on a phone, when it leaves the tab on screen,
+  the focus stays on the selected tab. Not built yet: drag and drop, linked files, filters (see the
+  spec).
 - Sign-in page (`/sign-in`): a full-screen split. On desktop (md and up) a deep-blue panel (the `brand-panel` token, white text, same in both themes) with the brand name, the home headline and three feature lines sits beside the form; on a phone the panel is hidden. The account pages (in the `src/app/(auth)` route group) are full-screen pages without the site header, footer or tab bar: the panel fills the left side on desktop, and the right side has a slim bar (the brand linking home on a phone, the theme toggle), the form centred, and the disclaimer under it. The form shows errors in one destructive alert, clears and focuses the password after a wrong one, has a show/hide password button and a Caps Lock hint. The split is `AuthShell` in `src/components/auth`. It also shows "New here? Create an account" (to `/sign-up`) above "Back to courses". When the password is right but the email is not confirmed (403 `email_not_confirmed`) it shows a default (not destructive) alert, "Confirm your email first. We sent a link to s•••@gmail.com.", with a "Send a new link" button that posts the typed address to the resend endpoint and answers "A new link is on its way." (429: "Please wait before asking for another link."); the password is kept. The header still shows only "Sign in"; sign-up is reached from the sign-in page. `?next=` (a same-site path checked by `safeNextPath`) is where sign-in sends the visitor afterwards, also when already signed in (`/admin` pages send a signed-out visitor there with their own path); otherwise admins go to `/admin` and students to `/`. Sign-up does not carry it.
 - The account pages share `BrandPanel` (the panel content) and `AuthShell`; each is `noindex`, has 44px touch targets and shows errors in one destructive alert.
 - Sign-up page (`/sign-up`; a signed-in visitor is redirected, like on `/sign-in`): "Create your account", fields Name (optional), Email and Password (show/hide, hint "At least 10 characters.", length also validated in the browser; no repeat field), "Create account", and a link to `/sign-in`. Field errors from a 400 show on the fields; a 429 says there were too many sign-ups from this network. On 202 the address is kept in `sessionStorage` (`signup:email`, never in the URL) and the page goes to `/sign-up/check-email`.
