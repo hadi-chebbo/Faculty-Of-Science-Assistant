@@ -12,7 +12,7 @@ import type { TodoCard } from "@/services/todos/types";
 import { BOARD_FULL_MESSAGE, boardRequest } from "./board-api";
 import { CardComposer } from "./card-composer";
 import { CardViewDialog } from "./card-view-dialog";
-import { TodoCardView, type BoardCard } from "./todo-card";
+import { moveMessage, TodoCardView, type BoardCard, type MoveHow } from "./todo-card";
 import { STATUS_LOOK } from "./todo-status";
 import { useCardSaver, type Edit } from "./use-card-saver";
 
@@ -56,6 +56,19 @@ function insertInColumn(all: BoardCard[], card: BoardCard, index: number): Board
   return [...all.slice(0, position), card, ...all.slice(position)];
 }
 
+// Where a card goes: out of its column, into `status` at `index` (0 = top). The card keeps its other
+// fields; a change of column stamps `changedAt` as the time it entered the column.
+function place(all: BoardCard[], id: string, status: TodoStatus, index: number, changedAt?: string): BoardCard[] {
+  const card = all.find((c) => c.id === id);
+  if (!card) return all;
+  const moved = { ...card, status, statusChangedAt: changedAt ?? card.statusChangedAt };
+  return insertInColumn(
+    all.filter((c) => c.id !== id),
+    moved,
+    index,
+  );
+}
+
 // The signed-in student's board, following variant D of the prototype: three tinted columns on a
 // desktop, tabs with one column at a time on a phone. Adding a card is optimistic: it appears at
 // the top of its column at once and is replaced by the server's card, or removed with a message.
@@ -67,6 +80,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
   const [adding, setAdding] = useState<TodoStatus | null>(null);
   const [phoneTab, setPhoneTab] = useState<TodoStatus>("todo");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [celebrating, setCelebrating] = useState<string | null>(null);
   // "Added 5 minutes ago" starts from the server's clock (so the first render matches the HTML)
   // and is refreshed every minute afterwards.
   const [now, setNow] = useState(serverNow);
@@ -76,6 +90,11 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
   const queue = useRef<Promise<void>>(Promise.resolve());
   // What the server has for each card, to put back a title it refused.
   const saved = useRef(new Map(initialCards.map((c) => [c.id, { title: c.title, note: c.note }])));
+  // The newest cards, for moves started from an Undo button whose closure is older than the board.
+  const latest = useRef(cards);
+  useEffect(() => {
+    latest.current = cards;
+  });
   const closeFocus = useRef<(() => void) | null>(null);
   const lastOpened = useRef<string | null>(null);
   const saver = useCardSaver({
@@ -238,8 +257,63 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
     });
   }
 
+  // Moves a card to `index` of `status` (0 = top) at once, then asks the server; if the server
+  // refuses, the card goes back where it was. Every move, except one made by Undo, offers Undo.
+  function move(id: string, status: TodoStatus, index: number, how: MoveHow, isUndo = false) {
+    const all = latest.current;
+    const card = all.find((c) => c.id === id);
+    if (!card || card.pending) return;
+    const column = all.filter((c) => c.status === card.status);
+    const from = column.indexOf(card);
+    const size = status === card.status ? column.length - 1 : all.filter((c) => c.status === status).length;
+    const to = Math.max(0, Math.min(index, size));
+    if (status === card.status && to === from) return;
+    const before = { status: card.status, index: from, changedAt: card.statusChangedAt };
+
+    const next = place(all, id, status, to, status === card.status ? undefined : new Date().toISOString());
+    latest.current = next;
+    setCards(next);
+    if (status === "done" && !isUndo) {
+      setCelebrating(id);
+      setTimeout(() => setCelebrating((current) => (current === id ? null : current)), 700);
+    }
+    const toastId = isUndo ? null : showUndoToast(how.message, () => move(id, before.status, before.index, how, true));
+    if (!how.keepFocus) {
+      // After the menu has handed the focus back to its button. The card may have left the tab that
+      // is on screen (a phone shows one column); then the tab itself keeps the focus.
+      setTimeout(() => (visibleElement(`[data-card-open="${id}"]`) ?? visibleElement('[role="tab"][aria-selected="true"]'))?.focus(), 60);
+    }
+
+    queue.current = queue.current.then(async () => {
+      const rollback = () => {
+        const back = place(latest.current, id, before.status, before.index, before.changedAt);
+        latest.current = back;
+        setCards(back);
+        if (toastId !== null) toast.dismiss(toastId);
+      };
+      try {
+        const response = await boardRequest("POST", `/${id}/move`, { status, index: to });
+        if (response.ok) {
+          const { card: fresh } = (await response.json()) as { card: TodoCard };
+          setCards((current) =>
+            current.map((c) => (c.id === id ? { ...c, statusChangedAt: fresh.statusChangedAt, updatedAt: fresh.updatedAt } : c)),
+          );
+        } else if (response.status === 401) {
+          rollback();
+          router.push(SIGN_IN);
+        } else {
+          rollback();
+          toast.error("Couldn't move the card. Try again.");
+        }
+      } catch {
+        rollback();
+        toast.error("Couldn't move the card. Try again.");
+      }
+    });
+  }
+
   const inColumn = (status: TodoStatus) => cards.filter((c) => c.status === status);
-  const listProps = { now, onOpen: openCard, onDelete: (id: string) => removeCard(id, true) };
+  const listProps = { now, celebrating, onOpen: openCard, onDelete: (id: string) => removeCard(id, true), onMove: move };
 
   return (
     <>
@@ -337,6 +411,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
         onEdit={editCard}
         onClose={closeCard}
         onDelete={(id) => removeCard(id)}
+        onMove={(id, status) => move(id, status, 0, { message: moveMessage(status), keepFocus: true })}
         onCloseFocus={() => {
           const run = closeFocus.current;
           closeFocus.current = null;
@@ -352,16 +427,20 @@ function CardList({
   cards,
   status,
   now,
+  celebrating,
   showEmpty,
   onOpen,
   onDelete,
+  onMove,
 }: {
   cards: BoardCard[];
   status: TodoStatus;
   now: string;
+  celebrating: string | null;
   showEmpty: boolean;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
+  onMove: (id: string, status: TodoStatus, index: number, how: MoveHow) => void;
 }) {
   const look = STATUS_LOOK[status];
   const Icon = look.icon;
@@ -376,9 +455,18 @@ function CardList({
   }
   return (
     <ul className="flex flex-col gap-2.5">
-      {cards.map((card) => (
+      {cards.map((card, index) => (
         <li key={card.id}>
-          <TodoCardView card={card} now={now} onOpen={onOpen} onDelete={onDelete} />
+          <TodoCardView
+            card={card}
+            now={now}
+            index={index}
+            count={cards.length}
+            celebrating={celebrating === card.id}
+            onOpen={onOpen}
+            onDelete={onDelete}
+            onMove={onMove}
+          />
         </li>
       ))}
     </ul>

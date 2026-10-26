@@ -1,11 +1,11 @@
 "use client";
 
-import { Trash2, X } from "lucide-react";
+import { Check, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { TODO_NOTE_MAX_LENGTH, TODO_TITLE_MAX_LENGTH } from "@/db/constants";
+import { TODO_NOTE_MAX_LENGTH, TODO_STATUSES, TODO_TITLE_MAX_LENGTH, type TodoStatus } from "@/db/constants";
 import { relativeTime } from "@/lib/relative-time";
 import { titleOf, type BoardCard } from "./todo-card";
 import { STATUS_LOOK } from "./todo-status";
@@ -32,7 +32,8 @@ function saveLine(info: SaveInfo | undefined): { text: string; tone: string } {
 }
 
 // The card view (like a Jira issue): one dialog owned by the board, whichever card is open. Title and
-// note save as you type (no Save button); the status is shown but cannot be changed yet.
+// note save as you type (no Save button); the status is a list of the three columns, and choosing
+// one moves the card to the top of it while the card view stays open.
 export function CardViewDialog({
   card,
   now,
@@ -40,6 +41,7 @@ export function CardViewDialog({
   onEdit,
   onClose,
   onDelete,
+  onMove,
   onCloseFocus,
 }: {
   card: BoardCard | null;
@@ -48,6 +50,7 @@ export function CardViewDialog({
   onEdit: (id: string, change: Edit) => void;
   onClose: () => void;
   onDelete: (id: string) => void;
+  onMove: (id: string, status: TodoStatus) => void;
   onCloseFocus: () => void;
 }) {
   return (
@@ -60,7 +63,7 @@ export function CardViewDialog({
         }}
         className="inset-0 flex max-h-none w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-y-auto rounded-none p-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:max-h-[92vh] sm:max-w-3xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl"
       >
-        {card && <CardViewBody key={card.id} card={card} now={now} info={info} onEdit={onEdit} onDelete={onDelete} />}
+        {card && <CardViewBody key={card.id} card={card} now={now} info={info} onEdit={onEdit} onDelete={onDelete} onMove={onMove} />}
       </DialogContent>
     </Dialog>
   );
@@ -72,16 +75,17 @@ function CardViewBody({
   info,
   onEdit,
   onDelete,
+  onMove,
 }: {
   card: BoardCard;
   now: string;
   info: SaveInfo | undefined;
   onEdit: (id: string, change: Edit) => void;
   onDelete: (id: string) => void;
+  onMove: (id: string, status: TodoStatus) => void;
 }) {
   const [confirming, setConfirming] = useState(false);
   const look = STATUS_LOOK[card.status];
-  const StatusIcon = look.icon;
   const line = saveLine(info);
   const titleInvalid = info?.invalidFields.includes("title") ?? false;
   const noteInvalid = info?.invalidFields.includes("note") ?? false;
@@ -162,10 +166,28 @@ function CardViewBody({
         <aside className="flex flex-col gap-5 border-t bg-muted/40 p-5 md:border-t-0 md:border-l">
           <section>
             <h4 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Status</h4>
-            <p className="flex items-center gap-2 text-sm font-medium text-heading">
-              <StatusIcon className={`size-4 ${look.iconTone}`} aria-hidden />
-              {look.label}
-            </p>
+            <div role="group" aria-label="Status" className="flex flex-col gap-1">
+              {TODO_STATUSES.map((status) => {
+                const option = STATUS_LOOK[status];
+                const Icon = option.icon;
+                const current = status === card.status;
+                return (
+                  <Button
+                    key={status}
+                    type="button"
+                    variant="ghost"
+                    aria-pressed={current}
+                    disabled={card.pending}
+                    onClick={() => !current && onMove(card.id, status)}
+                    className={`h-11 justify-start gap-2 px-2 md:h-9 ${current ? "bg-card font-semibold text-heading ring-1 ring-border" : "text-muted-foreground"}`}
+                  >
+                    <Icon className={`size-4 ${option.iconTone}`} aria-hidden />
+                    {option.label}
+                    {current && <Check className="ml-auto size-4" aria-hidden />}
+                  </Button>
+                );
+              })}
+            </div>
           </section>
           <section>
             <h4 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Details</h4>

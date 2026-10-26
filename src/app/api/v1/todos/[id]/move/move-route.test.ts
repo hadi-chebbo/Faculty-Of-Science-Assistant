@@ -45,7 +45,8 @@ describe("POST /api/v1/todos/{id}/move", () => {
   it("refuses a cross-origin or origin-less request with 403 and moves nothing", async () => {
     const me = await signIn();
     const card = await createCard(me, { title: "mine" });
-    for (const headers of [{ origin: "https://evil.example" }, {}]) {
+    const refused: Record<string, string>[] = [{ origin: "https://evil.example" }, {}];
+    for (const headers of refused) {
       expect((await move(card.id, { status: "done", index: 0 }, headers)).status).toBe(403);
     }
     expect(await getDb().Todo.findByPk(card.id)).toMatchObject({ status: "todo" });
