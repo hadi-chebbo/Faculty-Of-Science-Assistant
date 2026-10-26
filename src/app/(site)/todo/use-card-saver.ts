@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { TodoCard } from "@/services/todos/types";
 import { boardRequest } from "@/lib/board-api";
 
-export type Edit = { title?: string; note?: string };
+export type Edit = { title?: string; note?: string; resourceId?: string | null };
 export type SaveStatus = "idle" | "saving" | "saved" | "retrying" | "invalid" | "failed";
 export type SaveInfo = { status: SaveStatus; invalidFields: string[] };
 
@@ -29,15 +29,20 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export function useCardSaver({
   onSaved,
   onSignedOut,
+  onLinkRefused,
 }: {
-  onSaved: (card: TodoCard) => void;
+  // `stillWaiting` lists the fields with newer changes not sent yet (the board keeps its own copy of those).
+  onSaved: (card: TodoCard, stillWaiting: string[]) => void;
   onSignedOut: () => void;
+  // The server refused to link a file (404: it is no longer published). `newerLink` is true when
+  // the student has meanwhile picked or removed another file, which is still waiting to be sent.
+  onLinkRefused: (id: string, newerLink: boolean) => void;
 }) {
   const entries = useRef(new Map<string, Entry>());
   const [info, setInfo] = useState<Record<string, SaveInfo>>({});
-  const handlers = useRef({ onSaved, onSignedOut });
+  const handlers = useRef({ onSaved, onSignedOut, onLinkRefused });
   useEffect(() => {
-    handlers.current = { onSaved, onSignedOut };
+    handlers.current = { onSaved, onSignedOut, onLinkRefused };
   });
 
   const set = useCallback((id: string, next: SaveInfo) => setInfo((all) => ({ ...all, [id]: next })), []);
@@ -75,7 +80,7 @@ export function useCardSaver({
 
           if (response?.ok) {
             failures = 0;
-            handlers.current.onSaved(((await response.json()) as { card: TodoCard }).card);
+            handlers.current.onSaved(((await response.json()) as { card: TodoCard }).card, Object.keys(entry.dirty));
             if (Object.keys(entry.dirty).length === 0) set(id, { status: "saved", invalidFields: [] });
           } else if (response?.status === 401) {
             putBack();
@@ -94,6 +99,13 @@ export function useCardSaver({
             entry.dirty = { ...kept, ...entry.dirty };
             set(id, { status: "invalid", invalidFields: refused });
             if (refused.length === 0 || Object.keys(entry.dirty).length === 0) break;
+          } else if (response?.status === 404 && "resourceId" in sending) {
+            // The file can no longer be linked: not retried. What else was in the request still goes out.
+            const rest = { ...sending };
+            delete rest.resourceId;
+            handlers.current.onLinkRefused(id, "resourceId" in entry.dirty);
+            entry.dirty = { ...rest, ...entry.dirty };
+            set(id, { status: Object.keys(entry.dirty).length > 0 ? "saving" : "idle", invalidFields: [] });
           } else if (response && response.status >= 400 && response.status < 500) {
             // 403 or 404: retrying cannot help (the card is gone or the request was refused).
             set(id, { status: "failed", invalidFields: [] });
@@ -117,13 +129,19 @@ export function useCardSaver({
   );
 
   // Records a change and sends it once typing has paused.
+  // `immediate` (linking or removing a file) sends at once instead of waiting for typing to pause.
   const edit = useCallback(
-    (id: string, change: Edit) => {
+    (id: string, change: Edit, options: { immediate?: boolean } = {}) => {
       const entry = entryOf(id);
       entry.discarded = false;
       entry.dirty = { ...entry.dirty, ...change };
       if (entry.timer) clearTimeout(entry.timer);
-      entry.timer = setTimeout(() => void run(id), DEBOUNCE_MS);
+      if (options.immediate) {
+        entry.timer = null;
+        void run(id);
+      } else {
+        entry.timer = setTimeout(() => void run(id), DEBOUNCE_MS);
+      }
       setInfo((all) => {
         const now = all[id] ?? IDLE;
         // Typing in a field clears its error; a retry in progress keeps saying so.

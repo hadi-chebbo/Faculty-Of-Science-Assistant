@@ -335,10 +335,23 @@ mock exam generation, personalization.
   instead of "Note", and an **Open** link to the reader (same tab, above the title overlay, 44px on a phone, 32px on md and up; Tab order: title, Open, Start/Done, "…"). With no title of its own
   the card shows the file's title; a file that was deleted leaves the card with its title and note
   ("A file that was removed" if it had neither); a file no longer published shows "This file is no
-  longer available", never its title or a link. The card view shows the file read-only (the title
-  may be empty, with the file's title as placeholder). Cards carry `resource`: null,
-  `{ available: true, id, title, type, courseCode }` or `{ available: false }`. Not built yet: drag and drop, linking or
-  removing a file in the card view and the composer, filters (see the spec).
+  longer available", never its title or a link. The card view's File section is always there (the title
+  may be empty, with the file's title as placeholder). Without a file it has "Link one of your saved files";
+  with one, a small file card with **Open** and **Remove** (for a file no longer published, Remove only).
+  The composer has "Link a saved file" under the title field; the chosen file shows as a chip (icon, title, an
+  × "Remove TITLE") and, with a file chosen, an empty title is allowed (the placeholder becomes the file's title)
+  and Add card posts `resourceId`. Both open the shared `SavedFilePicker` (`saved-file-picker.tsx`): an inline list
+  of the student's saved files from `GET /api/v1/saved` (loaded when first opened), grouped by course, each file a
+  button with its type icon; empty: "Nothing saved yet. Tap the bookmark on any file to save it, then link it here.";
+  error: "Couldn't load your saved files." with Try again; Cancel or Esc closes only the picker and focus returns to
+  its button. Linking and removing go through the card's save queue and are sent at once (not after the 500 ms
+  pause), shown optimistically; the server's card then replaces the file shown. Removing the file of a card with no
+  title of its own sends the file's title with `resourceId: null`, so the card keeps a name; if the file is no longer
+  published and the card has no title, Remove is disabled with "Give the card a title before removing the file.".
+  A 404 when linking (the file was unpublished meanwhile) is not retried: the last saved file is put back with the
+  toast "This file can no longer be linked." (in the composer: the optimistic card is removed with "This file can no
+  longer be added."). Cards carry `resource`: null,
+  `{ available: true, id, title, type, courseCode }` or `{ available: false }`. Not built yet: drag and drop, filters (see the spec).
 - Sign-in page (`/sign-in`): a full-screen split. On desktop (md and up) a deep-blue panel (the `brand-panel` token, white text, same in both themes) with the brand name, the home headline and three feature lines sits beside the form; on a phone the panel is hidden. The account pages (in the `src/app/(auth)` route group) are full-screen pages without the site header, footer or tab bar: the panel fills the left side on desktop, and the right side has a slim bar (the brand linking home on a phone, the theme toggle), the form centred, and the disclaimer under it. The form shows errors in one destructive alert, clears and focuses the password after a wrong one, has a show/hide password button and a Caps Lock hint. The split is `AuthShell` in `src/components/auth`. It also shows "New here? Create an account" (to `/sign-up`) above "Back to courses". When the password is right but the email is not confirmed (403 `email_not_confirmed`) it shows a default (not destructive) alert, "Confirm your email first. We sent a link to s•••@gmail.com.", with a "Send a new link" button that posts the typed address to the resend endpoint and answers "A new link is on its way." (429: "Please wait before asking for another link."); the password is kept. The header still shows only "Sign in"; sign-up is reached from the sign-in page. `?next=` (a same-site path checked by `safeNextPath`) is where sign-in sends the visitor afterwards, also when already signed in (`/admin` pages send a signed-out visitor there with their own path); otherwise admins go to `/admin` and students to `/`. Sign-up does not carry it.
 - The account pages share `BrandPanel` (the panel content) and `AuthShell`; each is `noindex`, has 44px touch targets and shows errors in one destructive alert.
 - Sign-up page (`/sign-up`; a signed-in visitor is redirected, like on `/sign-in`): "Create your account", fields Name (optional), Email and Password (show/hide, hint "At least 10 characters.", length also validated in the browser; no repeat field), "Create account", and a link to `/sign-in`. Field errors from a 400 show on the fields; a 429 says there were too many sign-ups from this network. On 202 the address is kept in `sessionStorage` (`signup:email`, never in the URL) and the page goes to `/sign-up/check-email`.
