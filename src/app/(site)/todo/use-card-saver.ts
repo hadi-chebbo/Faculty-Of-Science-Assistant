@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TodoCard } from "@/services/todos/types";
-import { boardRequest } from "./board-api";
+import { boardRequest } from "@/lib/board-api";
 
 export type Edit = { title?: string; note?: string };
 export type SaveStatus = "idle" | "saving" | "saved" | "retrying" | "invalid" | "failed";

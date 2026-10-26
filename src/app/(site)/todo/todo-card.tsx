@@ -1,5 +1,7 @@
 import { useRef } from "react";
-import { ArrowDown, ArrowUp, Check, Clock, MoreHorizontal, PencilLine, Play, StickyNote, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, BookOpen, Check, Clock, FileText, MoreHorizontal, PencilLine, Play, StickyNote, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { TYPE_ICONS } from "@/components/site/resource-row";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TODO_STATUSES, type TodoStatus } from "@/db/constants";
+import { RESOURCE_TYPE_SINGULAR_LABELS } from "@/lib/labels";
 import { relativeTime } from "@/lib/relative-time";
 import type { TodoCard as Card } from "@/services/todos/types";
 import { STATUS_LOOK } from "./todo-status";
@@ -26,9 +29,12 @@ export type MoveHow = { message: string; keepFocus?: boolean };
 // A card still being saved (the optimistic copy) is shown slightly faded.
 export type BoardCard = Card & { pending?: boolean };
 
-// A card that has neither title nor file cannot be created yet; when linked files arrive a card
-// may have no title of its own.
-export const titleOf = (card: Card) => card.title || "Untitled";
+export const FILE_UNAVAILABLE = "This file is no longer available";
+
+// The card's own title, else its file's title; a file that is no longer published never lends its
+// title. No file left (it was deleted) and no title: "A file that was removed".
+export const titleOf = (card: Card) =>
+  card.title || (card.resource?.available ? card.resource.title : card.resource ? FILE_UNAVAILABLE : "A file that was removed");
 
 // One card: the note icon, the title, a two-line note preview and when it was added (or, in Done,
 // when it was finished). `now` comes from the board so server and browser agree.
@@ -57,6 +63,8 @@ export function TodoCardView({
   onMove: (id: string, status: TodoStatus, index: number, how: MoveHow) => void;
 }) {
   const done = card.status === "done";
+  const file = card.resource;
+  const TypeIcon = file?.available ? TYPE_ICONS[file.type] : file ? FileText : StickyNote;
   // After a move from the menu the board puts the focus on the card in its new place, so the menu
   // must not pull it back to its button.
   const moved = useRef(false);
@@ -71,9 +79,16 @@ export function TodoCardView({
     >
       <div className="flex items-center gap-2">
         <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-link" aria-hidden>
-          <StickyNote className="size-4" />
+          <TypeIcon className="size-4" />
         </span>
-        <span className="text-xs text-muted-foreground">Note</span>
+        {file?.available ? (
+          <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] font-medium text-link">{file.courseCode}</span>
+            {RESOURCE_TYPE_SINGULAR_LABELS[file.type]}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">{file ? "File" : "Note"}</span>
+        )}
       </div>
 
       <h3
@@ -96,6 +111,7 @@ export function TodoCardView({
       {card.note && (
         <p className="mt-1.5 line-clamp-2 border-l-2 border-muted pl-2 text-xs leading-relaxed text-muted-foreground">{card.note}</p>
       )}
+      {file && !file.available && card.title && <p className="mt-2 text-xs text-muted-foreground">{FILE_UNAVAILABLE}</p>}
 
       <div className="mt-3 flex items-center gap-2">
         <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -103,6 +119,14 @@ export function TodoCardView({
           {done ? "Done" : "Added"} {relativeTime(done ? card.statusChangedAt : card.createdAt, now)}
         </span>
         <span className="flex-1" />
+        {file?.available && !card.pending && (
+          <Link
+            href={`/resources/${file.id}`}
+            className="relative z-10 inline-flex h-11 items-center gap-1 rounded-full px-3 text-xs font-medium text-link hover:bg-primary/10 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none md:h-8 md:px-2"
+          >
+            <BookOpen className="size-3.5" aria-hidden /> Open<span className="sr-only"> {titleOf(card)}</span>
+          </Link>
+        )}
         {!card.pending && card.status === "todo" && (
           <Button
             type="button"

@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TODO_STATUSES, type TodoStatus } from "@/db/constants";
 import { showUndoToast } from "@/lib/undo-toast";
 import type { TodoCard } from "@/services/todos/types";
-import { BOARD_FULL_MESSAGE, boardRequest } from "./board-api";
+import { BOARD_FULL_MESSAGE, boardRequest } from "@/lib/board-api";
 import { CardComposer } from "./card-composer";
 import { CardViewDialog } from "./card-view-dialog";
 import { moveMessage, TodoCardView, type BoardCard, type MoveHow } from "./todo-card";
