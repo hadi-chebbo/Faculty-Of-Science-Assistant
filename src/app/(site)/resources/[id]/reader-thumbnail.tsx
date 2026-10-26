@@ -53,6 +53,7 @@ export function ThumbnailButton({
     let cancelled = false;
     let task: RenderTask | undefined;
     (async () => {
+      if (pdf.loadingTask.destroyed) return;
       const page = await pdf.getPage(number);
       if (cancelled) return;
       const ratio = Math.min(2, window.devicePixelRatio || 1);
@@ -62,6 +63,7 @@ export function ThumbnailButton({
       task = page.render({ canvas, viewport });
       await task.promise;
     })().catch((error: unknown) => {
+      if (cancelled || pdf.loadingTask.destroyed) return;
       if (error instanceof Error && error.name === "RenderingCancelledException") return;
       console.error(`reader failed to draw the thumbnail of page ${number}`, error);
     });

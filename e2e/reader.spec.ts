@@ -182,6 +182,32 @@ test.describe("the reader page", () => {
     await expect(page).toHaveURL(new RegExp(`/resources/${exam}$`));
   });
 
+  test("following a solution link never draws from the closed document", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("console", (message) => message.type() === "error" && errors.push(message.text()));
+    const exam = await resourceId("DEMO301", "Sample partial exam 2023");
+    const solution = await resourceId("DEMO301", "Sample partial exam 2023 solution");
+    await page.goto(`/resources/${exam}`);
+    await expect(page.getByRole("img", { name: "Page 1 of 1" })).toBeVisible();
+    // The solution's file is slow, so the old viewer is on screen for a while after its document
+    // was closed; a zoom then asks every drawn page to draw again.
+    await page.route(`**/api/v1/resources/${solution}/open`, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await route.continue();
+    });
+    await page.getByRole("link", { name: /Solution: Sample partial exam 2023 solution/ }).click();
+    await expect(page).toHaveURL(new RegExp(`/resources/${solution}$`));
+    for (let i = 0; i < 5; i++) {
+      await page.waitForTimeout(150);
+      await page.keyboard.press("+");
+      await page.setViewportSize({ width: 700 - i * 40, height: 800 });
+    }
+    await expect(page.getByRole("img", { name: "Page 1 of 1" })).toBeVisible();
+    await page.waitForTimeout(500);
+    expect(errors).toEqual([]);
+  });
+
   test("shows a message with the actions when the file cannot be loaded", async ({ page }) => {
     const id = await resourceId("DEMO301", "Sample lecture 1");
     await page.route(`**/api/v1/resources/${id}/open`, (route) => route.fulfill({ status: 500, body: "nope" }));

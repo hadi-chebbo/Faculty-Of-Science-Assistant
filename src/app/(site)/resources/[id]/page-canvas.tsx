@@ -71,6 +71,8 @@ export const PageCanvas = memo(function PageCanvas({
 
   const draw = useCallback(
     async (canvas: HTMLCanvasElement, isCancelled: () => boolean, setTask: (task: RenderTask) => void) => {
+      // A closed document (the viewer moved to another file) has nothing left to draw.
+      if (pdf.loadingTask.destroyed) return;
       const page = await pdf.getPage(number);
       if (isCancelled()) return;
       // Touch and small screens get a lower memory budget per canvas.
@@ -94,12 +96,13 @@ export const PageCanvas = memo(function PageCanvas({
       // wrapper keeps its size.
       canvas.width = 0;
       canvas.height = 0;
-      if (ready) void pdf.getPage(number).then((page) => page.cleanup(), () => {});
+      if (ready && !pdf.loadingTask.destroyed) void pdf.getPage(number).then((page) => page.cleanup(), () => {});
       return;
     }
     let cancelled = false;
     let task: RenderTask | undefined;
     draw(canvas, () => cancelled, (t) => (task = t)).catch((error: unknown) => {
+      if (cancelled || pdf.loadingTask.destroyed) return;
       if (error instanceof Error && error.name === "RenderingCancelledException") return;
       console.error(`reader failed to draw page ${number}`, error);
     });
@@ -118,6 +121,7 @@ export const PageCanvas = memo(function PageCanvas({
     let cancelled = false;
     let layer: TextLayer | undefined;
     (async () => {
+      if (pdf.loadingTask.destroyed) return;
       const [{ TextLayer: Layer }, page] = await Promise.all([import("pdfjs-dist"), pdf.getPage(number)]);
       if (cancelled) return;
       container.style.setProperty("--scale-factor", String(scaleRef.current));
@@ -130,7 +134,7 @@ export const PageCanvas = memo(function PageCanvas({
       if (cancelled) return;
       setLayerText({ elements: layer.textDivs, strings: layer.textContentItemsStr });
     })().catch((error: unknown) => {
-      if (cancelled || (error instanceof Error && error.name === "AbortException")) return;
+      if (cancelled || pdf.loadingTask.destroyed || (error instanceof Error && error.name === "AbortException")) return;
       console.error(`reader failed to build the text of page ${number}`, error);
     });
     return () => {
