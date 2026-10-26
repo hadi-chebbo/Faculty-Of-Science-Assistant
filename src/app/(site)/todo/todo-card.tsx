@@ -38,31 +38,10 @@ export function TodoCardView({
           <StickyNote className="size-4" />
         </span>
         <span className="text-xs text-muted-foreground">Note</span>
-        <span className="flex-1" />
-        {!card.pending && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Actions for ${titleOf(card)}`}
-                className="relative z-10 -my-2 -mr-1.5 size-11 text-muted-foreground md:-my-1 md:size-8"
-              >
-                <MoreHorizontal aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {/* "Move to…" joins this menu with the moving tickets. */}
-              <DropdownMenuItem variant="destructive" className="min-h-11 md:min-h-8" onSelect={() => onDelete(card.id)}>
-                <Trash2 aria-hidden /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
       </div>
 
       <h3
-        className={`mt-2 text-sm font-medium leading-snug break-words ${done ? "text-muted-foreground line-through decoration-success/70 decoration-2" : "text-heading"}`}
+        className={`mt-2 pr-11 text-sm font-medium leading-snug break-words md:pr-8 ${done ? "text-muted-foreground line-through decoration-success/70 decoration-2" : "text-heading"}`}
       >
         {card.pending ? (
           titleOf(card)
@@ -94,6 +73,30 @@ export function TodoCardView({
           </span>
         )}
       </div>
+
+      {/* Last in the DOM, so Tab reaches the card before its menu; drawn above the title's overlay. */}
+      {!card.pending && (
+        <div className="absolute top-1 right-1 z-10 md:top-2 md:right-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Actions for ${titleOf(card)}`}
+                className="size-11 text-muted-foreground md:size-8"
+              >
+                <MoreHorizontal aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {/* "Move to…" joins this menu with the moving tickets. */}
+              <DropdownMenuItem variant="destructive" className="min-h-11 md:min-h-8" onSelect={() => onDelete(card.id)}>
+                <Trash2 aria-hidden /> Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
     </article>
   );
 }

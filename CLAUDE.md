@@ -293,11 +293,27 @@ mock exam generation, personalization.
   status-changed time, with a green check); times come from the server's clock at first render and
   refresh every minute. Adding is optimistic: the card appears at the top of its column at once, is
   replaced by the server's card, or removed with a toast ("Couldn't add the card. Try again." / "Your
-  board is full (500 cards). Delete some to add more."); a 401 renews the session once, then goes to
+  board is full (500 cards). Delete some done cards to add more."); a 401 renews the session once, then goes to
   sign-in. Requests are sent one after another so cards keep the order they were added in. API:
   `GET` / `POST /api/v1/todos` (`{ title, note?, status? }`, 201 `{ card }`, 400 `fields`, 409
-  `board_full`). Not built yet: card view, editing, delete and Undo, Start / Done, moving, drag and
-  drop, linked files, filters (see the spec).
+  `board_full`). Card view: clicking a card (its title is a button stretched over the card) or
+  Enter / Space opens one `CardViewDialog` owned by the board (a full-screen sheet on a phone). Left: a
+  large one-line title and the note with "N / 2000"; right: the status, read-only for now (icon and
+  colour of its column), "Added" and "In this column since", and "Delete card". There is no Save button:
+  about 500 ms after typing stops, `PATCH /api/v1/todos/ID` sends only the fields that changed
+  (`use-card-saver`), one request at a time per card; a quiet line shows "Saving…", "Saved" or "Couldn't
+  save, retrying" (retries after 1, 2, 4, 8 s, then every 15 s; only problems are announced to screen
+  readers). Closing flushes at once; a hidden or closing page sends what is waiting with `keepalive`. A
+  400 (an empty title on a note card) shows "A card needs a title." under the title, is not retried, and
+  the board goes back to the last saved title. Delete: "Delete card" asks "Delete this card?" first; the
+  "…" menu on each card has Delete with no question. Either hides the card at once and shows "Card
+  deleted" with Undo for 5 seconds (`showUndoToast`, `src/lib/undo-toast.ts`, shared with moving later);
+  `DELETE /api/v1/todos/ID` (204) soft-deletes the card keeping its column and position, and
+  `POST /api/v1/todos/ID/restore` puts it back there (or at the bottom of a shorter column; 409
+  `board_full` at 500). Deleted cards are kept a day and purged when the owner loads the board. Focus
+  returns to the card after the card view closes, and goes to the next card (or "Add a card") after a
+  delete. Not built yet: Start / Done, moving and changing the status, drag and drop, linked files,
+  filters (see the spec).
 - Sign-in page (`/sign-in`): a full-screen split. On desktop (md and up) a deep-blue panel (the `brand-panel` token, white text, same in both themes) with the brand name, the home headline and three feature lines sits beside the form; on a phone the panel is hidden. The account pages (in the `src/app/(auth)` route group) are full-screen pages without the site header, footer or tab bar: the panel fills the left side on desktop, and the right side has a slim bar (the brand linking home on a phone, the theme toggle), the form centred, and the disclaimer under it. The form shows errors in one destructive alert, clears and focuses the password after a wrong one, has a show/hide password button and a Caps Lock hint. The split is `AuthShell` in `src/components/auth`. It also shows "New here? Create an account" (to `/sign-up`) above "Back to courses". When the password is right but the email is not confirmed (403 `email_not_confirmed`) it shows a default (not destructive) alert, "Confirm your email first. We sent a link to s•••@gmail.com.", with a "Send a new link" button that posts the typed address to the resend endpoint and answers "A new link is on its way." (429: "Please wait before asking for another link."); the password is kept. The header still shows only "Sign in"; sign-up is reached from the sign-in page. `?next=` (a same-site path checked by `safeNextPath`) is where sign-in sends the visitor afterwards, also when already signed in (`/admin` pages send a signed-out visitor there with their own path); otherwise admins go to `/admin` and students to `/`. Sign-up does not carry it.
 - The account pages share `BrandPanel` (the panel content) and `AuthShell`; each is `noindex`, has 44px touch targets and shows errors in one destructive alert.
 - Sign-up page (`/sign-up`; a signed-in visitor is redirected, like on `/sign-in`): "Create your account", fields Name (optional), Email and Password (show/hide, hint "At least 10 characters.", length also validated in the browser; no repeat field), "Create account", and a link to `/sign-in`. Field errors from a 400 show on the fields; a 429 says there were too many sign-ups from this network. On 202 the address is kept in `sessionStorage` (`signup:email`, never in the URL) and the page goes to `/sign-up/check-email`.
