@@ -3,7 +3,6 @@
 import { Bookmark } from "lucide-react";
 import Link from "next/link";
 import { ResourceRow } from "@/components/site/resource-row";
-import { SaveIconButton } from "@/components/site/save-icon-button";
 import { StateBlock } from "@/components/site/state-block";
 import { Button } from "@/components/ui/button";
 import { useSavedLookup } from "@/lib/saved-client";
@@ -52,11 +51,7 @@ export function SavedList({ groups }: { groups: SavedCourseGroup[] }) {
           </h2>
           <ul className="space-y-2">
             {group.items.map((resource) => (
-              <ResourceRow
-                key={resource.id}
-                resource={resource}
-                action={<SaveIconButton resourceId={resource.id} title={resource.title} />}
-              />
+              <ResourceRow key={resource.id} resource={resource} />
             ))}
           </ul>
         </section>
