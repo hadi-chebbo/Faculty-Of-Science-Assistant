@@ -51,7 +51,8 @@ describe("card routes", () => {
   it("refuse a cross-origin or origin-less write with 403", async () => {
     const user = await signIn();
     const card = await createCard({ id: user.id, role: "student" }, { title: "mine" });
-    for (const headers of [{ origin: "https://evil.example" }, {}]) {
+    const refused: Record<string, string>[] = [{ origin: "https://evil.example" }, {}];
+    for (const headers of refused) {
       expect((await patch(card.id, { title: "x" }, headers)).status).toBe(403);
       expect((await del(card.id, headers)).status).toBe(403);
       expect((await undo(card.id, headers)).status).toBe(403);
