@@ -33,6 +33,22 @@ export function CourseSkeleton() {
   );
 }
 
+export function SavedSkeleton() {
+  return (
+    <div className="space-y-8" role="status" aria-label="Loading saved files">
+      {Array.from({ length: 2 }, (_, i) => (
+        <div key={i}>
+          <Skeleton className="mb-3 h-6 w-64 max-w-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-[4.5rem] w-full" />
+            <Skeleton className="h-[4.5rem] w-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SemesterSkeleton() {
   return (
     <div role="status" aria-label="Loading semester">

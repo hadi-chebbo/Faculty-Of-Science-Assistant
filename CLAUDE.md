@@ -169,7 +169,7 @@ mock exam generation, personalization.
   (Browse, Exams, Search). Desktop (md and up): the same items inline in the top bar and a
   breadcrumb trail on inner pages. An item without a page would be shown disabled. The account pages (sign-in, sign-up, check-email, confirm-email) are the exception: see the Sign-in page bullet. The top bar
   also shows a "Sign in" link or, when signed in, an account button with the user's name
-  (never the email) and a menu with Admin (admins only) and Sign out.
+  (never the email) and a menu with Saved (everyone signed in), Admin (admins only) and Sign out.
 - Home is a landing page: a hero (headline, description, "Browse courses" and "Previous exams"
   buttons, three facts, and a decorative course preview), a numbers strip (only from 5 courses), the
   semester cards (an empty semester is a muted card, not a link), how it works, what you will find,
@@ -255,6 +255,19 @@ mock exam generation, personalization.
   saved." when removing), and a failure puts the state back with a toast. Signed out, the same
   controls show and using one goes to `/sign-in?next=<this page>`; there is no automatic save after
   signing in. There is no AI panel yet and no text about one.
+- Saved page (`/saved`): private, server-rendered, `noindex` and `no-store` (header set in
+  `next.config.ts`), reached from "Saved" in the account menu (nothing in the phone tab bar).
+  `requireSignedInPage` (`src/lib/auth/page-guard.ts`, also the base of the admin guard) sends a
+  visitor with no valid access token through `/api/v1/auth/restore?next=/saved`, which renews the
+  session or goes to `/sign-in?next=/saved`. Saved files are grouped by course (semester, then
+  course code; "DEMO301 Title" with the semester muted), newest save first inside a course, published
+  files only (a withdrawn file simply disappears). Each item is the shared resource row (opens the
+  reader in the same tab, solutions below) with a filled bookmark icon in its own cell at the right of
+  the row (the row's optional `action` slot, outside the row link; 44px on a phone). The icon
+  removes the item: it leaves the page at once, with the toast "Removed from saved." and no reload,
+  and a course with nothing left disappears. Empty state: a bookmark icon, "Nothing saved yet. Tap
+  the bookmark on any file to keep it here." and a "Browse courses" button. `GET /api/v1/saved` returns the same
+  groups.
 - Sign-in page (`/sign-in`): a full-screen split. On desktop (md and up) a deep-blue panel (the `brand-panel` token, white text, same in both themes) with the brand name, the home headline and three feature lines sits beside the form; on a phone the panel is hidden. The account pages (in the `src/app/(auth)` route group) are full-screen pages without the site header, footer or tab bar: the panel fills the left side on desktop, and the right side has a slim bar (the brand linking home on a phone, the theme toggle), the form centred, and the disclaimer under it. The form shows errors in one destructive alert, clears and focuses the password after a wrong one, has a show/hide password button and a Caps Lock hint. The split is `AuthShell` in `src/components/auth`. It also shows "New here? Create an account" (to `/sign-up`) above "Back to courses". When the password is right but the email is not confirmed (403 `email_not_confirmed`) it shows a default (not destructive) alert, "Confirm your email first. We sent a link to s•••@gmail.com.", with a "Send a new link" button that posts the typed address to the resend endpoint and answers "A new link is on its way." (429: "Please wait before asking for another link."); the password is kept. The header still shows only "Sign in"; sign-up is reached from the sign-in page. `?next=` (a same-site path checked by `safeNextPath`) is where sign-in sends the visitor afterwards, also when already signed in (`/admin` pages send a signed-out visitor there with their own path); otherwise admins go to `/admin` and students to `/`. Sign-up does not carry it.
 - The account pages share `BrandPanel` (the panel content) and `AuthShell`; each is `noindex`, has 44px touch targets and shows errors in one destructive alert.
 - Sign-up page (`/sign-up`; a signed-in visitor is redirected, like on `/sign-in`): "Create your account", fields Name (optional), Email and Password (show/hide, hint "At least 10 characters.", length also validated in the browser; no repeat field), "Create account", and a link to `/sign-in`. Field errors from a 400 show on the fields; a 429 says there were too many sign-ups from this network. On 202 the address is kept in `sessionStorage` (`signup:email`, never in the URL) and the page goes to `/sign-up/check-email`.

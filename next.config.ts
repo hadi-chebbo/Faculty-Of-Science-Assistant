@@ -12,9 +12,13 @@ const nextConfig: NextConfig = {
   // the connection created by one route (e.g. /api/health) cannot be used by the models of
   // another ("hasMany called with something that's not a subclass of Sequelize.Model").
   serverExternalPackages: ["sequelize", "pg", "pg-hstore"],
-  // The admin area shows per-user data, so browsers and shared caches must never keep it.
+  // The admin area and the Saved page show per-user data, so browsers and shared caches must never keep them.
   async headers() {
-    return [{ source: "/admin/:path*", headers: [{ key: "Cache-Control", value: "no-store" }] }];
+    const noStore = [{ key: "Cache-Control", value: "no-store" }];
+    return [
+      { source: "/admin/:path*", headers: noStore },
+      { source: "/saved", headers: noStore },
+    ];
   },
   turbopack: {
     rules: {
