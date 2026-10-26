@@ -43,7 +43,8 @@ describe("todo routes", () => {
 
   it("refuse a cross-origin or origin-less write with 403", async () => {
     await signIn();
-    for (const headers of [{ origin: "https://evil.example" }, {}]) {
+    const refused: Record<string, string>[] = [{ origin: "https://evil.example" }, {}];
+    for (const headers of refused) {
       expect((await post({ title: "x" }, headers)).status).toBe(403);
     }
     expect(await getDb().Todo.count()).toBe(0);

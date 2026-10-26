@@ -49,6 +49,19 @@ export function SavedSkeleton() {
   );
 }
 
+export function TodoSkeleton() {
+  return (
+    <div role="status" aria-label="Loading your board">
+      <Skeleton className="h-12 w-full md:hidden" />
+      <div className="hidden grid-cols-3 gap-4 md:grid">
+        {Array.from({ length: 3 }, (_, i) => (
+          <Skeleton key={i} className="h-72 w-full rounded-2xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function SemesterSkeleton() {
   return (
     <div role="status" aria-label="Loading semester">
