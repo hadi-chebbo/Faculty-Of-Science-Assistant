@@ -156,7 +156,7 @@ test("the composer links a saved file; with an empty title the card takes the fi
   await expect(page.getByRole("button", { name: "Link a saved file" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Remove Sample notes" })).toHaveCount(0);
 
-  await expect.poll(async () => withDb(async (c) => (await c.query(`SELECT count(*)::int AS n FROM todos WHERE resource_id = $1`, [id])).rows[0].n)).toBe(1);
+  await expect.poll(async () => withDb(async (c) => (await c.query(`SELECT count(*)::int AS n FROM todos t JOIN users u ON u.id = t.user_id WHERE t.resource_id = $1 AND u.email = $2`, [id, emailFor(isMobile)])).rows[0].n)).toBe(1);
   await topCard(page).getByRole("link", { name: /^Open/ }).click();
   await expect(page).toHaveURL(`/resources/${id}`);
 });
