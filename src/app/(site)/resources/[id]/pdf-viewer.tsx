@@ -77,6 +77,9 @@ export function PdfViewer({ resourceId }: { resourceId: string }) {
 
     return () => {
       cancelled = true;
+      // Closing the document leaves nothing on screen that still holds it: the old viewer content
+      // goes (its pages draw from this document), and the next load starts from the skeleton.
+      setState({ status: "loading", percent: null });
       destroy?.();
     };
   }, [resourceId, attempt]);
