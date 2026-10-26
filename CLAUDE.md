@@ -351,7 +351,24 @@ mock exam generation, personalization.
   A 404 when linking (the file was unpublished meanwhile) is not retried: the last saved file is put back with the
   toast "This file can no longer be linked." (in the composer: the optimistic card is removed with "This file can no
   longer be added."). Cards carry `resource`: null,
-  `{ available: true, id, title, type, courseCode }` or `{ available: false }`. Not built yet: drag and drop, filters (see the spec).
+  `{ available: true, id, title, type, courseCode }` or `{ available: false }`.
+  Drag and drop (desktop, md and up only; `todo-dnd.tsx`, `@dnd-kit`): the whole card is the drag source
+  (mouse or pen; a press that moves about 6px starts a drag, so a click without movement still opens the
+  card view). A press on a button or link other than the title button (the "…" menu, Start, Done, Open) never
+  starts a drag. While dragging, a slightly tilted copy with a stronger shadow follows the pointer
+  (`DragOverlay`), the card's own place shows a dashed slot that moves to where it will land, and the column
+  under it gets a primary ring; reduced motion drops the tilt and the drop animation. Cards still being
+  created cannot be dragged. A drop that changes nothing does nothing; otherwise it goes through the board's
+  own `move` (queue, rollback toast, Undo and the Done celebration), with "Moved to ..." / "Nice, that's
+  done." across columns and "Moved up" / "Moved down" within one. Keyboard: the title button is the handle;
+  Space picks the card up, the arrow keys move it (left/right between columns, up/down within one), Space
+  drops, Esc cancels (and only cancels); the focus stays on the card. On desktop Space therefore no longer
+  opens the card view: Enter does (on a phone Space still opens it). While a drag is on, N does nothing, and
+  the click a Space release would cause is ignored. Screen readers hear, in `@dnd-kit`'s live region,
+  "Picked up TITLE. To do, position 2 of 5.", "TITLE is over In progress, position 1 of 3.", "Dropped TITLE in
+  Done, position 1 of 4." and "Cancelled. TITLE went back to To do, position 2.", plus the instructions
+  "To pick up a card, press Space...". Below md nothing is drag-aware (no `DndContext`, no
+  `aria-roledescription="sortable"`); Start, Done and the menu remain the way to move. Not built yet: filters (see the spec).
 - Sign-in page (`/sign-in`): a full-screen split. On desktop (md and up) a deep-blue panel (the `brand-panel` token, white text, same in both themes) with the brand name, the home headline and three feature lines sits beside the form; on a phone the panel is hidden. The account pages (in the `src/app/(auth)` route group) are full-screen pages without the site header, footer or tab bar: the panel fills the left side on desktop, and the right side has a slim bar (the brand linking home on a phone, the theme toggle), the form centred, and the disclaimer under it. The form shows errors in one destructive alert, clears and focuses the password after a wrong one, has a show/hide password button and a Caps Lock hint. The split is `AuthShell` in `src/components/auth`. It also shows "New here? Create an account" (to `/sign-up`) above "Back to courses". When the password is right but the email is not confirmed (403 `email_not_confirmed`) it shows a default (not destructive) alert, "Confirm your email first. We sent a link to s•••@gmail.com.", with a "Send a new link" button that posts the typed address to the resend endpoint and answers "A new link is on its way." (429: "Please wait before asking for another link."); the password is kept. The header still shows only "Sign in"; sign-up is reached from the sign-in page. `?next=` (a same-site path checked by `safeNextPath`) is where sign-in sends the visitor afterwards, also when already signed in (`/admin` pages send a signed-out visitor there with their own path); otherwise admins go to `/admin` and students to `/`. Sign-up does not carry it.
 - The account pages share `BrandPanel` (the panel content) and `AuthShell`; each is `noindex`, has 44px touch targets and shows errors in one destructive alert.
 - Sign-up page (`/sign-up`; a signed-in visitor is redirected, like on `/sign-in`): "Create your account", fields Name (optional), Email and Password (show/hide, hint "At least 10 characters.", length also validated in the browser; no repeat field), "Create account", and a link to `/sign-in`. Field errors from a 400 show on the fields; a 429 says there were too many sign-ups from this network. On 202 the address is kept in `sessionStorage` (`signup:email`, never in the URL) and the page goes to `/sign-up/check-email`.
