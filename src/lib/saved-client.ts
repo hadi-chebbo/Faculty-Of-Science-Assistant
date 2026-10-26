@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { toast } from "sonner";
-import { renew } from "@/lib/auth/client-session";
+import { askMe, renew } from "@/lib/auth/client-session";
 import { SESSION_CHANGED_EVENT } from "@/lib/auth/session-events";
 
 // The saved state of the signed-in user, in the browser. Public pages never read the session on
@@ -48,6 +48,13 @@ function load(): Promise<void> {
   if (!loading) {
     loading = (async () => {
       try {
+        // Ask who is signed in first, so an anonymous visitor never makes a request that fails
+        // with 401 (the browser logs those as errors). A renewable session is renewed first.
+        const me = await askMe();
+        if (!me.user && (!me.renewable || !(await renew()))) {
+          set({ status: "signed-out", ids: new Set() });
+          return;
+        }
         const response = await request(() => fetch("/api/v1/saved/ids", { cache: "no-store" }));
         if (response.status === 401) set({ status: "signed-out", ids: new Set() });
         else if (response.ok) set({ status: "ready", ids: new Set(((await response.json()) as { ids: string[] }).ids) });
