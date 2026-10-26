@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Download, ExternalLink, Maximize, MoreHorizontal, Minimize, MoveVertical, MoveHorizontal } from "lucide-react";
+import { Bookmark, BookmarkCheck, Check, Download, ExternalLink, Maximize, MoreHorizontal, Minimize, MoveVertical, MoveHorizontal } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Fragment, type Ref } from "react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,8 @@ export interface ReaderMenuProps {
   onOpenChange: (open: boolean) => void;
   onFit: (fit: "width" | "page") => void;
   onFocus: () => void;
+  saved: boolean;
+  onToggleSaved: () => void;
   triggerRef: Ref<HTMLButtonElement>;
 }
 
@@ -33,7 +35,7 @@ type Entry =
   | { kind: "action"; label: string; icon: LucideIcon; selected?: boolean; run: () => void }
   | { kind: "link"; label: string; icon: LucideIcon; href: string; newTab?: boolean };
 
-function entriesOf({ id, fit, focus, onFit, onFocus }: ReaderMenuProps): { group: Entry[] }[] {
+function entriesOf({ id, fit, focus, onFit, onFocus, saved, onToggleSaved }: ReaderMenuProps): { group: Entry[] }[] {
   return [
     {
       group: [
@@ -44,6 +46,12 @@ function entriesOf({ id, fit, focus, onFit, onFocus }: ReaderMenuProps): { group
     },
     {
       group: [
+        {
+          kind: "action",
+          label: saved ? "Remove from saved" : "Save for later",
+          icon: saved ? BookmarkCheck : Bookmark,
+          run: onToggleSaved,
+        },
         { kind: "link", label: "Download", icon: Download, href: `/api/v1/resources/${id}/download` },
         { kind: "link", label: "Open outside the reader", icon: ExternalLink, href: `/api/v1/resources/${id}/open`, newTab: true },
       ],
@@ -72,7 +80,7 @@ export function ReaderMenu(props: ReaderMenuProps) {
         <SheetContent side="bottom" showCloseButton={false} className="gap-0 rounded-t-2xl px-2 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <SheetHeader className="sr-only">
             <SheetTitle>More actions</SheetTitle>
-            <SheetDescription>Zoom, focus mode, download and open outside the reader.</SheetDescription>
+            <SheetDescription>Zoom, focus mode, save for later, download and open outside the reader.</SheetDescription>
           </SheetHeader>
           <div aria-hidden className="mx-auto mt-2.5 mb-2 h-1 w-10 rounded-full bg-border" />
           {groups.map(({ group }, g) => (

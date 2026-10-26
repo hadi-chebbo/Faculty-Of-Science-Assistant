@@ -28,7 +28,7 @@ It prints nothing when the file is complete. Terms: "runtime" means the app need
 
 ## Styling and components
 
-shadcn/ui is not a package you import. Its CLI copies component source files into `src/components/ui` (currently alert-dialog, badge, breadcrumb, button, card, dropdown-menu, progress, skeleton, tabs). `components.json` tells the CLI the style (`radix-vega`), the CSS file (`src/app/globals.css`) and the aliases (`@/components/ui`, `@/lib/utils`). Add a component with `npx shadcn@latest add <name>`, as CLAUDE.md requires. The copied files import the packages in this section.
+shadcn/ui is not a package you import. Its CLI copies component source files into `src/components/ui` (currently alert-dialog, badge, breadcrumb, button, card, dropdown-menu, progress, skeleton, sonner, tabs). `components.json` tells the CLI the style (`radix-vega`), the CSS file (`src/app/globals.css`) and the aliases (`@/components/ui`, `@/lib/utils`). Add a component with `npx shadcn@latest add <name>`, as CLAUDE.md requires. The copied files import the packages in this section.
 
 | Package | What it is | Why we have it | Where used | Declared / installed | Section OK? |
 |---|---|---|---|---|---|
@@ -44,6 +44,7 @@ shadcn/ui is not a package you import. Its CLI copies component source files int
 | `@dnd-kit/sortable` | Sortable-list layer on top of `@dnd-kit/core` (item hook, keyboard coordinates, list strategy). | Same reason as `@dnd-kit/core`. | `src/app/(site)/admin/chapters/{chapter-list,sortable-chapter-item}.tsx`. | `^10.0.0` / 10.0.0 | Yes, runtime |
 | `@dnd-kit/utilities` | Small helpers for dnd-kit, such as turning a transform into a CSS string. | Same reason as `@dnd-kit/core`; peer-level helper of `@dnd-kit/sortable`. | `src/app/(site)/admin/chapters/sortable-chapter-item.tsx`. | `^3.2.2` / 3.2.2 | Yes, runtime |
 | `next-themes` | Switches between light and dark mode and remembers the choice. | Added with the light/dark palette (commit cedc1e7). | `src/app/layout.tsx`, `src/components/site/theme-toggle.tsx`. | `^0.4.6` / 0.4.6 | Yes, runtime |
+| `sonner` | Small toast notifications (a short message that fades by itself, optionally with an Undo button). | The shadcn `sonner` component builds on it. The save controls say "Saved. Find it under Saved in your account menu."; the to-do board will need toasts with Undo. | `src/components/ui/sonner.tsx` (mounted in `src/components/site/site-chrome.tsx`), `src/lib/saved-client.ts`. | `^2.0.8` / 2.0.8 | Yes, runtime |
 
 ## File storage
 
