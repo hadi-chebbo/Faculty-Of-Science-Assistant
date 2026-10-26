@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { ArrowDown, ArrowUp, Check, Clock, MoreHorizontal, PencilLine, Play, StickyNote, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,6 +57,13 @@ export function TodoCardView({
   onMove: (id: string, status: TodoStatus, index: number, how: MoveHow) => void;
 }) {
   const done = card.status === "done";
+  // After a move from the menu the board puts the focus on the card in its new place, so the menu
+  // must not pull it back to its button.
+  const moved = useRef(false);
+  const moveFromMenu = (status: TodoStatus, to: number, message: string) => {
+    moved.current = true;
+    onMove(card.id, status, to, { message });
+  };
   return (
     <article
       aria-busy={card.pending || undefined}
@@ -141,7 +149,13 @@ export function TodoCardView({
                 <MoreHorizontal aria-hidden />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent
+              align="end"
+              onCloseAutoFocus={(event) => {
+                if (moved.current) event.preventDefault();
+                moved.current = false;
+              }}
+            >
               <DropdownMenuLabel>Move to</DropdownMenuLabel>
               {TODO_STATUSES.filter((status) => status !== card.status).map((status) => {
                 const look = STATUS_LOOK[status];
@@ -150,7 +164,7 @@ export function TodoCardView({
                   <DropdownMenuItem
                     key={status}
                     className="min-h-11 md:min-h-8"
-                    onSelect={() => onMove(card.id, status, 0, { message: moveMessage(status) })}
+                    onSelect={() => moveFromMenu(status, 0, moveMessage(status))}
                   >
                     <Icon className={look.iconTone} aria-hidden /> {look.label}
                   </DropdownMenuItem>
@@ -160,14 +174,14 @@ export function TodoCardView({
               <DropdownMenuItem
                 className="min-h-11 md:min-h-8"
                 disabled={index === 0}
-                onSelect={() => onMove(card.id, card.status, index - 1, { message: "Moved up" })}
+                onSelect={() => moveFromMenu(card.status, index - 1, "Moved up")}
               >
                 <ArrowUp aria-hidden /> Move up
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="min-h-11 md:min-h-8"
                 disabled={index >= count - 1}
-                onSelect={() => onMove(card.id, card.status, index + 1, { message: "Moved down" })}
+                onSelect={() => moveFromMenu(card.status, index + 1, "Moved down")}
               >
                 <ArrowDown aria-hidden /> Move down
               </DropdownMenuItem>

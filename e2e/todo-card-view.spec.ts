@@ -92,7 +92,7 @@ test("open a card, write a note, see it saved, and find it again after a reload;
   await expect(dialog(page)).toBeVisible();
   await expect(dialog(page).getByRole("textbox", { name: "Title" })).toHaveValue("Revise chapter 1");
   await expect(dialog(page).getByText("0 / 2000")).toBeVisible();
-  await expect(dialog(page).getByText("To do", { exact: true })).toBeVisible();
+  await expect(dialog(page).getByRole("button", { name: "To do", pressed: true })).toBeVisible();
   await expect(dialog(page).getByText("In this column since")).toBeVisible();
 
   await dialog(page).getByRole("textbox", { name: "Note" }).fill("Focus on the proofs.");
@@ -196,6 +196,9 @@ test("keyboard: Enter opens a card, Esc closes it and the focus returns to the c
   await page.getByRole("button", { name: /New card/ }).focus();
   await page.keyboard.press("Tab");
   await expect(openCard(page, "Alpha")).toBeFocused();
+  // Then the card's Start button, then its menu.
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Start" }).first()).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Actions for Alpha" })).toBeFocused();
   await page.keyboard.press("Tab");
