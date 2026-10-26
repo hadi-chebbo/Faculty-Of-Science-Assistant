@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { cn } from "@/lib/utils";
 import { PageCanvas } from "./page-canvas";
 import { ReaderContents, useOutline } from "./reader-contents";
+import { useAddToTodo } from "@/lib/add-to-todo";
 import { useSavedResource } from "@/lib/saved-client";
 import { ReaderMenu } from "./reader-menu";
 import { readContentsOpen, writeContentsOpen } from "./reader-panel";
@@ -106,6 +107,7 @@ interface Anchor {
 // and the top row and the bar stay in view. Focus mode lets the card cover the whole viewport.
 export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; sizes: PageSize[]; resourceId: string }) {
   const savedState = useSavedResource(resourceId);
+  const addToTodo = useAddToTodo(resourceId);
   const total = pdf.numPages;
   const desktop = useMediaQuery("(min-width: 768px)");
   const [focus, setFocus] = useState(false);
@@ -700,6 +702,8 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
             onFocus={() => (focus ? exitFocus() : enterFocus())}
             saved={savedState.status === "saved"}
             onToggleSaved={() => void savedState.toggle()}
+            onAddToTodo={() => void addToTodo.add()}
+            addingToTodo={addToTodo.pending}
             triggerRef={menuButtonRef}
           />
         </div>

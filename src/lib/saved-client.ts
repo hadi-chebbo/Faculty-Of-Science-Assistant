@@ -153,3 +153,14 @@ export function useSavedResource(resourceId: string): {
     snapshot.status === "ready" ? (snapshot.ids.has(resourceId) ? "saved" : "not-saved") : snapshot.status;
   return { status, pending: snapshot.pending.has(resourceId), toggle };
 }
+
+// Who is signed in, from the same shared answer as the save controls: resolves once it is known
+// ("unknown" when the server could not be reached). For controls that need an account but are not
+// about saving, such as "Add to to-do".
+export function useSignedInCheck(): () => Promise<"signed-in" | "signed-out" | "unknown"> {
+  useEffect(ensureLoaded, []);
+  return useCallback(async () => {
+    if (store.status === "unknown") await load();
+    return store.status === "ready" ? "signed-in" : store.status === "signed-out" ? "signed-out" : "unknown";
+  }, []);
+}
