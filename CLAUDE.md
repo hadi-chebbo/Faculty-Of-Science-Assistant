@@ -119,6 +119,8 @@ mock exam generation, personalization.
   add each one through its CLI as it is needed, and do not hand-roll a
   component that shadcn/ui already provides or add another component library.
 - `next-themes` for the light/dark theme toggle (no flash of the wrong theme on load).
+- Toasts (short messages such as "Saved.", with an optional Undo) use shadcn's Sonner, mounted once in
+  `SiteChrome` at the top centre so a toast never covers the phone tab bar or the reader's floating bar.
 - Zod for validating all external input.
 - Vitest for unit/integration tests, Playwright for the core user journeys.
 - Hosting: Vercel (app), Neon (Postgres), Cloudflare R2 (files).
@@ -230,7 +232,8 @@ mock exam generation, personalization.
   the page stops at 880px so it sits centred on a grey surface), and "Fit page" shows a whole page;
   the percentage shown in a fit mode is the computed one, and zoom steps leave the fit mode. Zoom
   keeps the reader on the same page. The "More actions" menu (a dropdown on desktop, a bottom sheet
-  on a phone) has Fit width, Fit page, Focus mode, Download and Open outside the reader. Focus mode
+  on a phone) has Fit width, Fit page, Focus mode, then Save for later (or Remove from saved when it
+  is saved), Download and Open outside the reader. Focus mode
   makes the card cover the whole viewport (and asks for real fullscreen where available, but does
   not depend on it); Esc leaves it (or closes an open search first). Keys (when not typing): arrows,
   PageUp/PageDown, Home/End, `+`/`-`, `0`. The page being read is remembered per resource in
@@ -238,12 +241,20 @@ mock exam generation, personalization.
   page N?" once; this is a position only, never progress. Desktop (md and up): breadcrumb ending at
   the course area that lists the resource, the title with its type and language on one line, the
   card at a fixed height with the pages scrolling inside it, and a narrow details column (plain text
-  under small headings) beside it. Phone: a back link (the course code) above the title, the card's
-  top row sticky under the site bar with the window scrolling the pages, then the details below.
+  under small headings) beside it, with a full-width "Save for later" button at its top that becomes
+  "Saved" (filled bookmark) once saved; pressing "Saved" removes it. Phone: a back link (the course code) above the title, the card's
+  top row sticky under the site bar with the window scrolling the pages, then the details below
+  (so the Save button is below the card there).
   Back leads to Previous exams for an exam, to the chapter page for a resource in a chapter,
   otherwise to the course (Other material when the course has chapters). Resource rows and solution
-  links on public pages open the reader in the same tab. There is no AI panel yet and no text about
-  one.
+  links on public pages open the reader in the same tab. Saving needs an account but the page stays
+  public and never reads the session on the server: after load the browser asks
+  `GET /api/v1/saved/ids` once (one shared store, `src/lib/saved-client.ts`, so the button and the
+  menu always agree), and shows "Save for later" until the answer arrives. Saving is optimistic;
+  it answers with the toast "Saved. Find it under Saved in your account menu." ("Removed from
+  saved." when removing), and a failure puts the state back with a toast. Signed out, the same
+  controls show and using one goes to `/sign-in?next=<this page>`; there is no automatic save after
+  signing in. There is no AI panel yet and no text about one.
 - Sign-in page (`/sign-in`): a full-screen split. On desktop (md and up) a deep-blue panel (the `brand-panel` token, white text, same in both themes) with the brand name, the home headline and three feature lines sits beside the form; on a phone the panel is hidden. The account pages (in the `src/app/(auth)` route group) are full-screen pages without the site header, footer or tab bar: the panel fills the left side on desktop, and the right side has a slim bar (the brand linking home on a phone, the theme toggle), the form centred, and the disclaimer under it. The form shows errors in one destructive alert, clears and focuses the password after a wrong one, has a show/hide password button and a Caps Lock hint. The split is `AuthShell` in `src/components/auth`. It also shows "New here? Create an account" (to `/sign-up`) above "Back to courses". When the password is right but the email is not confirmed (403 `email_not_confirmed`) it shows a default (not destructive) alert, "Confirm your email first. We sent a link to s•••@gmail.com.", with a "Send a new link" button that posts the typed address to the resend endpoint and answers "A new link is on its way." (429: "Please wait before asking for another link."); the password is kept. The header still shows only "Sign in"; sign-up is reached from the sign-in page. `?next=` (a same-site path checked by `safeNextPath`) is where sign-in sends the visitor afterwards, also when already signed in (`/admin` pages send a signed-out visitor there with their own path); otherwise admins go to `/admin` and students to `/`. Sign-up does not carry it.
 - The account pages share `BrandPanel` (the panel content) and `AuthShell`; each is `noindex`, has 44px touch targets and shows errors in one destructive alert.
 - Sign-up page (`/sign-up`; a signed-in visitor is redirected, like on `/sign-in`): "Create your account", fields Name (optional), Email and Password (show/hide, hint "At least 10 characters.", length also validated in the browser; no repeat field), "Create account", and a link to `/sign-in`. Field errors from a 400 show on the fields; a 429 says there were too many sign-ups from this network. On 202 the address is kept in `sessionStorage` (`signup:email`, never in the URL) and the page goes to `/sign-up/check-email`.

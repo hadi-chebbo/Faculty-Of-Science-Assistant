@@ -1,6 +1,7 @@
 import { CheckCircle2, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { EXAM_SESSION_LABELS, LANGUAGE_NAMES, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
+import { SaveButton } from "./save-button";
 import type { ReaderResource } from "@/services/resources/types";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
@@ -29,6 +30,8 @@ export function ReaderDetails({ resource }: { resource: ReaderResource }) {
 
   return (
     <aside aria-label="About this file" className="space-y-5 text-sm md:pt-1">
+      <SaveButton resourceId={resource.id} />
+
       <section className="space-y-1.5">
         <h2 className={HEADING}>Details</h2>
         {resource.description && <p>{resource.description}</p>}

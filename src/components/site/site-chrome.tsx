@@ -1,3 +1,4 @@
+import { Toaster } from "@/components/ui/sonner";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
 
@@ -11,6 +12,8 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
         <div className="flex-1">{children}</div>
         <SiteFooter />
       </div>
+      {/* At the top, so a message never covers the phone tab bar or the reader's floating bar. */}
+      <Toaster position="top-center" />
     </>
   );
 }
