@@ -171,6 +171,16 @@ test("Esc closes only the picker, in the composer", async ({ page, isMobile }) =
   await expect(page.getByRole("button", { name: "Sample notes" })).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "New card in To do" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Link a saved file" })).toBeFocused();
+
+  // Also with the focus back in the title field: Esc closes the picker, then the form.
+  await page.getByRole("button", { name: "Link a saved file" }).click();
+  await expect(page.getByRole("button", { name: "Sample notes" })).toBeVisible();
+  await page.getByRole("textbox", { name: "New card in To do" }).focus();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Sample notes" })).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: "New card in To do" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("textbox", { name: "New card in To do" })).toHaveCount(0);
 });
 
 test("the picker says so when nothing is saved", async ({ page, isMobile }) => {

@@ -53,8 +53,10 @@ export function CardComposer({
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             event.stopPropagation();
-            // With the picker open, Esc closes only the picker (its own listener does that).
-            if (!picking) onClose();
+            // With the picker open, Esc closes only the picker. Stopping the event here also keeps it
+            // from the picker's own document listener, so close it from here.
+            if (picking) setPicking(false);
+            else onClose();
           }
         }}
       />
