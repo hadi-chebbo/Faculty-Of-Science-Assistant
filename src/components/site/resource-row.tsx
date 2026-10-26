@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { SaveIconButton } from "@/components/site/save-icon-button";
 import { Badge } from "@/components/ui/badge";
 import type { ResourceType } from "@/db/constants";
 import { EXAM_SESSION_LABELS, LANGUAGE_LABELS, formatAcademicYear } from "@/lib/labels";
@@ -37,8 +38,9 @@ const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible
 // the surrounding list already says them. The search results add three things: `title` replaces the
 // title's text (with its matches marked), `meta` is a small line under it (chapter and type) and
 // `snippet` is a short line of the description, for a file that matched only there. `action` is an
-// optional control (the save bookmark) in its own cell at the right of the row, outside the row
-// link; without it the row is unchanged.
+// optional extra control, shown beside the save bookmark. Every row carries the bookmark in its own
+// cell at the right, outside the row link (links are never nested); the cell is always there, so
+// nothing moves when the saved state arrives.
 export function ResourceRow({
   resource,
   showCourse = false,
@@ -60,7 +62,7 @@ export function ResourceRow({
   const link = (
     <Link
       href={readerHref(resource.id)}
-      className={`flex items-start gap-3 p-3 hover:bg-muted/60 focus-visible:bg-muted/60 ${FOCUS}${action ? " min-w-0 flex-1" : ""}`}
+      className={`flex items-start gap-3 p-3 hover:bg-muted/60 focus-visible:bg-muted/60 ${FOCUS} min-w-0 flex-1`}
     >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-link">
         <TypeIcon aria-hidden className="size-[18px]" />
@@ -89,14 +91,13 @@ export function ResourceRow({
   );
   return (
     <li className="group/row overflow-hidden rounded-lg border bg-card transition-colors hover:border-primary/40">
-      {action ? (
-        <div className="flex items-stretch">
-          {link}
-          <div className="flex items-center border-l px-1">{action}</div>
+      <div className="flex items-stretch">
+        {link}
+        <div className="flex shrink-0 items-center border-l px-0.5 md:px-1">
+          <SaveIconButton resourceId={resource.id} title={resource.title} />
+          {action}
         </div>
-      ) : (
-        link
-      )}
+      </div>
       {resource.solutions.length > 0 && (
         // A sibling of the row link: links must not be nested.
         <div className="flex flex-wrap gap-x-3 border-t bg-muted/30 py-0.5 pl-[3.75rem] pr-3">
