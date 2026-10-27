@@ -331,8 +331,11 @@ mock exam generation, personalization.
   have a struck-through title and "Done … ago". Moving a card to Done never creates or changes a
   completion. After a move the focus follows the card; on a phone, when it leaves the tab on screen,
   the focus stays on the selected tab. Linked files: a card made from "Add to to-do" (or `POST /api/v1/todos` / `PATCH /api/v1/todos/ID`
-  with `resourceId`; `null` removes the link) shows the file's type icon, course code and type
-  instead of "Note", and an **Open** link to the reader (same tab, above the title overlay, 44px on a phone, 32px on md and up; Tab order: title, Open, Start/Done, "…"). With no title of its own
+  with `resourceId`; `null` removes the link) shows the file as a tile under the title and note,
+  like an attachment (no "Note" label): the type icon, the file's title (left out when the card has no title of its own, as the
+  heading already is the file's title), the course code and type, and "Open ›". The whole tile is the link to the reader (same tab,
+  above the title overlay, at least 44px tall on a phone; a press on it never starts a drag; Tab order: title, file tile, Start/Done, "…").
+  A file no longer published shows a dashed tile with "This file is no longer available" and no link. With no title of its own
   the card shows the file's title; a file that was deleted leaves the card with its title and note
   ("A file that was removed" if it had neither); a file no longer published shows "This file is no
   longer available", never its title or a link. The card view's File section is always there (the title

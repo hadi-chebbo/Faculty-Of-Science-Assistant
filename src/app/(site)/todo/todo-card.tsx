@@ -1,5 +1,5 @@
 import { memo, useRef, type HTMLAttributes, type Ref } from "react";
-import { ArrowDown, ArrowUp, BookOpen, Check, Clock, FileText, MoreHorizontal, PencilLine, Play, StickyNote, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronRight, Clock, FileX, MoreHorizontal, PencilLine, Play, StickyNote, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { TYPE_ICONS } from "@/components/site/resource-row";
 import { Button } from "@/components/ui/button";
@@ -87,7 +87,6 @@ export const TodoCardView = memo(function TodoCardView({
 }) {
   const done = card.status === "done";
   const file = card.resource;
-  const TypeIcon = file?.available ? TYPE_ICONS[file.type] : file ? FileText : StickyNote;
   // After a move from the menu the board puts the focus on the card in its new place, so the menu
   // must not pull it back to its button.
   const moved = useRef(false);
@@ -101,22 +100,18 @@ export const TodoCardView = memo(function TodoCardView({
       aria-busy={card.pending || undefined}
       className={`relative rounded-xl border bg-card p-3 text-left shadow-xs transition-opacity hover:border-foreground/20 ${card.pending ? "opacity-70" : ""} ${done ? "bg-card/70" : ""} ${celebrating ? "done-ring" : ""}`}
     >
-      <div className="flex items-center gap-2">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-link" aria-hidden>
-          <TypeIcon className="size-4" />
-        </span>
-        {file?.available ? (
-          <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
-            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] font-medium text-link">{file.courseCode}</span>
-            {RESOURCE_TYPE_SINGULAR_LABELS[file.type]}
+      {/* A card with a file shows it in its own tile below; only a plain note keeps this label. */}
+      {!file && (
+        <div className="mb-2 flex items-center gap-2">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground" aria-hidden>
+            <StickyNote className="size-4" />
           </span>
-        ) : (
-          <span className="text-xs text-muted-foreground">{file ? "File" : "Note"}</span>
-        )}
-      </div>
+          <span className="text-xs text-muted-foreground">Note</span>
+        </div>
+      )}
 
       <h3
-        className={`mt-2 pr-11 text-sm font-medium leading-snug break-words md:pr-8 ${done ? "text-muted-foreground line-through decoration-success/70 decoration-2" : "text-heading"}`}
+        className={`pr-11 text-sm font-medium leading-snug break-words md:pr-8 ${done ? "text-muted-foreground line-through decoration-success/70 decoration-2" : "text-heading"}`}
       >
         {card.pending || overlay ? (
           titleOf(card)
@@ -137,7 +132,7 @@ export const TodoCardView = memo(function TodoCardView({
       {card.note && (
         <p className="mt-1.5 line-clamp-2 border-l-2 border-muted pl-2 text-xs leading-relaxed text-muted-foreground">{card.note}</p>
       )}
-      {file && !file.available && card.title && <p className="mt-2 text-xs text-muted-foreground">{FILE_UNAVAILABLE}</p>}
+      {file && (file.available || card.title) && <FileTile file={file} cardTitle={card.title} live={!card.pending && !overlay} />}
 
       <div className="mt-3 flex items-center gap-2">
         <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
@@ -145,14 +140,6 @@ export const TodoCardView = memo(function TodoCardView({
           {done ? "Done" : "Added"} {relativeTime(done ? card.statusChangedAt : card.createdAt, now)}
         </span>
         <span className="flex-1" />
-        {file?.available && !card.pending && (
-          <Link
-            href={`/resources/${file.id}`}
-            className="relative z-10 inline-flex h-11 items-center gap-1 rounded-full px-3 text-xs font-medium text-link hover:bg-primary/10 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none md:h-8 md:px-2"
-          >
-            <BookOpen className="size-3.5" aria-hidden /> Open<span className="sr-only"> {titleOf(card)}</span>
-          </Link>
-        )}
         {!card.pending && card.status === "todo" && (
           <Button
             type="button"
@@ -254,6 +241,62 @@ export const TodoCardView = memo(function TodoCardView({
     </article>
   );
 });
+
+// The linked file, shown like an attachment: its type icon, its title and course, and Open. The
+// whole tile is the link to the reader (same tab), drawn above the title's overlay so it is its own
+// click target; a press on it never starts a drag. When the card has no title of its own, the
+// heading already is the file's title, so the tile leads with the course and type instead.
+// A file that is no longer published shows a muted tile with no title and no link. A card still
+// being created, or the copy that follows the pointer, draws the tile without the link.
+function FileTile({ file, cardTitle, live }: { file: NonNullable<Card["resource"]>; cardTitle: string; live: boolean }) {
+  if (!file.available) {
+    return (
+      <div className="mt-2.5 flex items-center gap-2.5 rounded-lg border border-dashed bg-muted/40 p-2">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground" aria-hidden>
+          <FileX className="size-4" />
+        </span>
+        <p className="min-w-0 flex-1 text-xs text-muted-foreground">{FILE_UNAVAILABLE}</p>
+      </div>
+    );
+  }
+  const Icon = TYPE_ICONS[file.type];
+  const meta = (
+    <span className="text-[11px] text-muted-foreground">
+      <span className="font-mono font-medium text-link">{file.courseCode}</span> · {RESOURCE_TYPE_SINGULAR_LABELS[file.type]}
+    </span>
+  );
+  const body = (
+    <>
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-link" aria-hidden>
+        <Icon className="size-4" />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        {cardTitle ? (
+          <>
+            <span className="truncate text-xs font-medium text-heading">{file.title}</span>
+            {meta}
+          </>
+        ) : (
+          meta
+        )}
+      </span>
+      <span className="inline-flex shrink-0 items-center gap-0.5 pr-1 text-xs font-medium text-link" aria-hidden>
+        Open <ChevronRight className="size-3.5" />
+      </span>
+    </>
+  );
+  const look = "mt-2.5 flex min-h-11 items-center gap-2.5 rounded-lg border bg-muted/40 p-2 md:min-h-0";
+  if (!live) return <div className={look}>{body}</div>;
+  return (
+    <Link
+      href={`/resources/${file.id}`}
+      aria-label={`Open ${file.title} in the reader`}
+      className={`${look} relative z-10 transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none`}
+    >
+      {body}
+    </Link>
+  );
+}
 
 // The friendly empty text of a column with no cards.
 // While a filter is on, an empty column says that nothing matches instead.
