@@ -200,3 +200,28 @@ test("phone: tabs with counts, the round + adds to the shown tab and stays clear
   await expect(tab("In progress")).toHaveText("In progress1");
   await expect(page.getByRole("heading", { level: 3, name: "Phone card" })).toBeVisible();
 });
+
+test("a card with a linked file shows the file as a tile that opens the reader", async ({ page, isMobile }) => {
+  const file = await withDb(async (client) => {
+    const { rows } = await client.query<{ id: string; title: string }>(
+      `SELECT id, title FROM resources WHERE is_published AND file_key IS NOT NULL ORDER BY title LIMIT 1`,
+    );
+    await client.query(
+      `INSERT INTO todos (user_id, status, position, title, note, resource_id, created_at, updated_at, status_changed_at)
+       SELECT id, 'todo', 0, 'Revise before the partial', '', $2, now(), now(), now() FROM users WHERE email = $1`,
+      [emailFor(isMobile), rows[0].id],
+    );
+    return rows[0];
+  });
+  await signInOnBoard(page, isMobile);
+
+  const tile = page.getByRole("link", { name: `Open ${file.title} in the reader` }).filter({ visible: true });
+  await expect(tile).toBeVisible();
+  // The card keeps its own title and the tile names the file.
+  await expect(page.getByRole("heading", { level: 3, name: "Revise before the partial" }).filter({ visible: true })).toBeVisible();
+  await expect(tile).toContainText(file.title);
+  await expect(tile).toContainText("Open");
+
+  await tile.click();
+  await expect(page).toHaveURL(`/resources/${file.id}`);
+});
