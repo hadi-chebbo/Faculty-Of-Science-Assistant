@@ -13,6 +13,14 @@ export interface ChipLink {
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
+// The look of a chip, shared with the to-do board's filter.
+export const chipClass = (active: boolean) =>
+  cn(
+    "inline-flex min-h-11 items-center rounded-full border px-4 text-sm transition-colors md:min-h-9",
+    FOCUS,
+    active ? "border-primary bg-primary font-semibold text-primary-foreground" : "bg-card text-heading hover:border-primary/40 hover:bg-muted/60",
+  );
+
 // The row of chips. On a phone it scrolls sideways, so the chip in effect (which the words of the
 // query may have selected) is scrolled into the row's view whenever it changes. Only the row
 // moves, never the page.
@@ -39,13 +47,7 @@ export function ChipRow({ chips }: { chips: ChipLink[] }) {
             <Link
               href={chip.href}
               aria-current={chip.active ? "true" : undefined}
-              className={cn(
-                "inline-flex min-h-11 items-center rounded-full border px-4 text-sm transition-colors md:min-h-9",
-                FOCUS,
-                chip.active
-                  ? "border-primary bg-primary font-semibold text-primary-foreground"
-                  : "bg-card text-heading hover:border-primary/40 hover:bg-muted/60",
-              )}
+              className={chipClass(chip.active)}
             >
               {chip.label}
             </Link>
