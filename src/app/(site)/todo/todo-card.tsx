@@ -254,13 +254,14 @@ export function TodoCardView({
 }
 
 // The friendly empty text of a column with no cards.
-export function ColumnEmpty({ status }: { status: TodoStatus }) {
+// While a filter is on, an empty column says that nothing matches instead.
+export function ColumnEmpty({ status, filtered = false }: { status: TodoStatus; filtered?: boolean }) {
   const look = STATUS_LOOK[status];
   const Icon = look.icon;
   return (
     <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border/80 px-4 py-8 text-center">
       <Icon className={`size-6 ${look.iconTone} opacity-60`} aria-hidden />
-      <p className="text-xs text-muted-foreground">{look.empty}</p>
+      <p className="text-xs text-muted-foreground">{filtered ? "No cards match" : look.empty}</p>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,10 +11,12 @@ import { showUndoToast } from "@/lib/undo-toast";
 import { useMediaQuery } from "@/lib/use-media-query";
 import type { TodoCard } from "@/services/todos/types";
 import { BOARD_FULL_MESSAGE, boardRequest } from "@/lib/board-api";
+import { BoardFilterBar } from "./board-filter-bar";
+import { courseCodes, effectiveChip, isFiltering, matchesFilter, NO_FILTER, realIndexFor, type BoardFilter } from "./board-filter";
 import { CardComposer } from "./card-composer";
 import { CardViewDialog } from "./card-view-dialog";
 import type { PickedFile } from "./saved-file-picker";
-import { ColumnEmpty, focusMovedCard, moveMessage, TodoCardView, visibleElement, type BoardCard, type MoveHow } from "./todo-card";
+import { ColumnEmpty, focusMovedCard, moveMessage, titleOf, TodoCardView, visibleElement, type BoardCard, type MoveHow } from "./todo-card";
 import { BoardDnd, DRAG_QUIET_MS, SortableColumn, useActiveColumn } from "./todo-dnd";
 import { STATUS_LOOK } from "./todo-status";
 import { useCardSaver, type Edit } from "./use-card-saver";
@@ -79,6 +81,8 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
   const [adding, setAdding] = useState<TodoStatus | null>(null);
   const [phoneTab, setPhoneTab] = useState<TodoStatus>("todo");
   const [openId, setOpenId] = useState<string | null>(null);
+  // The filter lives in this state only: not saved, not in the address.
+  const [filter, setFilter] = useState<BoardFilter>(NO_FILTER);
   const [celebrating, setCelebrating] = useState<string | null>(null);
   // "Added 5 minutes ago" starts from the server's clock (so the first render matches the HTML)
   // and is refreshed every minute afterwards.
@@ -94,6 +98,14 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
   useEffect(() => {
     latest.current = cards;
   });
+  // What the filter shows. A chip whose course has no card left is gone (and counts as All); the
+  // card open in the card view stays listed while it is edited, so it does not vanish under the
+  // student's hands.
+  const codes = useMemo(() => courseCodes(cards), [cards]);
+  const effective: BoardFilter = { text: filter.text, chip: effectiveChip(filter.chip, codes) };
+  const filtering = isFiltering(effective);
+  const matches = (card: BoardCard) => matchesFilter(card, titleOf(card), effective, codes);
+  const shown = filtering ? cards.filter((c) => c.id === openId || matches(c)) : cards;
   // Drag and drop exists on desktop only; a phone moves cards with Start, Done and the menu.
   const desktop = useMediaQuery("(min-width: 768px)");
   const dragGuard = useRef({ active: false, endedAt: 0 });
@@ -155,6 +167,8 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
       id: tempId, status, position: 0, title, note: "", createdAt: stamp, updatedAt: stamp, statusChangedAt: stamp, resource: file, pending: true,
     };
     setCards((all) => [temp, ...all]);
+    // A card the filter would hide is not hidden from the student who just made it.
+    if (filtering && !matches(temp)) setFilter(NO_FILTER);
     const drop = () => setCards((all) => all.filter((c) => c.id !== tempId));
 
     queue.current = queue.current.then(async () => {
@@ -195,6 +209,15 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
   // Closing the card view sends what is still waiting.
   function closeCard() {
     const id = openId;
+    if (id) {
+      // An edit may have made the card leave the filtered view: the focus goes where it goes after
+      // a delete.
+      const card = cards.find((c) => c.id === id);
+      if (card && filtering && !matches(card)) {
+        const refocus = focusAfterRemoval(id, card.status);
+        closeFocus.current = () => refocus();
+      }
+    }
     setOpenId(null);
     if (!id) return;
     saver.flush(id);
@@ -348,8 +371,25 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
     });
   }
 
-  const inColumn = (status: TodoStatus) => cards.filter((c) => c.status === status);
-  const listProps = { now, celebrating, onOpen: openCard, onDelete: (id: string) => removeCard(id, true), onMove: move };
+  // While a filter is on, a card moved up, down or dropped goes past its visible neighbour; the
+  // server still gets a real index (see `realIndexFor`).
+  function moveAmongShown(id: string, status: TodoStatus, index: number, how: MoveHow) {
+    const all = latest.current;
+    const card = all.find((c) => c.id === id);
+    if (!card || !filtering) return move(id, status, index, how);
+    const visible = all.filter((c) => c.id === openId || matches(c));
+    const visibleIds = visible.filter((c) => c.status === status && c.id !== id).map((c) => c.id);
+    const realIds = all.filter((c) => c.status === status && c.id !== id).map((c) => c.id);
+    const visibleFrom = visible.filter((c) => c.status === card.status).indexOf(card);
+    const towardsEnd = status === card.status && index > visibleFrom;
+    move(id, status, realIndexFor(realIds, visibleIds, index, towardsEnd), how);
+  }
+  // Start, Done and Move to put the card at the top of its new column, filtered or not.
+  const menuMove = (id: string, status: TodoStatus, index: number, how: MoveHow) =>
+    status === latest.current.find((c) => c.id === id)?.status ? moveAmongShown(id, status, index, how) : move(id, status, index, how);
+
+  const inColumn = (status: TodoStatus) => shown.filter((c) => c.status === status);
+  const listProps = { now, celebrating, filtering, onOpen: openCard, onDelete: (id: string) => removeCard(id, true), onMove: menuMove };
 
   // The three desktop columns. With `sortable` they are drag and drop targets (inside BoardDnd).
   const columns = (sortable: boolean) => (
@@ -383,8 +423,9 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
 
   return (
     <>
-      <div className="mb-4 hidden justify-end md:flex">
-        <Button onClick={() => openComposer("todo")}>
+      <div className="mb-4 flex items-center gap-4">
+        <BoardFilterBar filter={effective} codes={codes} onChange={setFilter} />
+        <Button className="hidden md:inline-flex" onClick={() => openComposer("todo")}>
           <Plus aria-hidden /> New card
           <kbd className="ml-1 rounded border border-primary-foreground/40 px-1 text-[10px] leading-4" aria-hidden>
             N
@@ -435,7 +476,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
 
       {/* Desktop: three columns side by side. */}
       {desktop ? (
-        <BoardDnd cards={cards} now={now} move={move} onActiveChange={(active, quiet) => {
+        <BoardDnd cards={shown} now={now} move={moveAmongShown} onActiveChange={(active, quiet) => {
             dragGuard.current = { active, endedAt: quiet ? Date.now() : 0 };
           }}>
           {columns(true)}
@@ -495,6 +536,7 @@ function CardList({
   now,
   celebrating,
   showEmpty,
+  filtering,
   onOpen,
   onDelete,
   onMove,
@@ -504,11 +546,12 @@ function CardList({
   now: string;
   celebrating: string | null;
   showEmpty: boolean;
+  filtering: boolean;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
   onMove: (id: string, status: TodoStatus, index: number, how: MoveHow) => void;
 }) {
-  if (cards.length === 0) return showEmpty ? <ColumnEmpty status={status} /> : null;
+  if (cards.length === 0) return showEmpty ? <ColumnEmpty status={status} filtered={filtering} /> : null;
   return (
     <ul className="flex flex-col gap-2.5">
       {cards.map((card, index) => (
