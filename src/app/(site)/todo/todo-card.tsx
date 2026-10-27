@@ -40,6 +40,18 @@ export const FILE_UNAVAILABLE = "This file is no longer available";
 export const titleOf = (card: Card) =>
   card.title || (card.resource?.available ? card.resource.title : card.resource ? FILE_UNAVAILABLE : "A file that was removed");
 
+// The board is drawn twice (phone tabs and desktop columns, one hidden by CSS), so a control is
+// looked up among the copies that are on screen.
+export function visibleElement(selector: string): HTMLElement | undefined {
+  return [...document.querySelectorAll<HTMLElement>(selector)].find((el) => el.getClientRects().length > 0);
+}
+
+// After a move: the focus follows the card. On a phone the card may have left the tab that is on
+// screen (one column at a time); then the selected tab keeps the focus.
+export function focusMovedCard(id: string) {
+  (visibleElement(`[data-card-open="${id}"]`) ?? visibleElement('[role="tab"][aria-selected="true"]'))?.focus();
+}
+
 // One card: the note icon, the title, a two-line note preview and when it was added (or, in Done,
 // when it was finished). `now` comes from the board so server and browser agree.
 // Start (To do) and Done (In progress) move the card to the top of the next column; the "…" menu
@@ -188,7 +200,12 @@ export function TodoCardView({
             <DropdownMenuContent
               align="end"
               onCloseAutoFocus={(event) => {
-                if (moved.current) event.preventDefault();
+                if (moved.current) {
+                  // The menu has just left the page; only now is the focus safe. Handing it to the
+                  // card earlier loses it to the closing menu, which grabs it back while it fades out.
+                  event.preventDefault();
+                  focusMovedCard(card.id);
+                }
                 moved.current = false;
               }}
             >

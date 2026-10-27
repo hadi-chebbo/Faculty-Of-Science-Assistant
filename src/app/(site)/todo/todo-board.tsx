@@ -14,18 +14,12 @@ import { BOARD_FULL_MESSAGE, boardRequest } from "@/lib/board-api";
 import { CardComposer } from "./card-composer";
 import { CardViewDialog } from "./card-view-dialog";
 import type { PickedFile } from "./saved-file-picker";
-import { ColumnEmpty, moveMessage, TodoCardView, type BoardCard, type MoveHow } from "./todo-card";
+import { ColumnEmpty, focusMovedCard, moveMessage, TodoCardView, visibleElement, type BoardCard, type MoveHow } from "./todo-card";
 import { BoardDnd, DRAG_QUIET_MS, SortableColumn, useActiveColumn } from "./todo-dnd";
 import { STATUS_LOOK } from "./todo-status";
 import { useCardSaver, type Edit } from "./use-card-saver";
 
 const SIGN_IN = `/sign-in?next=${encodeURIComponent("/todo")}`;
-
-// The board is drawn twice (phone tabs and desktop columns, one hidden by CSS), so a control is
-// looked up among the copies that are on screen.
-function visibleElement(selector: string): HTMLElement | undefined {
-  return [...document.querySelectorAll<HTMLElement>(selector)].find((el) => el.getClientRects().length > 0);
-}
 
 // Puts the focus back on whichever "add" control is on screen (the column's "Add a card" on
 // desktop, the round "+" on a phone) once the composer has gone.
@@ -323,7 +317,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
     if (!how.keepFocus) {
       // After the menu has handed the focus back to its button. The card may have left the tab that
       // is on screen (a phone shows one column); then the tab itself keeps the focus.
-      setTimeout(() => (visibleElement(`[data-card-open="${id}"]`) ?? visibleElement('[role="tab"][aria-selected="true"]'))?.focus(), 60);
+      setTimeout(() => focusMovedCard(id), 60);
     }
 
     queue.current = queue.current.then(async () => {
