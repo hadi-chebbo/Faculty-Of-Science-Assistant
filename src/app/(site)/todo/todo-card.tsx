@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type HTMLAttributes, type Ref } from "react";
 import { ArrowDown, ArrowUp, BookOpen, Check, Clock, FileText, MoreHorizontal, PencilLine, Play, StickyNote, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { TYPE_ICONS } from "@/components/site/resource-row";
@@ -26,6 +26,10 @@ export const moveMessage = (status: TodoStatus) => (status === "done" ? DONE_MES
 // view) instead of following the card to its new place.
 export type MoveHow = { message: string; keepFocus?: boolean };
 
+// What a sortable card hands to its title button on desktop: the drag attributes (screen-reader
+// role description and instructions) and the ref that makes the button the keyboard activator.
+export type CardDrag = { attributes: HTMLAttributes<HTMLElement>; activatorRef: Ref<HTMLButtonElement> };
+
 // A card still being saved (the optimistic copy) is shown slightly faded.
 export type BoardCard = Card & { pending?: boolean };
 
@@ -35,6 +39,18 @@ export const FILE_UNAVAILABLE = "This file is no longer available";
 // title. No file left (it was deleted) and no title: "A file that was removed".
 export const titleOf = (card: Card) =>
   card.title || (card.resource?.available ? card.resource.title : card.resource ? FILE_UNAVAILABLE : "A file that was removed");
+
+// The board is drawn twice (phone tabs and desktop columns, one hidden by CSS), so a control is
+// looked up among the copies that are on screen.
+export function visibleElement(selector: string): HTMLElement | undefined {
+  return [...document.querySelectorAll<HTMLElement>(selector)].find((el) => el.getClientRects().length > 0);
+}
+
+// After a move: the focus follows the card. On a phone the card may have left the tab that is on
+// screen (one column at a time); then the selected tab keeps the focus.
+export function focusMovedCard(id: string) {
+  (visibleElement(`[data-card-open="${id}"]`) ?? visibleElement('[role="tab"][aria-selected="true"]'))?.focus();
+}
 
 // One card: the note icon, the title, a two-line note preview and when it was added (or, in Done,
 // when it was finished). `now` comes from the board so server and browser agree.
@@ -52,6 +68,8 @@ export function TodoCardView({
   onOpen,
   onDelete,
   onMove,
+  drag,
+  overlay = false,
 }: {
   card: BoardCard;
   now: string;
@@ -61,6 +79,9 @@ export function TodoCardView({
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
   onMove: (id: string, status: TodoStatus, index: number, how: MoveHow) => void;
+  drag?: CardDrag;
+  // The copy that follows the pointer while dragging: no title button, so nothing is found twice.
+  overlay?: boolean;
 }) {
   const done = card.status === "done";
   const file = card.resource;
@@ -74,6 +95,7 @@ export function TodoCardView({
   };
   return (
     <article
+      data-card-drag={drag ? "" : undefined}
       aria-busy={card.pending || undefined}
       className={`relative rounded-xl border bg-card p-3 text-left shadow-xs transition-opacity hover:border-foreground/20 ${card.pending ? "opacity-70" : ""} ${done ? "bg-card/70" : ""} ${celebrating ? "done-ring" : ""}`}
     >
@@ -94,12 +116,14 @@ export function TodoCardView({
       <h3
         className={`mt-2 pr-11 text-sm font-medium leading-snug break-words md:pr-8 ${done ? "text-muted-foreground line-through decoration-success/70 decoration-2" : "text-heading"}`}
       >
-        {card.pending ? (
+        {card.pending || overlay ? (
           titleOf(card)
         ) : (
           <button
             type="button"
             data-card-open={card.id}
+            ref={drag?.activatorRef}
+            {...drag?.attributes}
             aria-haspopup="dialog"
             onClick={() => onOpen(card.id)}
             className="cursor-pointer text-left outline-none after:absolute after:inset-0 after:rounded-xl focus-visible:after:ring-3 focus-visible:after:ring-ring/50"
@@ -160,7 +184,7 @@ export function TodoCardView({
       </div>
 
       {/* Last in the DOM, so Tab reaches the card before its menu; drawn above the title's overlay. */}
-      {!card.pending && (
+      {!card.pending && !overlay && (
         <div className="absolute top-1 right-1 z-10 md:top-2 md:right-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -176,7 +200,12 @@ export function TodoCardView({
             <DropdownMenuContent
               align="end"
               onCloseAutoFocus={(event) => {
-                if (moved.current) event.preventDefault();
+                if (moved.current) {
+                  // The menu has just left the page; only now is the focus safe. Handing it to the
+                  // card earlier loses it to the closing menu, which grabs it back while it fades out.
+                  event.preventDefault();
+                  focusMovedCard(card.id);
+                }
                 moved.current = false;
               }}
             >
@@ -221,5 +250,17 @@ export function TodoCardView({
         </div>
       )}
     </article>
+  );
+}
+
+// The friendly empty text of a column with no cards.
+export function ColumnEmpty({ status }: { status: TodoStatus }) {
+  const look = STATUS_LOOK[status];
+  const Icon = look.icon;
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border/80 px-4 py-8 text-center">
+      <Icon className={`size-6 ${look.iconTone} opacity-60`} aria-hidden />
+      <p className="text-xs text-muted-foreground">{look.empty}</p>
+    </div>
   );
 }

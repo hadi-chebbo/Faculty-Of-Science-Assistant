@@ -126,7 +126,8 @@ test("desktop: Start, Done and Undo move a card between columns, and the state s
   await expect(card(page, "Revise sorting").getByRole("button", { name: /^(Start|Done)$/ })).toHaveCount(0);
 
   // Undo puts it back at the top of In progress.
-  const undone = page.waitForResponse(isMove);
+  // The Undo request itself (back to In progress), not the slower answer to the earlier move to Done.
+  const undone = page.waitForResponse((r) => isMove(r) && (r.request().postData() ?? "").includes('"status":"in_progress"'));
   await undoButton(page, "Nice, that's done.").click();
   expect((await undone).status()).toBe(200);
   await expect(cardsIn(page, "In progress")).toHaveText(["Revise sorting", "Existing in progress"]);
@@ -162,7 +163,8 @@ test("desktop: the menu moves a card down and up, ends are disabled, Move to sen
   await page.getByRole("menuitem", { name: "Done", exact: true }).click();
   await expect(cardsIn(page, "Done")).toHaveText(["Three", "Finished"]);
   await expect(page.getByText("Nice, that's done.")).toBeVisible();
-  const undone = page.waitForResponse(isMove);
+  // The Undo request itself (back to To do), not the slower answer to the earlier move to Done.
+  const undone = page.waitForResponse((r) => isMove(r) && (r.request().postData() ?? "").includes('"status":"todo"'));
   await undoButton(page, "Nice, that's done.").click();
   await expect(cardsIn(page, "To do")).toHaveText(["Two", "Three", "One"]);
   await undone;

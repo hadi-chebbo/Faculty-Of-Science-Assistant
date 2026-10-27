@@ -209,10 +209,13 @@ test("keyboard: Enter opens a card, Esc closes it and the focus returns to the c
   await expect(dialog(page)).toHaveCount(0);
   await expect(openCard(page, "Beta")).toBeFocused();
 
-  // Space opens too.
+  // On desktop Space picks the card up for keyboard dragging (see todo-drag.spec.ts) instead of
+  // opening it; Esc puts it back and the card view stays closed.
   await page.keyboard.press("Space");
-  await expect(dialog(page)).toBeVisible();
+  await expect(dialog(page)).toHaveCount(0);
   await page.keyboard.press("Escape");
+  await expect(dialog(page)).toHaveCount(0);
+  await expect(openCard(page, "Beta")).toBeFocused();
 
   // Undo can be used from the keyboard.
   await page.getByRole("button", { name: "Actions for Beta" }).focus();

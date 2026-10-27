@@ -2,28 +2,24 @@
 
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TODO_STATUSES, type TodoStatus } from "@/db/constants";
 import { showUndoToast } from "@/lib/undo-toast";
+import { useMediaQuery } from "@/lib/use-media-query";
 import type { TodoCard } from "@/services/todos/types";
 import { BOARD_FULL_MESSAGE, boardRequest } from "@/lib/board-api";
 import { CardComposer } from "./card-composer";
 import { CardViewDialog } from "./card-view-dialog";
 import type { PickedFile } from "./saved-file-picker";
-import { moveMessage, TodoCardView, type BoardCard, type MoveHow } from "./todo-card";
+import { ColumnEmpty, focusMovedCard, moveMessage, TodoCardView, visibleElement, type BoardCard, type MoveHow } from "./todo-card";
+import { BoardDnd, DRAG_QUIET_MS, SortableColumn, useActiveColumn } from "./todo-dnd";
 import { STATUS_LOOK } from "./todo-status";
 import { useCardSaver, type Edit } from "./use-card-saver";
 
 const SIGN_IN = `/sign-in?next=${encodeURIComponent("/todo")}`;
-
-// The board is drawn twice (phone tabs and desktop columns, one hidden by CSS), so a control is
-// looked up among the copies that are on screen.
-function visibleElement(selector: string): HTMLElement | undefined {
-  return [...document.querySelectorAll<HTMLElement>(selector)].find((el) => el.getClientRects().length > 0);
-}
 
 // Puts the focus back on whichever "add" control is on screen (the column's "Add a card" on
 // desktop, the round "+" on a phone) once the composer has gone.
@@ -98,6 +94,9 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
   useEffect(() => {
     latest.current = cards;
   });
+  // Drag and drop exists on desktop only; a phone moves cards with Start, Done and the menu.
+  const desktop = useMediaQuery("(min-width: 768px)");
+  const dragGuard = useRef({ active: false, endedAt: 0 });
   const closeFocus = useRef<(() => void) | null>(null);
   const lastOpened = useRef<string | null>(null);
   const saver = useCardSaver({
@@ -140,6 +139,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
       const target = event.target as HTMLElement | null;
       if (event.key.toLowerCase() !== "n" || event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
       if (target?.closest("input, textarea, select, [contenteditable], [role=dialog]")) return;
+      if (dragGuard.current.active) return;
       event.preventDefault();
       setPhoneTab("todo");
       setAdding("todo");
@@ -185,6 +185,8 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
   }
 
   function openCard(id: string) {
+    // Space picks a card up on desktop; its click (on key release) must not open the card view.
+    if (dragGuard.current.active || Date.now() - dragGuard.current.endedAt < DRAG_QUIET_MS) return;
     lastOpened.current = id;
     closeFocus.current = null;
     setOpenId(id);
@@ -315,7 +317,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
     if (!how.keepFocus) {
       // After the menu has handed the focus back to its button. The card may have left the tab that
       // is on screen (a phone shows one column); then the tab itself keeps the focus.
-      setTimeout(() => (visibleElement(`[data-card-open="${id}"]`) ?? visibleElement('[role="tab"][aria-selected="true"]'))?.focus(), 60);
+      setTimeout(() => focusMovedCard(id), 60);
     }
 
     queue.current = queue.current.then(async () => {
@@ -348,6 +350,36 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
 
   const inColumn = (status: TodoStatus) => cards.filter((c) => c.status === status);
   const listProps = { now, celebrating, onOpen: openCard, onDelete: (id: string) => removeCard(id, true), onMove: move };
+
+  // The three desktop columns. With `sortable` they are drag and drop targets (inside BoardDnd).
+  const columns = (sortable: boolean) => (
+    <div className="hidden grid-cols-3 items-start gap-4 md:grid">
+      {TODO_STATUSES.map((status) => {
+        const items = inColumn(status);
+        return (
+          <DesktopColumn key={status} status={status} count={items.length}>
+            {adding === status && <CardComposer status={status} onAdd={add} onClose={closeComposer} />}
+            {sortable ? (
+              <SortableColumn cards={items} status={status} showEmpty={adding !== status} {...listProps} />
+            ) : (
+              <CardList cards={items} status={status} showEmpty={adding !== status} {...listProps} />
+            )}
+            {adding !== status && (
+              <Button
+                type="button"
+                variant="ghost"
+                data-add-card={status}
+                onClick={() => openComposer(status)}
+                className="justify-start text-muted-foreground hover:bg-card hover:text-heading"
+              >
+                <Plus aria-hidden /> Add a card
+              </Button>
+            )}
+          </DesktopColumn>
+        );
+      })}
+    </div>
+  );
 
   return (
     <>
@@ -402,40 +434,15 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
       </Button>
 
       {/* Desktop: three columns side by side. */}
-      <div className="hidden grid-cols-3 items-start gap-4 md:grid">
-        {TODO_STATUSES.map((status) => {
-          const look = STATUS_LOOK[status];
-          const Icon = look.icon;
-          const items = inColumn(status);
-          return (
-            <section key={status} aria-label={look.label} className={`overflow-hidden rounded-2xl ${look.tint}`}>
-              <div className={`h-1 ${look.bar}`} aria-hidden />
-              <div className="flex flex-col gap-3 p-3">
-                <div className="flex items-center gap-2 px-1">
-                  <Icon className={`size-4 ${look.iconTone}`} aria-hidden />
-                  <h2 className="text-sm font-semibold text-heading">{look.label}</h2>
-                  <span className="rounded-full bg-card px-2 py-0.5 text-xs font-medium text-muted-foreground ring-1 ring-border">
-                    {items.length}
-                  </span>
-                </div>
-                {adding === status && <CardComposer status={status} onAdd={add} onClose={closeComposer} />}
-                <CardList cards={items} status={status} showEmpty={adding !== status} {...listProps} />
-                {adding !== status && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    data-add-card={status}
-                    onClick={() => openComposer(status)}
-                    className="justify-start text-muted-foreground hover:bg-card hover:text-heading"
-                  >
-                    <Plus aria-hidden /> Add a card
-                  </Button>
-                )}
-              </div>
-            </section>
-          );
-        })}
-      </div>
+      {desktop ? (
+        <BoardDnd cards={cards} now={now} move={move} onActiveChange={(active, quiet) => {
+            dragGuard.current = { active, endedAt: quiet ? Date.now() : 0 };
+          }}>
+          {columns(true)}
+        </BoardDnd>
+      ) : (
+        columns(false)
+      )}
 
       {/* One card view for the whole board, outside both layouts. */}
       <CardViewDialog
@@ -458,6 +465,30 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
   );
 }
 
+// One desktop column: the coloured bar, the label with its count and the cards. While a card is
+// dragged over it, it gets a ring.
+function DesktopColumn({ status, count, children }: { status: TodoStatus; count: number; children: ReactNode }) {
+  const look = STATUS_LOOK[status];
+  const Icon = look.icon;
+  const highlighted = useActiveColumn() === status;
+  return (
+    <section
+      aria-label={look.label}
+      className={`overflow-hidden rounded-2xl transition-shadow motion-reduce:transition-none ${look.tint} ${highlighted ? "ring-2 ring-primary" : ""}`}
+    >
+      <div className={`h-1 ${look.bar}`} aria-hidden />
+      <div className="flex flex-col gap-3 p-3">
+        <div className="flex items-center gap-2 px-1">
+          <Icon className={`size-4 ${look.iconTone}`} aria-hidden />
+          <h2 className="text-sm font-semibold text-heading">{look.label}</h2>
+          <span className="rounded-full bg-card px-2 py-0.5 text-xs font-medium text-muted-foreground ring-1 ring-border">{count}</span>
+        </div>
+        {children}
+      </div>
+    </section>
+  );
+}
+
 function CardList({
   cards,
   status,
@@ -477,17 +508,7 @@ function CardList({
   onDelete: (id: string) => void;
   onMove: (id: string, status: TodoStatus, index: number, how: MoveHow) => void;
 }) {
-  const look = STATUS_LOOK[status];
-  const Icon = look.icon;
-  if (cards.length === 0) {
-    if (!showEmpty) return null;
-    return (
-      <div className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border/80 px-4 py-8 text-center">
-        <Icon className={`size-6 ${look.iconTone} opacity-60`} aria-hidden />
-        <p className="text-xs text-muted-foreground">{look.empty}</p>
-      </div>
-    );
-  }
+  if (cards.length === 0) return showEmpty ? <ColumnEmpty status={status} /> : null;
   return (
     <ul className="flex flex-col gap-2.5">
       {cards.map((card, index) => (

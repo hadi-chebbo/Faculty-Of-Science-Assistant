@@ -2,7 +2,7 @@
 
 import { ChevronLeft, ChevronRight, Minus, PanelLeft, Plus, Search, X } from "lucide-react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { PageCanvas } from "./page-canvas";
 import { ReaderContents, useOutline } from "./reader-contents";
 import { useAddToTodo } from "@/lib/add-to-todo";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { useSavedResource } from "@/lib/saved-client";
 import { ReaderMenu } from "./reader-menu";
 import { readContentsOpen, writeContentsOpen } from "./reader-panel";
@@ -56,20 +57,6 @@ const MAX_ZOOM = 300;
 const MOMENTUM_MS = 150;
 
 const toPoint = (event: { clientX: number; clientY: number; timeStamp: number }) => ({ x: event.clientX, y: event.clientY, time: event.timeStamp });
-
-function useMediaQuery(query: string): boolean {
-  // Stable functions per query: a new subscribe on every render would re-subscribe every time.
-  const subscribe = useCallback(
-    (notify: () => void) => {
-      const list = window.matchMedia(query);
-      list.addEventListener("change", notify);
-      return () => list.removeEventListener("change", notify);
-    },
-    [query],
-  );
-  const snapshot = useCallback(() => window.matchMedia(query).matches, [query]);
-  return useSyncExternalStore(subscribe, snapshot, () => false);
-}
 
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
