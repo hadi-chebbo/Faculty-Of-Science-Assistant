@@ -38,7 +38,7 @@ icon; tapping it takes them to sign-in and back to the same page.
 3. As a signed-in student, I want a "Save for later" button in the reader's details column, so that saving is visible without opening a menu.
 4. As a signed-in student, I want the bookmark icon to look filled when a resource is already saved, so that I can see at a glance what I have kept.
 5. As a signed-in student, I want to tap a filled bookmark to remove the resource from my saved list, so that unsaving is as quick as saving.
-6. As a signed-in student, I want a short confirmation after saving ("Saved. Find it under Saved in your account menu."), so that I know it worked and where to find it.
+6. As a signed-in student, I want a short confirmation after saving ("Saved. Find it any time under Saved."), so that I know it worked and where to find it.
 7. As a signed-in student, I want the save icon on course, chapter, exams and search pages, so that I can save from wherever I spot a file.
 8. As a signed-out visitor, I want to see the save icon too, so that I discover the feature.
 9. As a signed-out visitor, I want tapping save to take me to sign-in and then back to the same page, so that I do not lose my place.
@@ -48,7 +48,7 @@ icon; tapping it takes them to sign-in and back to the same page.
 
 ### Saved page
 
-13. As a signed-in student, I want a Saved page reachable from my account menu, so that I can find what I kept.
+13. As a signed-in student, I want a Saved page reachable from the main navigation, so that I can find what I kept.
 14. As a signed-in student, I want saved resources grouped by course, in semester and course-code order, so that the list matches how I study.
 15. As a signed-in student, I want the most recently saved resource first within each course, so that what I just kept is easy to find.
 16. As a signed-in student, I want each saved item to look like the resource rows I know, so that I can open it in the reader the same way.
@@ -60,7 +60,7 @@ icon; tapping it takes them to sign-in and back to the same page.
 
 ### Board: seeing it
 
-22. As a signed-in student, I want a To-do page reachable from my account menu, so that I can open my plan from anywhere.
+22. As a signed-in student, I want a To-do page reachable from the main navigation, so that I can open my plan from anywhere.
 23. As a signed-in student, I want three columns, To do, In progress and Done, each with its own colour, icon and count, so that I can read the board at a glance.
 24. As a signed-in student, I want each card to show its title, a short preview of its note, and for a linked file its course code and type, so that I recognise it without opening it.
 25. As a signed-in student, I want a card to say when it was added, or for a done card when it was finished, so that I notice what has been sitting there.

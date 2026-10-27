@@ -79,10 +79,9 @@ test("a student saves from the reader, finds it under Saved, removes it and sees
 
   const details = page.getByRole("complementary", { name: "About this file" });
   await details.getByRole("button", { name: "Save for later" }).click();
-  await expect(page.getByText("Saved. Find it under Saved in your account menu.")).toBeVisible();
+  await expect(page.getByText("Saved. Find it any time under Saved.")).toBeVisible();
 
-  await page.getByRole("button", { name: "Saved Tester" }).click();
-  await page.getByRole("menuitem", { name: "Saved" }).click();
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Saved" }).filter({ visible: true }).click();
   await expect(page).toHaveURL("/saved");
   await expect(page.getByRole("heading", { level: 1, name: "Saved" })).toBeVisible();
 
@@ -144,9 +143,10 @@ test("a signed-out visitor is sent to sign-in and returns to Saved after signing
   await expect(page.getByRole("heading", { level: 1, name: "Saved" })).toBeVisible();
 });
 
-test("the phone bottom tab bar has no Saved item", async ({ page, isMobile }) => {
-  test.skip(!isMobile, "The bottom tab bar is a phone layout");
+test("Saved and To-do are in the main navigation for everyone, and a visitor goes to sign-in", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Browse" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Saved" })).toHaveCount(0);
+  const nav = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
+  await expect(nav.getByRole("link")).toHaveText(["Browse", "Exams", "Search", "Saved", "To-do"]);
+  await nav.getByRole("link", { name: "Saved" }).click();
+  await expect(page).toHaveURL("/sign-in?next=%2Fsaved");
 });

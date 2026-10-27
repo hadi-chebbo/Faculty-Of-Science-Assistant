@@ -112,7 +112,7 @@ test("a student saves from a course page row, sees it filled after a reload and 
   await expect(save).toHaveAttribute("aria-pressed", "false");
   await save.click();
   await expect(
-    page.getByText("Saved. Find it under Saved in your account menu."),
+    page.getByText("Saved. Find it any time under Saved."),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: `Remove ${title} from saved` }),

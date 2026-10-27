@@ -10,15 +10,15 @@ export function SiteHeader() {
   return (
     <>
       <header className="sticky top-0 z-40 border-b bg-card">
-        <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-6 px-4">
+        <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-4 px-4 lg:gap-6">
           <BrandLink />
-          <nav aria-label="Main" className="ml-auto hidden items-center gap-1 md:flex">
+          <nav aria-label="Main" className="ml-auto hidden items-center md:flex">
             <Suspense fallback={null}>
               <NavItems variant="top" />
             </Suspense>
           </nav>
-          <div className="ml-auto flex items-center gap-1 md:ml-0">
-            <Suspense fallback={<div aria-hidden className="h-11 w-24 md:h-9" />}>
+          <div className="ml-auto flex items-center gap-1 md:ml-0 md:border-l md:pl-3">
+            <Suspense fallback={<div aria-hidden className="size-11 md:size-9" />}>
               <AccountControl />
             </Suspense>
             <ThemeToggle />

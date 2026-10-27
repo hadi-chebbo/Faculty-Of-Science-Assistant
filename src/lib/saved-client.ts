@@ -102,7 +102,7 @@ async function change(resourceId: string, save: boolean): Promise<"done" | "sign
       set({ status: "signed-out", ids: new Set() });
       return "signed-out";
     }
-    if (response.ok) toast.success(save ? "Saved. Find it under Saved in your account menu." : "Removed from saved.");
+    if (response.ok) toast.success(save ? "Saved. Find it any time under Saved." : "Removed from saved.");
     else if (response.status === 404 && save) fail("This file can't be saved.");
     else fail(save ? "Couldn't save. Try again." : "Couldn't remove. Try again.");
   } catch {

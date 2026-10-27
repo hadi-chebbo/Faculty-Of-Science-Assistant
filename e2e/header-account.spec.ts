@@ -71,10 +71,15 @@ test("the demo student sees their name and no Admin item, and lands on the home 
   await ownAddress(page);
   await signIn(page, STUDENT_EMAIL, STUDENT_PASSWORD);
   await expect(page).toHaveURL(/\/$/);
-  await expect(accountButton(page)).toHaveText("Demo Student");
+  await expect(accountButton(page)).toHaveAccessibleName("Demo Student");
+  await expect(accountButton(page)).toHaveText("DS");
   await accountButton(page).click();
+  await expect(page.getByRole("menu").getByText("Demo Student")).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Sign out" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Admin" })).toHaveCount(0);
+  // Saved and To-do live in the main navigation, not in this menu.
+  await expect(page.getByRole("menuitem", { name: "Saved" })).toHaveCount(0);
+  await expect(page.getByRole("menuitem", { name: "To-do" })).toHaveCount(0);
 });
 
 test("signing out from the menu on a public page returns to Sign in", async ({ page }) => {
@@ -95,7 +100,7 @@ test("an expired access cookie is renewed from the refresh cookie by the header"
   await signIn(page, STUDENT_EMAIL, STUDENT_PASSWORD);
   await page.context().clearCookies({ name: "ua_access" });
   await page.goto("/");
-  await expect(accountButton(page)).toHaveText("Demo Student");
+  await expect(accountButton(page)).toHaveAccessibleName("Demo Student");
 });
 
 // A refresh token works once; a second use ends the whole session. Tabs that load together must
@@ -112,12 +117,12 @@ test("several tabs with an expired access cookie renew once and all stay signed 
   }
   await context.clearCookies({ name: "ua_access" });
   await Promise.all(tabs.map((tab) => tab.goto("/")));
-  for (const tab of tabs) await expect(accountButton(tab)).toHaveText("Demo Student");
+  for (const tab of tabs) await expect(accountButton(tab)).toHaveAccessibleName("Demo Student");
   expect(refreshes).toEqual([200]);
 
   // The session survived: a later page load is still signed in.
   await page.reload();
-  await expect(accountButton(page)).toHaveText("Demo Student");
+  await expect(accountButton(page)).toHaveAccessibleName("Demo Student");
 });
 
 test("GET /api/v1/auth/me without cookies is signed out, and never contains an email when signed in", async ({
