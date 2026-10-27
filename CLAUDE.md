@@ -169,11 +169,15 @@ mock exam generation, personalization.
   - Text contrast is at least 4.5:1 in both themes.
 - Theme: light and dark, defaults to the device setting, toggle in the top bar.
 - UI language: English only.
-- Navigation adapts to the device. Phone: slim top bar plus a fixed bottom tab bar
-  (Browse, Exams, Search). Desktop (md and up): the same items inline in the top bar and a
-  breadcrumb trail on inner pages. An item without a page would be shown disabled. The account pages (sign-in, sign-up, check-email, confirm-email) are the exception: see the Sign-in page bullet. The top bar
-  also shows a "Sign in" link or, when signed in, an account button with the user's name
-  (never the email) and a menu with Saved and To-do (everyone signed in), Admin (admins only) and Sign out.
+- Navigation adapts to the device. The items are Browse, Exams, Search, Saved and To-do, shown to
+  everyone (signed out, Saved and To-do lead through sign-in and back; the bar never waits for the
+  session). Phone: slim top bar (brand, theme toggle, account) plus a fixed bottom tab bar with the five
+  items, the current one with its icon on a tinted pill. Desktop (md and up): the same items inline in the
+  top bar, Saved and To-do after a thin divider, the current item underlined in primary along the bar's
+  bottom edge (icons from lg up), and a breadcrumb trail on inner pages. An item without a page would be shown disabled. The account pages (sign-in, sign-up, check-email, confirm-email) are the exception: see the Sign-in page bullet. The top bar
+  also shows a "Sign in" link or, when signed in, a round avatar with the user's initials (a person icon
+  without a name), labelled with the name (never the email). Its menu holds the account only: the name,
+  Admin (admins only) and Sign out; pages never go in it.
 - Home is a landing page: a hero (headline, description, "Browse courses" and "Previous exams"
   buttons, three facts, and a decorative course preview), a numbers strip (only from 5 courses), the
   semester cards (an empty semester is a muted card, not a link), how it works, what you will find,
@@ -257,12 +261,12 @@ mock exam generation, personalization.
   public and never reads the session on the server: after load the browser asks
   `GET /api/v1/saved/ids` once (one shared store, `src/lib/saved-client.ts`, so the button and the
   menu always agree), and shows "Save for later" until the answer arrives. Saving is optimistic;
-  it answers with the toast "Saved. Find it under Saved in your account menu." ("Removed from
+  it answers with the toast "Saved. Find it any time under Saved." ("Removed from
   saved." when removing), and a failure puts the state back with a toast. Signed out, the same
   controls show and using one goes to `/sign-in?next=<this page>`; there is no automatic save after
   signing in. There is no AI panel yet and no text about one.
 - Saved page (`/saved`): private, server-rendered, `noindex` and `no-store` (header set in
-  `next.config.ts`), reached from "Saved" in the account menu (nothing in the phone tab bar).
+  `next.config.ts`), reached from "Saved" in the main navigation (also in the phone tab bar).
   `requireSignedInPage` (`src/lib/auth/page-guard.ts`, also the base of the admin guard) sends a
   visitor with no valid access token through `/api/v1/auth/restore?next=/saved`, which renews the
   session or goes to `/sign-in?next=/saved`. Saved files are grouped by course (semester, then
@@ -283,8 +287,8 @@ mock exam generation, personalization.
   icons share the answer; toasts are the reader's. The row's `action` slot is for extra controls
   beside the bookmark.
 - To-do board (`/todo`): private like `/saved` (server-rendered, `noindex`, `no-store`, same
-  `requireSignedInPage` / restore / `/sign-in?next=%2Ftodo` path), reached from "To-do" in the account
-  menu (nothing in the phone tab bar). Look follows prototype variant D. Desktop (md and up): breadcrumb
+  `requireSignedInPage` / restore / `/sign-in?next=%2Ftodo` path), reached from "To-do" in the main
+  navigation (also in the phone tab bar). Look follows prototype variant D. Desktop (md and up): breadcrumb
   Home › To-do, a "New card" button (shortcut N, only when focus is not in a field and no modifier is
   held) and three tinted columns side by side, each with a coloured top bar, icon, label and count, and
   a friendly empty text; "Add a card" at the bottom of each column opens a

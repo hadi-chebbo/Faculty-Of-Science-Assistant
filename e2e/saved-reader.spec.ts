@@ -78,7 +78,7 @@ test("a signed-in student saves from the reader, still sees it saved after a rel
   const save = details(page).getByRole("button", { name: "Save for later" });
   await expect(save).toHaveAttribute("aria-pressed", "false");
   await save.click();
-  await expect(page.getByText("Saved. Find it under Saved in your account menu.")).toBeVisible();
+  await expect(page.getByText("Saved. Find it any time under Saved.")).toBeVisible();
   await expect(details(page).getByRole("button", { name: "Saved", exact: true })).toHaveAttribute("aria-pressed", "true");
   expect(await savedCount(id)).toBe(1);
 

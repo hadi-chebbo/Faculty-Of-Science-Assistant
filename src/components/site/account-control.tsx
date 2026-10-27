@@ -1,14 +1,17 @@
 "use client";
 
-import { User } from "lucide-react";
+import { LogOut, Shield, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { findAccount, type Account } from "@/lib/auth/client-session";
@@ -21,8 +24,20 @@ function displayName(account: Account): string {
   return account.name?.trim() || (account.role === "admin" ? "Admin" : "Account");
 }
 
-// Same box as the button, so nothing moves when the answer arrives.
-const placeholder = <div aria-hidden className="h-11 w-24 md:h-9" />;
+// Up to two initials from the name ("Demo Student" → "DS"); none without a name.
+export function initialsOf(name: string | null | undefined): string {
+  return (name ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join("");
+}
+
+// Same box as the avatar button, so nothing moves when the answer arrives. "Sign in" is wider and
+// may shift the bar slightly for a visitor; the pages themselves never move.
+const placeholder = <div aria-hidden className="size-11 md:size-9" />;
 
 // Public pages are static, so the browser asks who is signed in after the page has loaded.
 export function AccountControl() {
@@ -60,28 +75,32 @@ export function AccountControl() {
     );
   }
 
+  const name = displayName(account);
+  const initials = initialsOf(account.name);
+  // The pages (Saved, To-do) live in the main navigation; this menu only holds the account itself.
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="h-11 max-w-32 md:h-9 md:max-w-48">
-          <User aria-hidden />
-          <span className="truncate">{displayName(account)}</span>
+        <Button variant="ghost" size="icon" aria-label={name} className="size-11 rounded-full md:size-9">
+          <Avatar className="size-9 md:size-8">
+            <AvatarFallback className="bg-primary/10 text-xs font-semibold text-link">
+              {initials || <User className="size-4" aria-hidden />}
+            </AvatarFallback>
+          </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem asChild className="min-h-11 md:min-h-8">
-          <Link href="/saved">Saved</Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild className="min-h-11 md:min-h-8">
-          <Link href="/todo">To-do</Link>
-        </DropdownMenuItem>
+      <DropdownMenuContent align="end" className="min-w-48">
+        <DropdownMenuLabel className="truncate font-medium text-heading">{name}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
         {account.role === "admin" && (
           <DropdownMenuItem asChild className="min-h-11 md:min-h-8">
-            <Link href="/admin">Admin</Link>
+            <Link href="/admin">
+              <Shield aria-hidden /> Admin
+            </Link>
           </DropdownMenuItem>
         )}
         <DropdownMenuItem className="min-h-11 md:min-h-8" onSelect={() => void signOut()}>
-          Sign out
+          <LogOut aria-hidden /> Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

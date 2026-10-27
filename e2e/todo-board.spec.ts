@@ -77,15 +77,14 @@ test("signed out, /todo goes to sign-in and signing in returns to the board", as
   await expect(page.getByRole("heading", { level: 1, name: "To-do" })).toBeVisible();
 });
 
-test("the account menu has To-do and it opens the board", async ({ page, isMobile }) => {
+test("To-do in the main navigation opens the board", async ({ page, isMobile }) => {
   await ownAddress(page);
   await page.goto("/sign-in?next=%2Fsaved");
   await page.getByLabel("Email").fill(emailFor(isMobile));
   await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL("/saved");
-  await page.getByRole("button", { name: "Board Tester" }).click();
-  await page.getByRole("menuitem", { name: "To-do" }).click();
+  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "To-do" }).filter({ visible: true }).click();
   await expect(page).toHaveURL("/todo");
   await expect(page.getByRole("heading", { level: 1, name: "To-do" })).toBeVisible();
 });
