@@ -26,6 +26,7 @@ import {
   useContext,
   useEffect,
   useId,
+  useMemo,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -33,7 +34,7 @@ import {
 } from "react";
 import { TODO_STATUSES, type TodoStatus } from "@/db/constants";
 import { useMediaQuery } from "@/lib/use-media-query";
-import { ColumnEmpty, moveMessage, titleOf, TodoCardView, type BoardCard, type MoveHow } from "./todo-card";
+import { ColumnEmpty, moveMessage, titleOf, TodoCardView, type BoardCard, type CardDrag, type MoveHow } from "./todo-card";
 import { STATUS_LOOK } from "./todo-status";
 
 type Layout = Record<TodoStatus, string[]>;
@@ -316,9 +317,14 @@ export function SortableColumn({
   const drag = useContext(DragContext);
   const { setNodeRef } = useDroppable({ id: columnId(status) });
   const shown = drag?.layout ? drag.layout[status].flatMap((id) => drag.cardsById.get(id) ?? []) : cards;
+  // The same array while the ids are the same: SortableContext re-measures the columns whenever
+  // `items` is a new array, and that measuring re-renders this column, so a fresh array on every
+  // render loops ("Maximum update depth exceeded").
+  const key = shown.map((c) => c.id).join(" ");
+  const items = useMemo(() => (key ? key.split(" ") : []), [key]);
   return (
     <div ref={setNodeRef} className="flex min-h-16 flex-col gap-3">
-      <SortableContext items={shown.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext items={items} strategy={verticalListSortingStrategy}>
         {shown.length === 0 ? (
           showEmpty && <ColumnEmpty status={status} filtered={filtering} />
         ) : (
@@ -366,6 +372,17 @@ function SortableCard({
     id: card.id,
     disabled: card.pending === true,
   });
+  // Stable while nothing changes, so the memoised card view is skipped on every pointer move (dnd-kit
+  // re-renders each sortable item as the pointer moves).
+  const roleDescription = attributes["aria-roledescription"];
+  const describedBy = attributes["aria-describedby"];
+  const dragProps = useMemo<CardDrag | undefined>(
+    () =>
+      card.pending
+        ? undefined
+        : { attributes: { "aria-roledescription": roleDescription, "aria-describedby": describedBy }, activatorRef: setActivatorNodeRef },
+    [card.pending, roleDescription, describedBy, setActivatorNodeRef],
+  );
   return (
     <li
       ref={setNodeRef}
@@ -384,17 +401,7 @@ function SortableCard({
           onOpen={onOpen}
           onDelete={onDelete}
           onMove={onMove}
-          drag={
-            card.pending
-              ? undefined
-              : {
-                  attributes: {
-                    "aria-roledescription": attributes["aria-roledescription"],
-                    "aria-describedby": attributes["aria-describedby"],
-                  },
-                  activatorRef: setActivatorNodeRef,
-                }
-          }
+          drag={dragProps}
         />
       </div>
     </li>

@@ -1,4 +1,4 @@
-import { useRef, type HTMLAttributes, type Ref } from "react";
+import { memo, useRef, type HTMLAttributes, type Ref } from "react";
 import { ArrowDown, ArrowUp, BookOpen, Check, Clock, FileText, MoreHorizontal, PencilLine, Play, StickyNote, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { TYPE_ICONS } from "@/components/site/resource-row";
@@ -59,7 +59,9 @@ export function focusMovedCard(id: string) {
 // The title is a button stretched over the whole card (an overlay), so the card opens with a click
 // or Enter/Space without nesting controls; the "…" menu sits above that overlay. A card that is
 // still being created can be neither opened nor changed.
-export function TodoCardView({
+// Memoised: while a card is dragged, dnd-kit re-renders every sortable item on each pointer move,
+// and the props here stay the same unless the card itself changed.
+export const TodoCardView = memo(function TodoCardView({
   card,
   now,
   index,
@@ -251,7 +253,7 @@ export function TodoCardView({
       )}
     </article>
   );
-}
+});
 
 // The friendly empty text of a column with no cards.
 // While a filter is on, an empty column says that nothing matches instead.

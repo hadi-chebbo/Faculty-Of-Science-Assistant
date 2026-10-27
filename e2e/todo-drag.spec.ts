@@ -248,3 +248,40 @@ test("phone: the board has no drag handlers", async ({ page, isMobile }) => {
   await page.keyboard.press("Space");
   await expect(dialog(page)).toBeVisible();
 });
+
+test("desktop: hovering a dragged card on the gap between two columns does not loop", async ({ page, isMobile }) => {
+  test.skip(isMobile, "desktop drag");
+  await seedCards(isMobile, [
+    ...Array.from({ length: 8 }, (_, i) => ({ title: `Todo ${i + 1}` })),
+    ...Array.from({ length: 3 }, (_, i) => ({ title: `Working ${i + 1}`, status: "in_progress" })),
+  ]);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+  await signInOnBoard(page, isMobile);
+
+  const a = (await card(page, "Todo 2").boundingBox())!;
+  const left = (await column(page, "To do").boundingBox())!;
+  const right = (await column(page, "In progress").boundingBox())!;
+  const done = (await column(page, "Done").boundingBox())!;
+  const gap = (left.x + left.width + right.x) / 2;
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(a.x + a.width / 2 + 10, a.y + a.height / 2 + 10, { steps: 4 });
+  // Back and forth across the gap, at several heights, a few pixels at a time; then across the
+  // whole board, past the bottom of the short columns and into the empty one.
+  for (const y of [a.y + 20, a.y + 120, a.y + 260, left.y + left.height - 20]) {
+    for (let x = gap - 40; x <= gap + 40; x += 4) await page.mouse.move(x, y);
+    for (let x = gap + 40; x >= gap - 40; x -= 4) await page.mouse.move(x, y);
+  }
+  for (const y of [right.y + 30, right.y + right.height + 40, left.y + left.height / 2]) {
+    for (let x = left.x + 20; x <= done.x + done.width - 20; x += 8) await page.mouse.move(x, y);
+    for (let x = done.x + done.width - 20; x >= left.x + 20; x -= 8) await page.mouse.move(x, y);
+  }
+  await page.waitForTimeout(200);
+  await page.mouse.up();
+  await page.waitForTimeout(300);
+  expect(errors.filter((e) => /Maximum update depth|Minified React error #185/.test(e))).toEqual([]);
+  const counts = await Promise.all(["To do", "In progress", "Done"].map((name) => cardsIn(page, name).count()));
+  expect(counts.reduce((x, y) => x + y)).toBe(11);
+});
