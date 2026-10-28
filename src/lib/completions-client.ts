@@ -102,22 +102,24 @@ function markedMessage(progress: Progress | null): string {
   return chapter ? `Marked as done. Chapter ${chapter.position}: ${chapter.done} of ${chapter.total}.` : "Marked as done.";
 }
 
-// Where the milestone toast's "View" goes: set to the router's push by the hook that starts a mark,
-// so it is always set by the time a toast shows.
-let viewProgress: () => void = () => {};
-
 // One toast per milestone the mark earned, after the mark's own Undo toast. The server returns a
 // key only the first time, so each shows once without anything kept in the browser. An Undo never
-// takes a milestone away.
-function showMilestones(keys: readonly MilestoneKey[]): void {
+// takes a milestone away. `navigate` is the caller's router push, so "View" works wherever the mark
+// was made (the reader now, the board later).
+function showMilestones(keys: readonly MilestoneKey[], navigate: (href: string) => void): void {
   for (const key of keys) {
-    toast(`Milestone: ${MILESTONE_LABELS[key]}`, { action: { label: "View", onClick: () => viewProgress() } });
+    toast(`Milestone: ${MILESTONE_LABELS[key]}`, { action: { label: "View", onClick: () => navigate("/progress") } });
   }
 }
 
 // Optimistic: the state changes at once and is put back, with a message, if the server refuses.
-// A change made by Undo shows no second Undo.
-async function change(resourceId: string, done: boolean, undoable: boolean): Promise<"done" | "signed-out"> {
+// A change made by Undo shows no second Undo. `navigate` is needed only for a mark's milestone toasts.
+async function change(
+  resourceId: string,
+  done: boolean,
+  undoable: boolean,
+  navigate: (href: string) => void = (href) => window.location.assign(href),
+): Promise<"done" | "signed-out"> {
   set({ ids: withId(store.ids, resourceId, done), pending: withId(store.pending, resourceId, true) });
   const failed = done ? "Couldn't mark it as done. Try again." : "Couldn't mark it as not done. Try again.";
   const fail = (message: string) => {
@@ -141,7 +143,7 @@ async function change(resourceId: string, done: boolean, undoable: boolean): Pro
       if (undoable) {
         showUndoToast(done ? markedMessage(progress) : "Marked as not done.", () => void undo(resourceId, !done));
       }
-      if (rewards) showMilestones(rewards.milestones);
+      if (rewards) showMilestones(rewards.milestones, navigate);
     } else if (response.status === 404 && done) fail("This file can't be marked as done.");
     else fail(failed);
   } catch {
@@ -175,9 +177,6 @@ export function useDoneResource(
   useEffect(() => {
     if (markable) ensureLoaded();
   }, [markable]);
-  useEffect(() => {
-    viewProgress = () => router.push("/progress");
-  }, [router]);
 
   const goToSignIn = useCallback(() => {
     const here = window.location.pathname + window.location.search;
@@ -193,8 +192,8 @@ export function useDoneResource(
       return;
     }
     if (store.status === "signed-out") return goToSignIn();
-    if ((await change(resourceId, !store.ids.has(resourceId), true)) === "signed-out") goToSignIn();
-  }, [resourceId, goToSignIn]);
+    if ((await change(resourceId, !store.ids.has(resourceId), true, router.push)) === "signed-out") goToSignIn();
+  }, [resourceId, goToSignIn, router]);
 
   const status: DoneStatus =
     snapshot.status === "ready"
