@@ -49,6 +49,18 @@ export function SavedSkeleton() {
   );
 }
 
+export function ProgressSkeleton() {
+  return (
+    <div role="status" aria-label="Loading your progress">
+      <Skeleton className="mb-3 h-6 w-32" />
+      <div className="grid gap-3 md:grid-cols-2">
+        <Skeleton className="h-48 w-full rounded-xl" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
 export function TodoSkeleton() {
   return (
     <div role="status" aria-label="Loading your board">

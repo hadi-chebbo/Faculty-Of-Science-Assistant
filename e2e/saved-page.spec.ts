@@ -143,10 +143,10 @@ test("a signed-out visitor is sent to sign-in and returns to Saved after signing
   await expect(page.getByRole("heading", { level: 1, name: "Saved" })).toBeVisible();
 });
 
-test("Saved and To-do are in the main navigation for everyone, and a visitor goes to sign-in", async ({ page }) => {
+test("Saved and To-do are in the main navigation for everyone, and a visitor goes to sign-in", async ({ page, isMobile }) => {
   await page.goto("/");
   const nav = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
-  await expect(nav.getByRole("link")).toHaveText(["Browse", "Exams", "Search", "Saved", "To-do"]);
+  await expect(nav.getByRole("link")).toHaveText(["Browse", "Exams", "Search", "Saved", "To-do", ...(isMobile ? [] : ["Progress"])]);
   await nav.getByRole("link", { name: "Saved" }).click();
   await expect(page).toHaveURL("/sign-in?next=%2Fsaved");
 });

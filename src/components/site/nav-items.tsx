@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, BookOpen, FileText, ListTodo, Search, type LucideIcon } from "lucide-react";
+import { Bookmark, BookOpen, FileText, ListTodo, Search, TrendingUp, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";
@@ -14,9 +14,11 @@ interface NavItem {
   isActive?: (pathname: string) => boolean;
   // The first item of the student's own pages (Saved, To-do): a divider goes before it on desktop.
   startsOwnGroup?: boolean;
+  // Not in the phone tab bar (it keeps five items).
+  desktopOnly?: boolean;
 }
 
-// Saved and To-do are shown to everyone. Signed out, their pages send the visitor through sign-in
+// Saved, To-do and Progress are shown to everyone. Signed out, their pages send the visitor through sign-in
 // and back, so the bar never waits for the session and nothing moves once the page has loaded.
 const ITEMS: NavItem[] = [
   {
@@ -29,11 +31,12 @@ const ITEMS: NavItem[] = [
   { label: "Search", icon: Search, href: "/search", isActive: (p) => p.startsWith("/search") },
   { label: "Saved", icon: Bookmark, href: "/saved", isActive: (p) => p.startsWith("/saved"), startsOwnGroup: true },
   { label: "To-do", icon: ListTodo, href: "/todo", isActive: (p) => p.startsWith("/todo") },
+  { label: "Progress", icon: TrendingUp, href: "/progress", isActive: (p) => p.startsWith("/progress"), desktopOnly: true },
 ];
 
 // "bottom" is the phone tab bar, "top" the inline desktop items.
 // Desktop: the current item has a primary underline along the bottom edge of the bar; icons show
-// from lg up, so the five items fit beside the brand at md.
+// from lg up, so the six items fit beside the brand at md.
 // Phone: five equal tabs; the current one has its icon on a tinted pill.
 export function NavItems({ variant }: { variant: "top" | "bottom" }) {
   const pathname = usePathname();
@@ -41,7 +44,7 @@ export function NavItems({ variant }: { variant: "top" | "bottom" }) {
 
   return (
     <>
-      {ITEMS.map(({ label, icon: Icon, href, isActive, startsOwnGroup }) => {
+      {ITEMS.filter((item) => !(bottom && item.desktopOnly)).map(({ label, icon: Icon, href, isActive, startsOwnGroup }) => {
         const active = href !== undefined && (isActive?.(pathname) ?? false);
         const className = cn(
           "flex items-center font-medium outline-none",

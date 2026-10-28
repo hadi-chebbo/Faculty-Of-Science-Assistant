@@ -4,7 +4,7 @@ import { getDb } from "@/db/models";
 import { NotFoundError } from "../errors";
 import type { Viewer } from "../viewer";
 import { COUNTED_TYPES, MARKABLE_TYPES } from "./markable";
-import type { CourseProgress, MarkResult, Progress } from "./types";
+import type { CourseProgress, MarkResult, Progress, ProgressOverview } from "./types";
 
 // Completions: a student's explicit "Mark as done" on a file (terms in GLOSSARY.md). Opening or
 // downloading a file never makes one. Every function acts only on the viewer's own rows.
@@ -104,6 +104,39 @@ export async function listCompletedIds(viewer: NonNullable<Viewer>): Promise<str
   return rows.map((row) => row.resourceId);
 }
 
+interface CountRow {
+  chapter_id: string | null;
+  is_exam: boolean;
+  total: string;
+  done: string;
+}
+
+interface ChapterRef {
+  id: string;
+  position: number;
+  title: string;
+}
+
+const withFinished = (counts: { done: number; total: number }) => ({ ...counts, finished: finished(counts.done, counts.total) });
+
+// Turns the grouped counts of one course (by chapter, exams apart) into its course, exams, chapter
+// and General figures. Shared by the course page and the overview so both count the same way.
+function summarize(rows: CountRow[], chapters: ChapterRef[]) {
+  const sum = (match: (row: CountRow) => boolean) =>
+    rows.filter(match).reduce((acc, row) => ({ done: acc.done + Number(row.done), total: acc.total + Number(row.total) }), { done: 0, total: 0 });
+  return {
+    course: withFinished(sum((row) => !row.is_exam)),
+    exams: sum((row) => row.is_exam),
+    chapters: chapters.map((chapter) => ({
+      id: chapter.id,
+      position: chapter.position,
+      title: chapter.title,
+      ...withFinished(sum((row) => !row.is_exam && row.chapter_id === chapter.id)),
+    })),
+    general: withFinished(sum((row) => !row.is_exam && row.chapter_id === null)),
+  };
+}
+
 // Progress of the whole course page: course, exams, every chapter (empty ones too, by position) and
 // General (counted files with no chapter). One grouped count over the published files, computed
 // live. The admin gets the same as a student.
@@ -116,7 +149,7 @@ export async function getCourseProgress(viewer: NonNullable<Viewer>, courseCode:
     attributes: ["id", "position", "title"],
     order: [["position", "ASC"]],
   });
-  const rows = await sequelize.query<{ chapter_id: string | null; is_exam: boolean; total: string; done: string }>(
+  const rows = await sequelize.query<CountRow>(
     `SELECT r.chapter_id, (r.type = 'exam') AS is_exam, count(*) AS total, count(c.id) AS done
      FROM resources r
      LEFT JOIN completions c ON c.resource_id = r.id AND c.user_id = $1
@@ -124,18 +157,46 @@ export async function getCourseProgress(viewer: NonNullable<Viewer>, courseCode:
      GROUP BY r.chapter_id, (r.type = 'exam')`,
     { bind: [viewer.id, course.id, [...COUNTED_TYPES, "exam"]], type: QueryTypes.SELECT },
   );
-  const sum = (match: (row: (typeof rows)[number]) => boolean) =>
-    rows.filter(match).reduce((acc, row) => ({ done: acc.done + Number(row.done), total: acc.total + Number(row.total) }), { done: 0, total: 0 });
-  const withFinished = (counts: { done: number; total: number }) => ({ ...counts, finished: finished(counts.done, counts.total) });
+  const summary = summarize(rows, chapters);
+  return { ...summary, course: { code: course.code, title: course.title, ...summary.course } };
+}
+
+// The progress page: every course where the viewer has marked at least one currently published
+// file (My courses), by semester then code. All of them are counted in one grouped query (by
+// course, chapter and exam or not), then split per course in memory with the same rules as the
+// course page. `lastCompletedAt` is the latest completion in the course.
+export async function getProgressOverview(viewer: NonNullable<Viewer>): Promise<ProgressOverview> {
+  const { sequelize, Course, Chapter } = getDb();
+  const rows = await sequelize.query<CountRow & { course_id: string; last_completed_at: Date | null }>(
+    `SELECT r.course_id, r.chapter_id, (r.type = 'exam') AS is_exam,
+            count(*) AS total, count(c.id) AS done, max(c.created_at) AS last_completed_at
+     FROM resources r
+     LEFT JOIN completions c ON c.resource_id = r.id AND c.user_id = $1
+     WHERE r.is_published AND r.type = ANY($2::text[])
+       AND r.course_id IN (
+         SELECT r2.course_id FROM completions c2 JOIN resources r2 ON r2.id = c2.resource_id
+         WHERE c2.user_id = $1 AND r2.is_published AND r2.type = ANY($2::text[])
+       )
+     GROUP BY r.course_id, r.chapter_id, (r.type = 'exam')`,
+    { bind: [viewer.id, [...MARKABLE_TYPES]], type: QueryTypes.SELECT },
+  );
+  const courseIds = [...new Set(rows.map((row) => row.course_id))];
+  if (courseIds.length === 0) return { courses: [] };
+  const [courses, chapters] = await Promise.all([
+    Course.findAll({ where: { id: courseIds }, attributes: ["id", "code", "title", "semester"], order: [["semester", "ASC"], ["code", "ASC"]] }),
+    Chapter.findAll({ where: { courseId: courseIds }, attributes: ["id", "courseId", "position", "title"], order: [["position", "ASC"]] }),
+  ]);
   return {
-    course: { code: course.code, title: course.title, ...withFinished(sum((row) => !row.is_exam)) },
-    exams: sum((row) => row.is_exam),
-    chapters: chapters.map((chapter) => ({
-      id: chapter.id,
-      position: chapter.position,
-      title: chapter.title,
-      ...withFinished(sum((row) => !row.is_exam && row.chapter_id === chapter.id)),
-    })),
-    general: withFinished(sum((row) => !row.is_exam && row.chapter_id === null)),
+    courses: courses.map((course) => {
+      const own = rows.filter((row) => row.course_id === course.id);
+      const last = own.reduce<Date | null>((latest, row) => (row.last_completed_at && (!latest || row.last_completed_at > latest) ? row.last_completed_at : latest), null);
+      return {
+        code: course.code,
+        title: course.title,
+        semester: course.semester,
+        lastCompletedAt: (last ?? new Date(0)).toISOString(),
+        ...summarize(own, chapters.filter((chapter) => chapter.courseId === course.id)),
+      };
+    }),
   };
 }

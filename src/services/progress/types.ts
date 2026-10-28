@@ -23,3 +23,19 @@ export interface CourseProgress {
   // Counted files with no chapter.
   general: { done: number; total: number; finished: boolean };
 }
+
+// The progress page: one entry per course where the student has marked a published file as done.
+export interface ProgressOverview {
+  // By semester, then course code. Same figures as `CourseProgress`, without the exams of other courses.
+  courses: {
+    code: string;
+    title: string;
+    semester: number;
+    // ISO time of the latest completion in the course.
+    lastCompletedAt: string;
+    course: { done: number; total: number; finished: boolean };
+    exams: { done: number; total: number };
+    chapters: { id: string; position: number; title: string; done: number; total: number; finished: boolean }[];
+    general: { done: number; total: number; finished: boolean };
+  }[];
+}

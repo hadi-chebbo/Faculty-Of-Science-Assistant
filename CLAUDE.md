@@ -53,7 +53,8 @@ mock exam generation, personalization.
 - Seed data is placeholder during development: obviously fake course codes,
   titles and resources. The real course list and files are loaded in a
   separate data-gathering phase; do not ask for them or invent real-looking
-  ones before then.
+  ones before then. The seeded demo student has a few completions (DEMO610: chapter 1 finished, two files of chapter 2,
+  one exam; DEMO410: one lecture) so demos show progress; e2e specs that mark files must not use those courses.
 - Every resource has a stored file (owner's decision, 2026-10-13). A link is
   never the resource itself: `external_url` is an optional backup shown beside
   the file. A resource cannot be published without a file; a draft may be
@@ -174,11 +175,11 @@ mock exam generation, personalization.
   - Text contrast is at least 4.5:1 in both themes.
 - Theme: light and dark, defaults to the device setting, toggle in the top bar.
 - UI language: English only.
-- Navigation adapts to the device. The items are Browse, Exams, Search, Saved and To-do, shown to
-  everyone (signed out, Saved and To-do lead through sign-in and back; the bar never waits for the
+- Navigation adapts to the device. The items are Browse, Exams, Search, Saved, To-do and (desktop only) Progress, shown to
+  everyone (signed out, Saved, To-do and Progress lead through sign-in and back; the bar never waits for the
   session). Phone: slim top bar (brand, theme toggle, account) plus a fixed bottom tab bar with the five
-  items, the current one with its icon on a tinted pill. Desktop (md and up): the same items inline in the
-  top bar, Saved and To-do after a thin divider, the current item underlined in primary along the bar's
+  items (no Progress there), the current one with its icon on a tinted pill. Desktop (md and up): the same items inline in the
+  top bar (six, Progress after To-do), Saved, To-do and Progress after a thin divider, the current item underlined in primary along the bar's
   bottom edge (icons from lg up), and a breadcrumb trail on inner pages. An item without a page would be shown disabled. The account pages (sign-in, sign-up, check-email, confirm-email) are the exception: see the Sign-in page bullet. The top bar
   also shows a "Sign in" link or, when signed in, a round avatar with the user's initials (a person icon
   without a name), labelled with the name (never the email). Its menu holds the account only: the name,
@@ -308,6 +309,23 @@ mock exam generation, personalization.
   and a course with nothing left disappears. Empty state: a bookmark icon, "Nothing saved yet. Tap
   the bookmark on any file to keep it here." and a "Browse courses" button. `GET /api/v1/saved` returns the same
   groups.
+- Progress page (`/progress`): private like `/saved` (server-rendered, `noindex`, `no-store`, `requireSignedInPage` with
+  `next=/progress`), reached from "Progress" in the desktop navigation only (not in the phone tab bar; the course
+  page's progress block also links to it). Breadcrumb Home › Progress, title "Your progress" with "Based only on the
+  files you marked as done.", then My courses (courses with at least one completion of a published file) grouped
+  under "Semester N" headings, semester then code, in a 2-column grid from md up. Each card: a ring (64px, 56px on a
+  phone; a finished course is a full green ring with a check), the linked "CODE Title", and "8 of 13 files · Exams: 2 of
+  6 done" ("Finished" in success green first when done; no exams part without exams; on a phone the exams part is on
+  its own line); then one row per chapter with counted files, in position order, and "General" when it has counted
+  files: "N · Title", a 6px bar (primary, green when finished) and "4/5" or "✓ 3/3". A finished course has a
+  green-tinted border. Success green only means finished. The ring container is labelled "62% done, 8 of 13 files";
+  bars are `aria-hidden`. Empty: "Nothing marked as done yet. Open a file and press Mark as done to see your progress
+  here." and "Browse courses". Backed by `getProgressOverview` (`src/services/progress`; one grouped count over all My
+  courses, sharing its counting with `getCourseProgress`) and `GET /api/v1/progress` (`{ courses: [{ code, title,
+  semester, lastCompletedAt, course, exams, chapters, general }] }`). Semester pages (`/semesters/N`) show a small ring
+  (34px, `data-personal`, labelled "Your progress: 62% done") at the right of the course card of each started course,
+  loaded by the browser after the page shows from the same `GET /api/v1/progress` (`useProgressOverview`, one request
+  per page, none for a visitor); a finished course shows a check in the ring.
 - Save bookmark on rows: every resource row (`ResourceRow`: course page areas and tabs, chapter pages,
   exams, search results, Saved) carries a bookmark button in its own cell at the right, outside the
   row link, 44px on a phone, always rendered so nothing moves when the state arrives. Outline when not

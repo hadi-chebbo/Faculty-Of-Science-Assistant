@@ -4,7 +4,7 @@ import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { NotFoundError } from "../errors";
 import type { Viewer } from "../viewer";
-import { getCourseProgress, listCompletedIds, markDone, unmarkDone } from "./progress";
+import { getCourseProgress, getProgressOverview, listCompletedIds, markDone, unmarkDone } from "./progress";
 
 const MISSING_ID = "33333333-3333-4333-8333-333333333333";
 
@@ -268,5 +268,75 @@ describe("getCourseProgress", () => {
 
   it("is not found for an unknown code", async () => {
     await expect(getCourseProgress(await user(), "NOPE")).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("getProgressOverview", () => {
+  it("is empty when nothing is marked", async () => {
+    const student = await user();
+    await seed();
+    expect(await getProgressOverview(student)).toEqual({ courses: [] });
+  });
+
+  it("lists only My courses, by semester then code, with the same figures as the course page", async () => {
+    const { Course, Resource } = getDb();
+    const student = await user();
+    const s = await seed();
+    const early = await Course.create({ code: "TEST302", title: "Course B", semester: 3 });
+    const late = await Course.create({ code: "TEST501", title: "Course C", semester: 5 });
+    await Course.create({ code: "TEST303", title: "Untouched", semester: 3 });
+    const earlyLecture = await Resource.create({ courseId: early.id, type: "lecture", title: "A", fileKey: "k", isPublished: true });
+    const lateLecture = await Resource.create({ courseId: late.id, type: "lecture", title: "A", fileKey: "k", isPublished: true });
+    await markDone(student, lateLecture.id);
+    await markDone(student, earlyLecture.id);
+    await markDone(student, s.lecture1.id);
+    await markDone(student, s.exam1.id);
+
+    const { courses } = await getProgressOverview(student);
+    expect(courses.map((c) => c.code)).toEqual(["TEST301", "TEST302", "TEST501"]);
+    expect(courses[0]).toMatchObject({ title: "Course A", semester: 3, exams: { done: 1, total: 2 }, course: { done: 1, total: 5, finished: false } });
+    expect(courses[0].chapters).toEqual([
+      { id: s.one.id, position: 1, title: "Basics", done: 1, total: 3, finished: false },
+      { id: s.two.id, position: 2, title: "Sorting", done: 0, total: 1, finished: false },
+    ]);
+    expect(courses[0].general).toEqual({ done: 0, total: 1, finished: false });
+    expect(courses[1].course).toEqual({ done: 1, total: 1, finished: true });
+    const page = await getCourseProgress(student, "TEST301");
+    expect(courses[0]).toMatchObject({ course: { done: page.course.done, total: page.course.total, finished: page.course.finished }, exams: page.exams, general: page.general });
+  });
+
+  it("does not list a course whose only completion is of an unpublished file", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id);
+    await s.lecture1.update({ isPublished: false });
+    expect(await getProgressOverview(student)).toEqual({ courses: [] });
+    await s.lecture1.update({ isPublished: true });
+    expect((await getProgressOverview(student)).courses).toHaveLength(1);
+  });
+
+  it("reports General, finished chapters and the latest completion time", async () => {
+    const { Completion } = getDb();
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.notes.id);
+    await markDone(student, s.general.id);
+    await Completion.update({ createdAt: new Date("2026-01-01T10:00:00Z") }, { where: { resourceId: s.notes.id } });
+    await Completion.update({ createdAt: new Date("2026-02-03T10:00:00Z") }, { where: { resourceId: s.general.id } });
+    const [course] = (await getProgressOverview(student)).courses;
+    expect(course.chapters[1]).toMatchObject({ position: 2, done: 1, total: 1, finished: true });
+    expect(course.general).toEqual({ done: 1, total: 1, finished: true });
+    expect(course.lastCompletedAt).toBe("2026-02-03T10:00:00.000Z");
+  });
+
+  it("never shows another student's completions", async () => {
+    const mine = await user();
+    const other = await user("other@example.com");
+    const s = await seed();
+    await markDone(other, s.lecture1.id);
+    expect(await getProgressOverview(mine)).toEqual({ courses: [] });
+    await markDone(mine, s.lecture2.id);
+    const [course] = (await getProgressOverview(mine)).courses;
+    expect(course.course.done).toBe(1);
   });
 });
