@@ -185,10 +185,10 @@ mock exam generation, personalization.
   - Text contrast is at least 4.5:1 in both themes.
 - Theme: light and dark, defaults to the device setting, toggle in the top bar.
 - UI language: English only.
-- Navigation adapts to the device. The items are Browse, Exams, Search, Saved, To-do and (desktop only) Progress, shown to
+- Navigation adapts to the device. The items are Browse, Exams, Search, Saved, To-do and Progress, shown to
   everyone (signed out, Saved, To-do and Progress lead through sign-in and back; the bar never waits for the
-  session). Phone: slim top bar (brand, theme toggle, account) plus a fixed bottom tab bar with the five
-  items (no Progress there), the current one with its icon on a tinted pill. Desktop (md and up): the same items inline in the
+  session). Phone: slim top bar (brand, theme toggle, account) plus a fixed bottom tab bar with the six
+  items (Progress after To-do; owner decision 2026-10-28), the current one with its icon on a tinted pill. Desktop (md and up): the same items inline in the
   top bar (six, Progress after To-do), Saved, To-do and Progress after a thin divider, the current item underlined in primary along the bar's
   bottom edge (icons from lg up), and a breadcrumb trail on inner pages. An item without a page would be shown disabled. The account pages (sign-in, sign-up, check-email, confirm-email) are the exception: see the Sign-in page bullet. The top bar
   also shows a "Sign in" link or, when signed in, a round avatar with the user's initials (a person icon
@@ -339,7 +339,7 @@ mock exam generation, personalization.
   the bookmark on any file to keep it here." and a "Browse courses" button. `GET /api/v1/saved` returns the same
   groups.
 - Progress page (`/progress`): private like `/saved` (server-rendered, `noindex`, `no-store`, `requireSignedInPage` with
-  `next=/progress`), reached from "Progress" in the desktop navigation only (not in the phone tab bar; the course
+  `next=/progress`), reached from "Progress" in the main navigation, after To-do, on phone and desktop (the course
   page's progress block also links to it). Breadcrumb Home › Progress, title "Your progress" with "Based only on the
   files you marked as done.", then My courses (courses with at least one completion of a published file) grouped
   under "Semester N" headings, semester then code, in a 2-column grid from md up. Each card: a ring (64px, 56px on a

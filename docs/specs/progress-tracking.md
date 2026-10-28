@@ -89,10 +89,10 @@ Seeing progress in place
 The Progress page
 
 25. As a student, I want a private Progress page, so that I can see all my progress in one place.
-26. As a student on desktop, I want "Progress" in the main navigation, after To-do, so that I can
-    reach it from anywhere.
+26. As a student, I want "Progress" in the main navigation, after To-do, so that I can
+    reach it from anywhere (phone tab bar too, owner decision 2026-10-28).
 27. As a student on a phone, I want to reach Progress from a band on Home and from any course ring,
-    so that the bottom tab bar stays uncluttered.
+    as well as from the tab bar.
 28. As a visitor, I want the Progress nav item to take me through sign-in and back, like Saved and
     To-do.
 29. As a student, I want the page to list only the courses I have marked something in, so that I do
@@ -303,8 +303,8 @@ Pages and components
   y done", a bar per chapter in order and General, finished ones in green with ✓). Empty state:
   "Nothing marked as done yet. Open a file and press Mark as done to see your progress here." and
   "Browse courses".
-- Navigation: "Progress" becomes a sixth item after To-do on md and up only (icon from lg like the
-  others); the phone tab bar keeps five items. Signed out it goes through sign-in like Saved.
+- Navigation: "Progress" becomes a sixth item after To-do on md and up (icon from lg like the
+  others), and also a sixth tab in the phone tab bar (owner decision, 2026-10-28, reversing the earlier "phone keeps five"). Signed out it goes through sign-in like Saved.
 - Home: a "Your progress" band, loaded by the browser for signed-in viewers only, placed right
   after the hero: "N active days this week", up to three My courses rows (ring, code and title, "x
   of y files · P%", or "✓ Finished"), each linking to its course, and "See all ›" to `/progress`;
