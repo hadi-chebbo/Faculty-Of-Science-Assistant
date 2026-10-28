@@ -230,7 +230,13 @@ test("public pages render the same signed in and signed out", async ({ page }) =
       await page.waitForLoadState("networkidle");
       // The home page shows a live count of chapters, which other specs change while this one
       // runs. That figure depends on the moment, not on who is looking, so it is left out.
-      texts.push((await page.locator("main").innerText()).replace(/(Chapters\s+)\d+/, "$1#"));
+      // Course pages also show a signed-in student's progress (ring, counts, chapter bars), which
+      // is meant to differ; those lines are left out.
+      const text = (await page.locator("main").innerText())
+        .replace(/(Chapters\s+)\d+/, "$1#")
+        .replace(/^(\d+%|Your progress|\d+ of \d+ files done|Exams: \d+ of \d+ done|Not started · \d+ files?|\d+ of \d+ done|Finished)\s*$/gm, "")
+        .replace(/\n\s*\n+/g, "\n");
+      texts.push(text);
     }
     return texts;
   };

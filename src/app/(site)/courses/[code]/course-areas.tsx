@@ -4,6 +4,7 @@ import { ResourceRow } from "@/components/site/resource-row";
 import { StateBlock } from "@/components/site/state-block";
 import { groupExamsByYear } from "@/lib/group-exams";
 import { EXAM_SESSION_LABELS, RESOURCE_TYPE_LABELS, describeGroups, formatAcademicYear } from "@/lib/labels";
+import { ChapterProgressBar, ChapterProgressText } from "./course-progress";
 import type { CourseOutline, ResourceGroup } from "@/services/courses/types";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
@@ -51,8 +52,11 @@ export function ChapterCards({ code, chapters }: { code: string; chapters: Cours
         const hasItems = chapter.itemCount > 0;
         const body = (
           <>
-            <span className="min-w-0">
-              <span className="block text-xs font-medium text-muted-foreground">Chapter {chapter.position}</span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
+                Chapter {chapter.position}
+                {hasItems && <ChapterProgressText code={code} position={chapter.position} />}
+              </span>
               <span className="mt-0.5 block text-base font-medium text-heading">{chapter.title}</span>
               <span className="mt-0.5 block text-sm text-muted-foreground">
                 {hasItems ? describeGroups(chapter.groups) : "Nothing yet"}
@@ -71,9 +75,10 @@ export function ChapterCards({ code, chapters }: { code: string; chapters: Cours
             {hasItems ? (
               <Link
                 href={`/courses/${encodeURIComponent(code)}/chapters/${chapter.position}`}
-                className="group flex h-full min-h-20 items-center justify-between gap-3 rounded-xl border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/60 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                className="group relative flex h-full min-h-20 items-center justify-between gap-3 overflow-hidden rounded-xl border bg-card p-4 transition-colors has-[[data-finished=true]]:border-success/40 hover:border-primary hover:bg-muted/60 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 {body}
+                <ChapterProgressBar code={code} position={chapter.position} />
               </Link>
             ) : (
               <div className="flex h-full min-h-20 items-center justify-between gap-3 rounded-xl border border-dashed bg-muted/40 p-4">
