@@ -53,6 +53,32 @@ module.exports = {
         resources.slice(0, 2).map((r) => ({ user_id: user.id, resource_id: r.id, created_at: now })),
         { transaction },
       );
+
+      // Progress to look at in local demos. DEMO610 and DEMO410 are used by no e2e spec that marks
+      // files (specs run in parallel and expect the files they mark to start as not done), so
+      // keep it that way: DEMO610 has chapter 1 finished, two files of chapter 2 and one exam;
+      // DEMO410 has one lecture.
+      const demo = await queryInterface.sequelize.query(
+        `SELECT r.id FROM resources r
+           JOIN courses c ON c.id = r.course_id
+           LEFT JOIN chapters ch ON ch.id = r.chapter_id
+         WHERE r.is_published AND (
+           (c.code = 'DEMO610' AND (
+             (ch.position = 1 AND r.type IN ('lecture', 'notes', 'exercise'))
+             OR r.title IN ('Sample lecture 2.1', 'Sample notes 2')
+             OR r.id = (SELECT x.id FROM resources x WHERE x.course_id = c.id AND x.type = 'exam' AND x.is_published ORDER BY x.title LIMIT 1)
+           ))
+           OR (c.code = 'DEMO410' AND r.title = 'Sample lecture 1.1')
+         )`,
+        { transaction, type: queryInterface.sequelize.QueryTypes.SELECT },
+      );
+      if (demo.length === 0) throw new Error('demo-student: DEMO610 / DEMO410 files not found.');
+      const ids = new Set(resources.map((r) => r.id));
+      await queryInterface.bulkInsert(
+        'completions',
+        demo.filter((r) => !ids.has(r.id)).map((r) => ({ user_id: user.id, resource_id: r.id, created_at: now })),
+        { transaction },
+      );
     });
   },
 

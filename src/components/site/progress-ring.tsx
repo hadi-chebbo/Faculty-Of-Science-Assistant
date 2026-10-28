@@ -1,7 +1,20 @@
+import { Check } from "lucide-react";
+
 // A circular progress ring with the percentage in the centre. Hand-written SVG (shadcn has no
 // ring). Decorative: the text equivalent lives on the container. The arc is primary, or success
-// green once everything is done.
-export function ProgressRing({ done, total, size = 56 }: { done: number; total: number; size?: number }) {
+// green once everything is done. With `checkWhenFinished` a finished ring shows a check mark
+// instead of "100%".
+export function ProgressRing({
+  done,
+  total,
+  size = 56,
+  checkWhenFinished = false,
+}: {
+  done: number;
+  total: number;
+  size?: number;
+  checkWhenFinished?: boolean;
+}) {
   const percent = total > 0 ? Math.floor((done / total) * 100) : 0;
   const finished = total > 0 && done === total;
   const stroke = Math.max(3, Math.round(size / 10));
@@ -27,7 +40,7 @@ export function ProgressRing({ done, total, size = 56 }: { done: number; total: 
         className={`absolute font-semibold tabular-nums ${finished ? "text-success" : "text-heading"}`}
         style={{ fontSize: Math.max(10, Math.round(size / 4.2)) }}
       >
-        {percent}%
+        {finished && checkWhenFinished ? <Check style={{ width: size * 0.4, height: size * 0.4 }} strokeWidth={3} /> : `${percent}%`}
       </span>
     </span>
   );

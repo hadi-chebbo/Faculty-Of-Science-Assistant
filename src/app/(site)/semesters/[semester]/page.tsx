@@ -10,6 +10,7 @@ import { StateBlock } from "@/components/site/state-block";
 import { SEMESTER_MAX, SEMESTER_MIN } from "@/db/constants";
 import { readForPage } from "@/lib/page-errors";
 import { listCoursesBySemester } from "@/services/courses/courses";
+import { SemesterCourseRing } from "./semester-course-ring";
 
 // The four semesters are known at build time, so they are prerendered. Anything else (e.g. /semesters/9) renders the not-found
 // page. dynamicParams = false would make that a 404 from routing, but Cache Components rejects it.
@@ -68,12 +69,12 @@ async function CourseList({ semester }: { semester: number }) {
   return (
     <ul className="grid gap-3 sm:grid-cols-2">
       {courses.map((course) => (
-        <li key={course.code}>
+        <li key={course.code} className="relative">
           <Link
             href={`/courses/${course.code}`}
             className="group flex h-full min-h-20 items-center justify-between gap-3 rounded-xl border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/60 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
-            <span className="min-w-0">
+            <span className="min-w-0 pr-10">
               <span className="inline-block rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs font-medium text-link">
                 {course.code}
               </span>
@@ -87,6 +88,7 @@ async function CourseList({ semester }: { semester: number }) {
               className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-link"
             />
           </Link>
+          <SemesterCourseRing code={course.code} />
         </li>
       ))}
     </ul>

@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
       { source: "/admin/:path*", headers: noStore },
       { source: "/saved", headers: noStore },
       { source: "/todo", headers: noStore },
+      { source: "/progress", headers: noStore },
     ];
   },
   turbopack: {
