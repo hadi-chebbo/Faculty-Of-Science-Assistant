@@ -33,7 +33,7 @@ async function ProgressContent() {
   return (
     <div className="space-y-8">
       {overview.hasCompletions && (
-        <div className="grid gap-4 md:grid-cols-[360px_1fr]">
+        <div className="grid gap-4 grid-cols-[minmax(0,1fr)] md:grid-cols-[360px_minmax(0,1fr)]">
           <ThisWeek week={overview.week} />
           <Milestones milestones={overview.milestones} />
         </div>

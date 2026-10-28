@@ -97,19 +97,27 @@ test("a visitor is sent to sign-in and back", async ({ page }) => {
   await expect(page).toHaveURL("/progress");
 });
 
-test("Progress is in the desktop navigation only", async ({ page, isMobile }) => {
+test("Progress is in the main navigation on phone and desktop", async ({ page }) => {
   await signInTo(page, "/progress");
-  const main = page.getByRole("navigation", { name: "Main" });
-  if (isMobile) {
-    await expect(main.getByRole("link", { name: "Progress", exact: true })).toHaveCount(0);
-    await expect(main.getByRole("link", { name: "To-do", exact: true })).toBeVisible();
-  } else {
-    const item = main.getByRole("link", { name: "Progress", exact: true });
-    await expect(item).toBeVisible();
-    await expect(item).toHaveAttribute("aria-current", "page");
-    await page.goto("/");
-    await expect(item).not.toHaveAttribute("aria-current", "page");
-  }
+  const main = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
+  const item = main.getByRole("link", { name: "Progress", exact: true });
+  await expect(item).toBeVisible();
+  await expect(item).toHaveAttribute("aria-current", "page");
+  await page.goto("/");
+  await expect(item).not.toHaveAttribute("aria-current", "page");
+});
+
+test("on a phone the page fits the screen and the milestones row scrolls inside its panel", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "phone layout");
+  await signInTo(page, "/progress");
+  const milestones = page.getByRole("list", { name: "Milestones" });
+  await expect(milestones).toBeVisible();
+  // innerWidth alone is not enough: on a phone it grows with the content, so compare with the real viewport.
+  const width = page.viewportSize()!.width;
+  const fits = await page.evaluate((w) => document.documentElement.scrollWidth <= window.innerWidth && window.innerWidth <= w, width);
+  expect(fits).toBe(true);
+  const scrollsInside = await milestones.evaluate((el) => el.scrollWidth > el.clientWidth);
+  expect(scrollsInside).toBe(true);
 });
 
 test("a semester page rings the started courses for the student, and nothing for a visitor", async ({ page, browser, baseURL }) => {

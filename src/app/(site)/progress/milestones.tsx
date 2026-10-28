@@ -22,7 +22,7 @@ export function Milestones({ milestones }: { milestones: ProgressOverview["miles
       <h2 id="milestones-label" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Milestones · {count} of {milestones.length}
       </h2>
-      <ul aria-label="Milestones" className="mt-4 flex gap-1 overflow-x-auto pb-1 max-md:pr-4 md:justify-between md:overflow-visible">
+      <ul aria-label="Milestones" className="relative mt-4 flex gap-1 overflow-x-auto pb-1 max-md:pr-4 md:justify-between md:overflow-visible">
         {milestones.map((m) => {
           const earned = m.earnedAt !== null;
           return (
