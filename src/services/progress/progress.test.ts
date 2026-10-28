@@ -60,7 +60,7 @@ describe("markDone", () => {
         exams: { done: 0, total: 2 },
         chapter: { id: s.one.id, position: 1, title: "Basics", done: 1, total: 3, finished: false },
       },
-      rewards: { milestones: ["first_file"] },
+      rewards: { milestones: ["first_file"], chapterFinished: null, courseFinished: null },
     });
     expect(await listCompletedIds(student)).toEqual([s.lecture1.id]);
   });
@@ -566,5 +566,72 @@ describe("milestones", () => {
     await expect(
       getDb().sequelize.query(`INSERT INTO milestones (user_id, key) VALUES ($1, 'nope')`, { bind: [student.id] }),
     ).rejects.toThrow();
+  });
+});
+
+describe("markDone rewards", () => {
+  it("returns chapterFinished on the last counted file of a chapter, with the next chapter", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id);
+    await markDone(student, s.lecture2.id);
+    const { rewards } = await markDone(student, s.exercise.id);
+    expect(rewards.chapterFinished).toEqual({ position: 1, title: "Basics", nextChapter: { position: 2, title: "Sorting" } });
+    expect(rewards.courseFinished).toBeNull();
+  });
+
+  it("skips a next chapter with no counted published file, and has none at the end", async () => {
+    const student = await user();
+    const s = await seed();
+    const { Chapter, Resource } = getDb();
+    const empty = await Chapter.create({ courseId: s.course.id, position: 3, title: "Empty" });
+    await Resource.create({ courseId: s.course.id, chapterId: empty.id, type: "lecture", title: "Hidden", fileKey: "k", isPublished: false });
+    const skipTo = await Chapter.create({ courseId: s.course.id, position: 4, title: "Later" });
+    await Resource.create({ courseId: s.course.id, chapterId: skipTo.id, type: "notes", title: "Later notes", fileKey: "k", isPublished: true });
+    const { rewards } = await markDone(student, s.notes.id);
+    expect(rewards.chapterFinished).toEqual({ position: 2, title: "Sorting", nextChapter: { position: 4, title: "Later" } });
+    const last = await markDone(student, (await Resource.findOne({ where: { title: "Later notes" } }))!.id);
+    expect(last.rewards.chapterFinished).toEqual({ position: 4, title: "Later", nextChapter: null });
+  });
+
+  it("returns courseFinished with the file total and the exams, and both when one mark finishes both", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id);
+    await markDone(student, s.lecture2.id);
+    await markDone(student, s.exercise.id);
+    await markDone(student, s.general.id);
+    await markDone(student, s.exam1.id);
+    const { rewards } = await markDone(student, s.notes.id);
+    expect(rewards.courseFinished).toEqual({ code: "TEST301", title: "Course A", filesTotal: 5, exams: { done: 1, total: 2 } });
+    expect(rewards.chapterFinished).toEqual({ position: 2, title: "Sorting", nextChapter: null });
+  });
+
+  it("returns nothing on a repeated mark or for an exam", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.notes.id);
+    const again = await markDone(student, s.notes.id);
+    expect(again.rewards).toEqual({ milestones: [], chapterFinished: null, courseFinished: null });
+    const exam = await markDone(student, s.exam1.id);
+    expect(exam.rewards.chapterFinished).toBeNull();
+    expect(exam.rewards.courseFinished).toBeNull();
+  });
+
+  it("returns it again after an un-mark and re-mark", async () => {
+    const student = await user();
+    const s = await seed();
+    expect((await markDone(student, s.notes.id)).rewards.chapterFinished).not.toBeNull();
+    await unmarkDone(student, s.notes.id);
+    expect((await markDone(student, s.notes.id)).rewards.chapterFinished).not.toBeNull();
+  });
+
+  it("returns it again after new material is published and completed", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.notes.id);
+    const extra = await getDb().Resource.create({ courseId: s.course.id, chapterId: s.two.id, type: "exercise", title: "New", fileKey: "k", isPublished: true });
+    const { rewards } = await markDone(student, extra.id);
+    expect(rewards.chapterFinished).toMatchObject({ position: 2 });
   });
 });
