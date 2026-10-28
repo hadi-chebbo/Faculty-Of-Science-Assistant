@@ -85,8 +85,9 @@ describe("completion routes", () => {
         exams: { done: 0, total: 0 },
         chapter: { id: chapter.id, position: 2, title: "Sorting", done: 1, total: 1, finished: true },
       },
+      rewards: { milestones: ["first_file", "first_chapter", "first_course"] },
     });
-    expect(await (await call("PUT", lecture.id)).json()).toMatchObject({ created: false });
+    expect(await (await call("PUT", lecture.id)).json()).toEqual(expect.objectContaining({ created: false, rewards: { milestones: [] } }));
 
     const listed = await listIds();
     expect(listed.status).toBe(200);

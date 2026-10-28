@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import type { ResourceType } from "@/db/constants";
+import { MILESTONE_KEYS, type MilestoneKey, type ResourceType } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { NotFoundError } from "../errors";
@@ -60,6 +60,7 @@ describe("markDone", () => {
         exams: { done: 0, total: 2 },
         chapter: { id: s.one.id, position: 1, title: "Basics", done: 1, total: 3, finished: false },
       },
+      rewards: { milestones: ["first_file"] },
     });
     expect(await listCompletedIds(student)).toEqual([s.lecture1.id]);
   });
@@ -426,5 +427,144 @@ describe("getProgressOverview week", () => {
     await markDone(student, s.lecture1.id);
     await unmarkDone(student, s.lecture1.id);
     expect((await getProgressOverview(student)).hasCompletions).toBe(true);
+  });
+});
+
+describe("milestones", () => {
+  const earned = async (userId: string) =>
+    (await getDb().Milestone.findAll({ where: { userId } })).map((m) => m.key).sort();
+  const sorted = (keys: MilestoneKey[]) => [...keys].sort();
+
+  // Completions made directly, as if marked earlier, so a threshold can be crossed by one mark.
+  async function fill(userId: string, courseId: string, count: number, prefix: string) {
+    const { Resource, Completion } = getDb();
+    for (let i = 0; i < count; i++) {
+      const r = await Resource.create({ courseId, type: "lecture", title: `${prefix}${i}`, fileKey: "k", isPublished: true });
+      await Completion.create({ userId, resourceId: r.id });
+    }
+  }
+
+  it("first_file comes with the first mark only", async () => {
+    const student = await user();
+    const s = await seed();
+    expect((await markDone(student, s.lecture1.id)).rewards).toEqual({ milestones: ["first_file"] });
+    expect((await markDone(student, s.lecture2.id)).rewards).toEqual({ milestones: [] });
+  });
+
+  it("files_10 at the tenth file, not the ninth", async () => {
+    const student = await user();
+    const s = await seed();
+    await fill(student.id, s.course.id, 8, "A");
+    const ninth = await markDone(student, s.lecture1.id);
+    expect(ninth.rewards.milestones).toEqual(["first_file"]);
+    const tenth = await markDone(student, s.lecture2.id);
+    expect(tenth.rewards.milestones).toEqual(["files_10"]);
+  });
+
+  it("files_50 at the fiftieth file, not the forty-ninth", async () => {
+    const student = await user();
+    const s = await seed();
+    await fill(student.id, s.course.id, 48, "B");
+    expect((await markDone(student, s.lecture1.id)).rewards.milestones).toEqual(["first_file", "files_10"]);
+    expect((await markDone(student, s.lecture2.id)).rewards.milestones).toEqual(["files_50"]);
+  });
+
+  it("an unpublished file does not count toward the file counts", async () => {
+    const student = await user();
+    const s = await seed();
+    await fill(student.id, s.course.id, 8, "C");
+    await getDb().Resource.update({ isPublished: false }, { where: { title: ["C0", "C1"] } });
+    // 6 published + this one = 7 published completions.
+    expect((await markDone(student, s.lecture1.id)).rewards.milestones).toEqual(["first_file"]);
+    expect((await markDone(student, s.lecture2.id)).rewards.milestones).toEqual([]);
+  });
+
+  it("first_chapter when every counted file of a chapter is done", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id);
+    await markDone(student, s.lecture2.id);
+    expect((await markDone(student, s.exercise.id)).rewards.milestones).toEqual(["first_chapter"]);
+  });
+
+  it("first_chapter is not earned by a chapter with a file still to do", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id);
+    expect(await earned(student.id)).toEqual(["first_file"]);
+  });
+
+  it("first_course when every counted file of the course is done, and not before", async () => {
+    const student = await user();
+    const s = await seed();
+    for (const r of [s.lecture1, s.lecture2, s.exercise, s.notes]) await markDone(student, r.id);
+    const last = await markDone(student, s.general.id);
+    expect(last.rewards.milestones).toEqual(["first_course"]);
+    expect(sorted(await getDb().Milestone.findAll({ where: { userId: student.id } }).then((rows) => rows.map((r) => r.key)))).toEqual(
+      sorted(["first_file", "first_chapter", "first_course"]),
+    );
+  });
+
+  it("all_exams_of_course needs every published exam done", async () => {
+    const student = await user();
+    const s = await seed();
+    expect((await markDone(student, s.exam1.id)).rewards.milestones).toEqual(["first_file"]);
+    expect((await markDone(student, s.exam2.id)).rewards.milestones).toEqual(["all_exams_of_course"]);
+  });
+
+  it("all_exams_of_course needs at least one published exam", async () => {
+    const student = await user();
+    const s = await seed();
+    await getDb().Resource.update({ isPublished: false }, { where: { id: [s.exam1.id, s.exam2.id] } });
+    await markDone(student, s.lecture1.id);
+    expect(await earned(student.id)).toEqual(["first_file"]);
+  });
+
+  it("a repeated mark earns nothing", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id);
+    expect((await markDone(student, s.lecture1.id)).rewards).toEqual({ milestones: [] });
+  });
+
+  it("un-marking keeps milestones, and re-marking earns them no second time", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id);
+    const before = await getDb().Milestone.findOne({ where: { userId: student.id, key: "first_file" } });
+    await unmarkDone(student, s.lecture1.id);
+    expect(await earned(student.id)).toEqual(["first_file"]);
+    expect((await markDone(student, s.lecture1.id)).rewards).toEqual({ milestones: [] });
+    const after = await getDb().Milestone.findOne({ where: { userId: student.id, key: "first_file" } });
+    expect(after?.earnedAt).toEqual(before?.earnedAt);
+  });
+
+  it("the overview lists all six in order, with earnedAt or null", async () => {
+    const student = await user();
+    const s = await seed();
+    expect((await getProgressOverview(student)).milestones.map((m) => [m.key, m.earnedAt])).toEqual(MILESTONE_KEYS.map((key) => [key, null]));
+    await markDone(student, s.lecture1.id);
+    const { milestones } = await getProgressOverview(student);
+    expect(milestones.map((m) => m.key)).toEqual([...MILESTONE_KEYS]);
+    expect(milestones[0]).toEqual({ key: "first_file", label: "First file done", earnedAt: expect.stringMatching(/^\d{4}-/) });
+    expect(milestones.slice(1).every((m) => m.earnedAt === null)).toBe(true);
+    expect(milestones.map((m) => m.label)).toEqual([
+      "First file done", "10 files done", "50 files done", "First chapter finished", "First course finished", "All past exams of a course",
+    ]);
+  });
+
+  it("never shows another user's milestones", async () => {
+    const mine = await user();
+    const other = await user("other@example.com");
+    const s = await seed();
+    await markDone(other, s.lecture1.id);
+    expect((await getProgressOverview(mine)).milestones.every((m) => m.earnedAt === null)).toBe(true);
+  });
+
+  it("the key check refuses an unknown key", async () => {
+    const student = await user();
+    await expect(
+      getDb().sequelize.query(`INSERT INTO milestones (user_id, key) VALUES ($1, 'nope')`, { bind: [student.id] }),
+    ).rejects.toThrow();
   });
 });
