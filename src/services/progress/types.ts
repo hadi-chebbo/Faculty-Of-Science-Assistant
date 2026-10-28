@@ -13,3 +13,13 @@ export interface MarkResult {
   created: boolean;
   progress: Progress;
 }
+
+// Progress of one student over a whole course (the course page). Counted files only, except `exams`.
+export interface CourseProgress {
+  course: { code: string; title: string; done: number; total: number; finished: boolean };
+  exams: { done: number; total: number };
+  // Every chapter of the course by position, including ones with total 0.
+  chapters: { id: string; position: number; title: string; done: number; total: number; finished: boolean }[];
+  // Counted files with no chapter.
+  general: { done: number; total: number; finished: boolean };
+}

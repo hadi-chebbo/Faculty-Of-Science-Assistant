@@ -4,7 +4,7 @@ import { getDb } from "@/db/models";
 import { NotFoundError } from "../errors";
 import type { Viewer } from "../viewer";
 import { COUNTED_TYPES, MARKABLE_TYPES } from "./markable";
-import type { MarkResult, Progress } from "./types";
+import type { CourseProgress, MarkResult, Progress } from "./types";
 
 // Completions: a student's explicit "Mark as done" on a file (terms in GLOSSARY.md). Opening or
 // downloading a file never makes one. Every function acts only on the viewer's own rows.
@@ -102,4 +102,40 @@ export async function listCompletedIds(viewer: NonNullable<Viewer>): Promise<str
     raw: true,
   });
   return rows.map((row) => row.resourceId);
+}
+
+// Progress of the whole course page: course, exams, every chapter (empty ones too, by position) and
+// General (counted files with no chapter). One grouped count over the published files, computed
+// live. The admin gets the same as a student.
+export async function getCourseProgress(viewer: NonNullable<Viewer>, courseCode: string): Promise<CourseProgress> {
+  const { sequelize, Course, Chapter } = getDb();
+  const course = await Course.findOne({ where: { code: courseCode }, attributes: ["id", "code", "title"] });
+  if (!course) throw new NotFoundError("Course not found");
+  const chapters = await Chapter.findAll({
+    where: { courseId: course.id },
+    attributes: ["id", "position", "title"],
+    order: [["position", "ASC"]],
+  });
+  const rows = await sequelize.query<{ chapter_id: string | null; is_exam: boolean; total: string; done: string }>(
+    `SELECT r.chapter_id, (r.type = 'exam') AS is_exam, count(*) AS total, count(c.id) AS done
+     FROM resources r
+     LEFT JOIN completions c ON c.resource_id = r.id AND c.user_id = $1
+     WHERE r.course_id = $2 AND r.is_published AND r.type = ANY($3::text[])
+     GROUP BY r.chapter_id, (r.type = 'exam')`,
+    { bind: [viewer.id, course.id, [...COUNTED_TYPES, "exam"]], type: QueryTypes.SELECT },
+  );
+  const sum = (match: (row: (typeof rows)[number]) => boolean) =>
+    rows.filter(match).reduce((acc, row) => ({ done: acc.done + Number(row.done), total: acc.total + Number(row.total) }), { done: 0, total: 0 });
+  const withFinished = (counts: { done: number; total: number }) => ({ ...counts, finished: finished(counts.done, counts.total) });
+  return {
+    course: { code: course.code, title: course.title, ...withFinished(sum((row) => !row.is_exam)) },
+    exams: sum((row) => row.is_exam),
+    chapters: chapters.map((chapter) => ({
+      id: chapter.id,
+      position: chapter.position,
+      title: chapter.title,
+      ...withFinished(sum((row) => !row.is_exam && row.chapter_id === chapter.id)),
+    })),
+    general: withFinished(sum((row) => !row.is_exam && row.chapter_id === null)),
+  };
 }
