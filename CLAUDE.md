@@ -289,7 +289,25 @@ mock exam generation, personalization.
   load, only for a signed-in viewer), rolls back with a toast on failure, and signed out goes to
   `/sign-in?next=` with nothing marked afterwards. Toasts, both with Undo: "Marked as done. Chapter 2: 4 of
   5." ("Marked as done." for an exam or a file in General) and "Marked as not done."; Undo itself shows no
-  toast. A mark that earns a milestone then shows one more toast per milestone, "Milestone: 10 files done" with a
+  toast. A mark that is a new completion can also celebrate, decided by the server: the PUT response's
+  `rewards` is `{ milestones, chapterFinished, courseFinished }`. `chapterFinished` is `{ position, title,
+  nextChapter: { position, title } | null }` (the next chapter by position with a counted published file) when
+  the mark left the file's chapter finished; `courseFinished` is `{ code, title, filesTotal, exams: { done,
+  total } }` when it left the course finished (counted files only). Both are null on a repeated mark and for an
+  exam, are computed live and play again whenever a new completion leaves the chapter or course finished (after
+  un-mark and re-mark, or after new material is completed). Undo (a re-mark by Undo) celebrates nothing.
+  The browser shows them through `celebrate` (`src/lib/celebrations.ts`, which the to-do board can call with
+  the same result): course finished wins over chapter finished, which wins over the plain toast. Chapter
+  finished: one toast replaces the plain one, "Chapter 2 finished!" with the chapter title and "all 5 files
+  done.", an Undo button and, when there is a next chapter, a "Next chapter ›" button to
+  `/courses/CODE/chapters/N`, plus a ~600 ms success-green ring (`done-ring`) on the reader's Done button.
+  Course finished: the plain toast with Undo, and a dialog mounted once in `SiteChrome`
+  (`CelebrationDialogHost`): a 64px success-green check, "DEMO301 finished", "You marked all 13 files of Demo
+  Algorithms as done. Exams: 2 of 6 done." (no exams sentence when the course has none), "See your progress"
+  (to `/progress`) and "Close"; it takes focus, closes with Esc or Close and gives focus back to the Done button
+  (`data-done-button`); about 12 CSS confetti pieces in the brand colours fall over the page once (above the dim
+  layer, `aria-hidden`, `pointer-events: none`). The ring and the confetti exist only under
+  `prefers-reduced-motion: no-preference`; toasts and dialog are the same without it. A mark that earns a milestone then shows one more toast per milestone, "Milestone: 10 files done" with a
   "View" action to `/progress` (the server returns a key only the first time; an Undo takes nothing away). After a mark or un-mark the button is followed by a progress line and bar from the response:
   "Chapter 2: 4 of 5 files done", "Exams: 3 of 6 done" for an exam, or "DEMO301: 8 of 13 files done" for a
   file in General (the bar is primary, success green once finished). API: `PUT` / `DELETE

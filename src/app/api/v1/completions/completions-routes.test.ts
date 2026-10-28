@@ -85,9 +85,13 @@ describe("completion routes", () => {
         exams: { done: 0, total: 0 },
         chapter: { id: chapter.id, position: 2, title: "Sorting", done: 1, total: 1, finished: true },
       },
-      rewards: { milestones: ["first_file", "first_chapter", "first_course"] },
+      rewards: {
+        milestones: ["first_file", "first_chapter", "first_course"],
+        chapterFinished: { position: 2, title: "Sorting", nextChapter: null },
+        courseFinished: { code: "TEST301", title: expect.any(String), filesTotal: 1, exams: { done: 0, total: 0 } },
+      },
     });
-    expect(await (await call("PUT", lecture.id)).json()).toEqual(expect.objectContaining({ created: false, rewards: { milestones: [] } }));
+    expect(await (await call("PUT", lecture.id)).json()).toEqual(expect.objectContaining({ created: false, rewards: { milestones: [], chapterFinished: null, courseFinished: null } }));
 
     const listed = await listIds();
     expect(listed.status).toBe(200);

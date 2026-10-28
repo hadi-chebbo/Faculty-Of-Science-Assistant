@@ -72,7 +72,7 @@ export async function markDone(viewer: NonNullable<Viewer>, resourceId: string, 
   const resource = validId(resourceId)
     ? await Resource.findOne({
         where: { id: resourceId, isPublished: true, type: { [Op.in]: [...MARKABLE_TYPES] } },
-        attributes: ["id", "courseId", "chapterId"],
+        attributes: ["id", "courseId", "chapterId", "type"],
       })
     : null;
   if (!resource) throw new NotFoundError("Resource not found");
@@ -88,9 +88,38 @@ export async function markDone(viewer: NonNullable<Viewer>, resourceId: string, 
         transaction,
       });
     }
-    const rewards: Rewards = { milestones: created ? await awardMilestones(viewer, resource.courseId, transaction) : [] };
-    return { created, progress: await progressOf(viewer, resource, transaction), rewards };
+    const progress = await progressOf(viewer, resource, transaction);
+    const milestones = created ? await awardMilestones(viewer, resource.courseId, transaction) : [];
+    const counted = created && (COUNTED_TYPES as readonly string[]).includes(resource.type);
+    const rewards: Rewards = {
+      milestones,
+      chapterFinished: counted && progress.chapter?.finished ? await chapterReward(progress.chapter, resource.courseId, transaction) : null,
+      courseFinished: counted && progress.course.finished ? await courseReward(progress, resource.courseId, transaction) : null,
+    };
+    return { created, progress, rewards };
   });
+}
+
+// The chapter celebration: the next chapter is the first one after it with a counted published file.
+async function chapterReward(
+  chapter: NonNullable<Progress["chapter"]>,
+  courseId: string,
+  transaction: Transaction,
+): Promise<NonNullable<Rewards["chapterFinished"]>> {
+  const { sequelize } = getDb();
+  const [next] = await sequelize.query<{ position: number; title: string }>(
+    `SELECT ch.position, ch.title FROM chapters ch
+     WHERE ch.course_id = $1 AND ch.position > $2
+       AND EXISTS (SELECT 1 FROM resources r WHERE r.chapter_id = ch.id AND r.is_published AND r.type = ANY($3::text[]))
+     ORDER BY ch.position LIMIT 1`,
+    { bind: [courseId, chapter.position, [...COUNTED_TYPES]], type: QueryTypes.SELECT, transaction },
+  );
+  return { position: chapter.position, title: chapter.title, nextChapter: next ? { position: next.position, title: next.title } : null };
+}
+
+async function courseReward(progress: Progress, courseId: string, transaction: Transaction): Promise<NonNullable<Rewards["courseFinished"]>> {
+  const course = await getDb().Course.findByPk(courseId, { attributes: ["title"], transaction, rejectOnEmpty: true });
+  return { code: progress.course.code, title: course.title, filesTotal: progress.course.total, exams: progress.exams };
 }
 
 // Earns the milestones this new completion made true, in the mark's transaction. Chapter, course

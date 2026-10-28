@@ -247,6 +247,39 @@
   }
 }
 
+/* Course finished: a short burst of confetti behind the dialog. Hidden unless motion is welcome. */
+.confetti {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .confetti {
+    display: block;
+  }
+  .confetti-piece {
+    position: absolute;
+    top: -16px;
+    left: var(--x);
+    width: 8px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--c);
+    opacity: 0;
+    animation: confetti-fall 1500ms ease-in var(--d) 1 both;
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(75vh) rotate(var(--r));
+    opacity: 0;
+  }
+}
+
 @keyframes done-ring {
   0% {
     box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 70%, transparent);

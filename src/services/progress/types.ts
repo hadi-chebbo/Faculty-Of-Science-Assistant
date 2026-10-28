@@ -10,10 +10,17 @@ export interface Progress {
   chapter: { id: string; position: number; title: string; done: number; total: number; finished: boolean } | null;
 }
 
-// What a mark earned. Empty for a repeated mark. More kinds of reward join this object later.
+// What a mark earned. Empty for a repeated mark and for an exam (which never finishes a chapter or
+// the course). Computed live: nothing is stored, so it plays again whenever a new completion leaves
+// the chapter or course finished.
 export interface Rewards {
   // Milestones earned by this mark, in MILESTONE_KEYS order.
   milestones: MilestoneKey[];
+  // The chapter of the marked file when this mark finished it. `nextChapter` is the next chapter by
+  // position that has a counted published file, or null.
+  chapterFinished: { position: number; title: string; nextChapter: { position: number; title: string } | null } | null;
+  // The course of the marked file when this mark finished it (counted files only).
+  courseFinished: { code: string; title: string; filesTotal: number; exams: { done: number; total: number } } | null;
 }
 
 export interface MarkResult {

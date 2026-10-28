@@ -3,6 +3,8 @@
 import { Check, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress as ProgressBar } from "@/components/ui/progress";
+import { useState, useSyncExternalStore } from "react";
+import { pulses } from "@/lib/celebrations";
 import { useDoneResource } from "@/lib/completions-client";
 import { cn } from "@/lib/utils";
 import type { Progress } from "@/services/progress/types";
@@ -13,6 +15,9 @@ import type { Progress } from "@/services/progress/types";
 export function MarkDoneButton({ resourceId, isExam }: { resourceId: string; isExam: boolean }) {
   const { status, pending, progress, toggle } = useDoneResource(resourceId);
   const done = status === "done";
+  // A chapter finished: the ring plays once while the pulse count is ahead of the last one played.
+  const pulse = useSyncExternalStore(pulses.subscribe, () => pulses.get().get(resourceId) ?? 0, () => 0);
+  const [played, setPlayed] = useState(pulse);
   return (
     <div className="space-y-2">
       <Button
@@ -20,8 +25,10 @@ export function MarkDoneButton({ resourceId, isExam }: { resourceId: string; isE
         variant={done ? "default" : "outline"}
         aria-pressed={done}
         disabled={pending}
+        data-done-button={resourceId}
+        onAnimationEnd={(event) => event.target === event.currentTarget && setPlayed(pulse)}
         onClick={() => void toggle()}
-        className={cn("min-h-11 w-full md:min-h-9", done && "bg-success text-success-foreground hover:bg-success/90")}
+        className={cn("min-h-11 w-full md:min-h-9", done && "bg-success text-success-foreground hover:bg-success/90", pulse !== played && "done-ring")}
       >
         {done ? <Check aria-hidden /> : <Circle aria-hidden />}
         {done ? "Done" : "Mark as done"}

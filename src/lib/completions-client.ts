@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { MILESTONE_LABELS, type MilestoneKey } from "@/db/constants";
+import { celebrate } from "@/lib/celebrations";
 import { askMe, renew } from "@/lib/auth/client-session";
 import { SESSION_CHANGED_EVENT } from "@/lib/auth/session-events";
 import { showUndoToast } from "@/lib/undo-toast";
@@ -140,7 +141,12 @@ async function change(
       if (progress) nextProgress.set(resourceId, progress);
       else nextProgress.delete(resourceId);
       set({ progress: nextProgress });
-      if (undoable) {
+      if (undoable && done && progress && rewards) {
+        celebrate(
+          { progress, rewards },
+          { resourceId, message: markedMessage(progress), undo: () => void undo(resourceId, !done), navigate },
+        );
+      } else if (undoable) {
         showUndoToast(done ? markedMessage(progress) : "Marked as not done.", () => void undo(resourceId, !done));
       }
       if (rewards) showMilestones(rewards.milestones, navigate);

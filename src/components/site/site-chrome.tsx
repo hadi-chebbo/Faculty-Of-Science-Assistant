@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/sonner";
+import { CelebrationDialogHost } from "./celebration-dialog-host";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
 
@@ -14,6 +15,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       </div>
       {/* At the top, so a message never covers the phone tab bar or the reader's floating bar. */}
       <Toaster position="top-center" />
+      <CelebrationDialogHost />
     </>
   );
 }

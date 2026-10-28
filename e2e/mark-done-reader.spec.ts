@@ -89,7 +89,8 @@ test("a student marks a file as done, still sees it done after a reload, and un-
   expect(await doneCount(id)).toBe(0);
 
   await markButton(page).click();
-  const marked = isMobile ? "Marked as done." : "Marked as done. Chapter 1: 1 of 1.";
+  // On desktop the one file of the chapter finishes it, so the chapter toast replaces the plain one.
+  const marked = isMobile ? "Marked as done." : "Chapter 1 finished!";
   await expect(page.locator("[data-sonner-toast]", { hasText: marked })).toBeVisible();
   await expect(doneButton(page)).toHaveAttribute("aria-pressed", "true");
   await expect(details(page).getByText(isMobile ? /DEMO401: 1 of 2 files done/ : /Chapter 1: 1 of 1 files done/)).toBeVisible();
@@ -116,7 +117,7 @@ test("Undo right after marking takes the mark back", async ({ page, isMobile }) 
   const id = await resourceId(courseFor(isMobile), "Sample lecture 1");
   await openSignedIn(page, id);
   await markButton(page).click();
-  await undoIn(page, "Marked as done").click();
+  await undoIn(page, isMobile ? "Marked as done" : "Chapter 1 finished!").click();
   await expect(markButton(page)).toHaveAttribute("aria-pressed", "false");
   await expect.poll(() => doneCount(id)).toBe(0);
   await page.reload();
