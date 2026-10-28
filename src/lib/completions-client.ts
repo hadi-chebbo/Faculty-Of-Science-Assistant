@@ -15,8 +15,9 @@ import type { Progress } from "@/services/progress/types";
 
 type Store = {
   // unknown: not asked yet (or the answer failed). signed-out: the server said 401, even after a
-  // renew. ready: `ids` is the user's completed list.
-  status: "unknown" | "signed-out" | "ready";
+  // renew. signed-in: known to be signed in, the ids are not back yet (rows reserve their cell).
+  // ready: `ids` is the user's completed list.
+  status: "unknown" | "signed-out" | "signed-in" | "ready";
   ids: ReadonlySet<string>;
   pending: ReadonlySet<string>;
   // The progress the last mark or un-mark of a file answered with, by file id.
@@ -59,11 +60,14 @@ function load(): Promise<void> {
           set({ status: "signed-out", ids: new Set() });
           return;
         }
+        set({ status: "signed-in" });
         const response = await request(() => fetch("/api/v1/completions/ids", { cache: "no-store" }));
         if (response.status === 401) set({ status: "signed-out", ids: new Set() });
         else if (response.ok) set({ status: "ready", ids: new Set(((await response.json()) as { ids: string[] }).ids) });
+        else set({ status: "unknown" });
       } catch {
-        // Offline or a server error: stay unknown; the next use asks again.
+        // Offline or a server error: back to unknown; the next use asks again.
+        if (store.status === "signed-in") set({ status: "unknown" });
       }
     })().finally(() => {
       loading = null;
@@ -165,8 +169,8 @@ export function useDoneResource(
   const toggle = useCallback(async () => {
     if (store.pending.has(resourceId)) return;
     // Pressed before the answer arrived: wait for it.
-    if (store.status === "unknown") await load();
-    if (store.status === "unknown") {
+    if (store.status === "unknown" || store.status === "signed-in") await load();
+    if (store.status === "unknown" || store.status === "signed-in") {
       toast.error("Couldn't reach the server. Try again.");
       return;
     }
@@ -175,11 +179,32 @@ export function useDoneResource(
   }, [resourceId, goToSignIn]);
 
   const status: DoneStatus =
-    snapshot.status === "ready" ? (snapshot.ids.has(resourceId) ? "done" : "not-done") : snapshot.status;
+    snapshot.status === "ready"
+      ? snapshot.ids.has(resourceId)
+        ? "done"
+        : "not-done"
+      : snapshot.status === "signed-in"
+        ? "unknown"
+        : snapshot.status;
   return {
     status,
     pending: snapshot.pending.has(resourceId),
     progress: snapshot.status === "ready" ? (snapshot.progress.get(resourceId) ?? null) : null,
     toggle,
   };
+}
+
+// What a resource row's status cell shows. visitor or unknown: none (no cell at all). Signed in
+// with the ids still loading: reserved (an empty cell of the same width). Otherwise done or
+// not-done. Every row shares the one ids request; a visitor never makes it.
+export type DoneCell = "none" | "reserved" | "done" | "not-done";
+
+export function useDoneCell(resourceId: string): DoneCell {
+  const snapshot = useSyncExternalStore(subscribe, () => store, () => UNKNOWN);
+  useEffect(() => {
+    ensureLoaded();
+  }, []);
+  if (snapshot.status === "signed-in") return "reserved";
+  if (snapshot.status === "ready") return snapshot.ids.has(resourceId) ? "done" : "not-done";
+  return "none";
 }

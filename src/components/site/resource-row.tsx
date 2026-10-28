@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { DoneStatusCell } from "@/components/site/done-status-cell";
 import { SaveIconButton } from "@/components/site/save-icon-button";
 import { Badge } from "@/components/ui/badge";
 import type { ResourceType } from "@/db/constants";
@@ -40,7 +41,8 @@ const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible
 // `snippet` is a short line of the description, for a file that matched only there. `action` is an
 // optional extra control, shown beside the save bookmark. Every row carries the bookmark in its own
 // cell at the right, outside the row link (links are never nested); the cell is always there, so
-// nothing moves when the saved state arrives.
+// nothing moves when the saved state arrives. A signed-in student also gets a read-only status cell
+// at the left (done check, empty circle, or an empty spacer), see `DoneStatusCell`.
 export function ResourceRow({
   resource,
   showCourse = false,
@@ -92,6 +94,7 @@ export function ResourceRow({
   return (
     <li className="group/row overflow-hidden rounded-lg border bg-card transition-colors hover:border-primary/40">
       <div className="flex items-stretch">
+        <DoneStatusCell resourceId={resource.id} type={resource.type} />
         {link}
         <div className="flex shrink-0 items-center border-l px-0.5 md:px-1">
           <SaveIconButton resourceId={resource.id} title={resource.title} />
