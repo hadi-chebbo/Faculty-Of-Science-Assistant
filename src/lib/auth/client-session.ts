@@ -3,10 +3,21 @@
 
 export type Account = { name: string | null; role: "student" | "admin" };
 
-export async function askMe(): Promise<{ user: Account | null; renewable: boolean }> {
-  const response = await fetch("/api/v1/auth/me", { cache: "no-store" });
-  if (!response.ok) return { user: null, renewable: false };
-  return response.json();
+// Callers that ask at the same moment (the header and the progress stores on a page load) share one
+// request; once it has answered, the next call asks again.
+let askingMe: Promise<{ user: Account | null; renewable: boolean }> | null = null;
+
+export function askMe(): Promise<{ user: Account | null; renewable: boolean }> {
+  if (!askingMe) {
+    askingMe = (async () => {
+      const response = await fetch("/api/v1/auth/me", { cache: "no-store" });
+      if (!response.ok) return { user: null, renewable: false };
+      return (await response.json()) as { user: Account | null; renewable: boolean };
+    })().finally(() => {
+      askingMe = null;
+    });
+  }
+  return askingMe;
 }
 
 // Renews the session, one caller at a time across every tab of this browser. A refresh token works
