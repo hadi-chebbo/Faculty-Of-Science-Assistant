@@ -5,6 +5,7 @@ import { PageTitle } from "@/components/site/page-title";
 import { ProgressSkeleton } from "@/components/site/skeletons";
 import { requireSignedInPage } from "@/lib/auth/page-guard";
 import { getProgressOverview } from "@/services/progress/progress";
+import { Milestones } from "./milestones";
 import { ProgressOverviewList } from "./progress-overview-list";
 import { ThisWeek } from "./this-week";
 
@@ -32,8 +33,9 @@ async function ProgressContent() {
   return (
     <div className="space-y-8">
       {overview.hasCompletions && (
-        <div className="md:max-w-[360px]">
+        <div className="grid gap-4 md:grid-cols-[360px_1fr]">
           <ThisWeek week={overview.week} />
+          <Milestones milestones={overview.milestones} />
         </div>
       )}
       <ProgressOverviewList courses={overview.courses} />

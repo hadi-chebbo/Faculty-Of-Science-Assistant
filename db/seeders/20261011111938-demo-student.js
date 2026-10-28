@@ -96,6 +96,38 @@ module.exports = {
         { transaction },
       );
 
+      // Milestones the seeded completions already satisfy, found by query so they stay consistent
+      // with the data: files done, a finished chapter, a finished course, all exams of a course.
+      const [facts] = await queryInterface.sequelize.query(
+        `WITH mine AS (
+           SELECT r.course_id, r.chapter_id, r.type, (c.id IS NOT NULL) AS done
+           FROM resources r
+           LEFT JOIN completions c ON c.resource_id = r.id AND c.user_id = :userId
+           WHERE r.is_published AND r.type IN ('lecture', 'notes', 'exercise', 'exam')
+         )
+         SELECT
+           (SELECT count(*) FROM mine WHERE done) AS files,
+           EXISTS (SELECT 1 FROM mine WHERE chapter_id IS NOT NULL AND type <> 'exam' GROUP BY chapter_id HAVING bool_and(done)) AS chapter,
+           EXISTS (SELECT 1 FROM mine WHERE type <> 'exam' GROUP BY course_id HAVING bool_and(done)) AS course,
+           EXISTS (SELECT 1 FROM mine WHERE type = 'exam' GROUP BY course_id HAVING bool_and(done)) AS exams`,
+        { transaction, replacements: { userId: user.id }, type: queryInterface.sequelize.QueryTypes.SELECT },
+      );
+      const keys = [
+        ['first_file', Number(facts.files) >= 1],
+        ['files_10', Number(facts.files) >= 10],
+        ['files_50', Number(facts.files) >= 50],
+        ['first_chapter', facts.chapter],
+        ['first_course', facts.course],
+        ['all_exams_of_course', facts.exams],
+      ].filter(([, reached]) => reached).map(([key]) => key);
+      if (keys.length > 0) {
+        await queryInterface.bulkInsert(
+          'milestones',
+          keys.map((key) => ({ user_id: user.id, key, earned_at: now })),
+          { transaction },
+        );
+      }
+
       // Active days for the "This week" panel: today (Beirut) and up to two earlier days of the
       // current Beirut week, so a local demo always shows a few filled dots.
       const today = beirutDate(now);

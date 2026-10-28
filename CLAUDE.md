@@ -101,6 +101,13 @@ mock exam generation, personalization.
 - StudyDay (`study_days`): an active day. Belongs to a user (cascade); `day` is a Beirut (Asia/Beirut)
   calendar date; unique per (user, day). Recorded by `markDone` inside the mark's transaction, only for a new
   completion (`src/services/progress/beirut-date.ts` gives the date); never removed, so un-marking keeps it.
+- Milestone (`milestones`): an achievement a student earns once and keeps. Belongs to a user (cascade); `key`
+  (check constraint, `MILESTONE_KEYS` in `src/db/constants.ts`: `first_file`, `files_10`, `files_50`,
+  `first_chapter`, `first_course`, `all_exams_of_course`); `earned_at`; unique per (user, key). Awarded by
+  `markDone` inside the mark's transaction, only for a new completion, and never removed (un-marking and content
+  changes leave it). File counts use completions of currently published markable files; chapter, course and
+  exams milestones are evaluated only within the marked file's course (deliberate, to keep a mark cheap);
+  `all_exams_of_course` needs at least one published exam, all completed.
 - Todo (`todos`; a "card" in the interface): a card on a student's to-do board. Belongs to a user
   (cascade); status (todo, in_progress, done; check constraint), position within its status (0 is
   the top, renumbered on write), title (≤200, "" allowed in the table: the service requires a title
@@ -282,10 +289,11 @@ mock exam generation, personalization.
   load, only for a signed-in viewer), rolls back with a toast on failure, and signed out goes to
   `/sign-in?next=` with nothing marked afterwards. Toasts, both with Undo: "Marked as done. Chapter 2: 4 of
   5." ("Marked as done." for an exam or a file in General) and "Marked as not done."; Undo itself shows no
-  toast. After a mark or un-mark the button is followed by a progress line and bar from the response:
+  toast. A mark that earns a milestone then shows one more toast per milestone, "Milestone: 10 files done" with a
+  "View" action to `/progress` (the server returns a key only the first time; an Undo takes nothing away). After a mark or un-mark the button is followed by a progress line and bar from the response:
   "Chapter 2: 4 of 5 files done", "Exams: 3 of 6 done" for an exam, or "DEMO301: 8 of 13 files done" for a
   file in General (the bar is primary, success green once finished). API: `PUT` / `DELETE
-  /api/v1/completions/ID` (200 `{ created, progress }` / `{ progress }`; 404 for a file that cannot be
+  /api/v1/completions/ID` (200 `{ created, progress, rewards: { milestones } }` / `{ progress }`; 404 for a file that cannot be
   marked) and `GET /api/v1/completions/ids`. Opening or downloading never marks a file. Phone: a back link (the course code) above the title, the card's
   top row sticky under the site bar with the window scrolling the pages, then the details below
   (so the Save button is below the card there).
@@ -337,6 +345,13 @@ mock exam generation, personalization.
   The dots are a `ul` labelled "This week" whose items read "Monday, active" / "Tuesday" / "Friday, today". On desktop
   it sits in a 360px column. Primary only, never success green. `getProgressOverview(viewer, { now? })` also returns
   `week: { start (Monday), today, activeDays }` and `hasCompletions`, so `GET /api/v1/progress` has them too.
+  Beside it (a grid `360px 1fr` from md up, under it on a phone; shown whenever "This week" is) sits "MILESTONES · n OF 6"
+  (`milestones.tsx`): six items in a `ul` labelled "Milestones", each a 52px circle (symbols "1", "10", "50", Check,
+  Star, ClipboardCheck, `aria-hidden`) with its label under it (12px). Earned: `bg-primary/10`, primary symbol and
+  2px primary border, heading-colour label. Not yet earned: muted background, 2px dashed border, muted symbol and
+  label (no "missing" or "locked" wording). Items read "10 files done, earned" / "50 files done, not yet earned".
+  On a phone the row scrolls sideways (88px items, bleeding to the panel's right edge). Primary only. The overview
+  also returns `milestones: { key, label, earnedAt | null }[]`, all six in order.
 - Save bookmark on rows: every resource row (`ResourceRow`: course page areas and tabs, chapter pages,
   exams, search results, Saved) carries a bookmark button in its own cell at the right, outside the
   row link, 44px on a phone, always rendered so nothing moves when the state arrives. Outline when not

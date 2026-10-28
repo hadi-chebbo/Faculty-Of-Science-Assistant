@@ -91,6 +91,8 @@ describe("seeders", () => {
     expect(await count("bookmarks")).toBe(3);
     expect(await count("completions")).toBe(10);
     expect(await count("study_days")).toBeGreaterThanOrEqual(1);
+    const milestones = await query("SELECT key FROM milestones ORDER BY key");
+    expect(milestones.map((m) => m.key)).toEqual(["files_10", "first_chapter", "first_file"]);
 
     const admin = await query("SELECT role, password_hash FROM users WHERE email = 'admin@example.com'");
     expect(admin).toHaveLength(1);
