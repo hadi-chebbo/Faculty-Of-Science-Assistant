@@ -28,7 +28,8 @@ async function loadPdfjs() {
 // scroll, each drawn on a canvas with a text layer over it. The file comes from the same-origin open route, which redirects to a
 // short-lived signed URL; range requests and streaming are off so the browser makes one plain
 // GET, with no Range header and so no CORS preflight.
-export function PdfViewer({ resourceId }: { resourceId: string }) {
+// `markable`: the file can be marked as done (a lecture, notes, exercise or exam).
+export function PdfViewer({ resourceId, markable }: { resourceId: string; markable: boolean }) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<State>({ status: "loading", percent: null });
 
@@ -109,5 +110,5 @@ export function PdfViewer({ resourceId }: { resourceId: string }) {
     );
   }
   // Keyed by the resource: a solution link reuses this page, and the new file starts from its own state.
-  return <ReaderCard key={resourceId} pdf={state.pdf} sizes={state.sizes} resourceId={resourceId} />;
+  return <ReaderCard key={resourceId} pdf={state.pdf} sizes={state.sizes} resourceId={resourceId} markable={markable} />;
 }

@@ -1,7 +1,9 @@
 import { CheckCircle2, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { EXAM_SESSION_LABELS, LANGUAGE_NAMES, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
+import { isMarkable } from "@/services/progress/markable";
 import { AddToTodoButton } from "./add-to-todo-button";
+import { MarkDoneButton } from "./mark-done-button";
 import { SaveButton } from "./save-button";
 import type { ReaderResource } from "@/services/resources/types";
 
@@ -34,6 +36,7 @@ export function ReaderDetails({ resource }: { resource: ReaderResource }) {
       <div className="space-y-2">
         <SaveButton resourceId={resource.id} />
         <AddToTodoButton resourceId={resource.id} />
+        {isMarkable(resource.type) && <MarkDoneButton resourceId={resource.id} isExam={resource.type === "exam"} />}
       </div>
 
       <section className="space-y-1.5">

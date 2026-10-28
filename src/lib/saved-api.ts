@@ -6,7 +6,7 @@ import { getAccount } from "@/services/auth/auth";
 import { BoardFullError, NotFoundError, ValidationError } from "@/services/errors";
 import type { Viewer } from "@/services/viewer";
 
-// Shared by the saved-resource and to-do routes, which any signed-in user may call (the admin write routes
+// Shared by the saved-resource, completion and to-do routes, which any signed-in user may call (the admin write routes
 // use `adminWrite`). `request` is given for writes, which need the same-origin check first. The
 // viewer is the account that still exists, with the role from the database; no or an expired
 // token, or a deleted user, is 401. A not-found error is 404; anything else is 500.

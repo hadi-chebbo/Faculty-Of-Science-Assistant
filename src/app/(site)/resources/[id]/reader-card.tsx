@@ -11,6 +11,7 @@ import { PageCanvas } from "./page-canvas";
 import { ReaderContents, useOutline } from "./reader-contents";
 import { useAddToTodo } from "@/lib/add-to-todo";
 import { useMediaQuery } from "@/lib/use-media-query";
+import { useDoneResource } from "@/lib/completions-client";
 import { useSavedResource } from "@/lib/saved-client";
 import { ReaderMenu } from "./reader-menu";
 import { readContentsOpen, writeContentsOpen } from "./reader-panel";
@@ -92,8 +93,19 @@ interface Anchor {
 // The document card: a top row, the pages, and a floating bar with page and zoom controls. From
 // md up the card has a fixed height and the pages scroll inside it; on a phone the window scrolls
 // and the top row and the bar stay in view. Focus mode lets the card cover the whole viewport.
-export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; sizes: PageSize[]; resourceId: string }) {
+export function ReaderCard({
+  pdf,
+  sizes,
+  resourceId,
+  markable,
+}: {
+  pdf: PDFDocumentProxy;
+  sizes: PageSize[];
+  resourceId: string;
+  markable: boolean;
+}) {
   const savedState = useSavedResource(resourceId);
+  const doneState = useDoneResource(resourceId);
   const addToTodo = useAddToTodo(resourceId);
   const total = pdf.numPages;
   const desktop = useMediaQuery("(min-width: 768px)");
@@ -691,6 +703,9 @@ export function ReaderCard({ pdf, sizes, resourceId }: { pdf: PDFDocumentProxy; 
             onToggleSaved={() => void savedState.toggle()}
             onAddToTodo={() => void addToTodo.add()}
             addingToTodo={addToTodo.pending}
+            done={markable ? doneState.status === "done" : null}
+            onToggleDone={() => void doneState.toggle()}
+            markingDone={doneState.pending}
             triggerRef={menuButtonRef}
           />
         </div>

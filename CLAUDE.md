@@ -32,9 +32,10 @@ In:
 - Student sign-up with email confirmation (pulled forward by the owner, 2026-10-21).
 - Saved resources and a private to-do board, for signed-in users only (pulled forward by the
   owner, 2026-10-24; terms in `GLOSSARY.md`).
+- Explicit "mark as done" and progress tracking, for signed-in users only (pulled forward by the
+  owner, 2026-10-27; spec `docs/specs/progress-tracking.md`, terms in `GLOSSARY.md`).
 
-After launch, in this order:
-- Explicit "mark as done".
+After launch:
 - Per-course AI Q&A grounded in uploaded material, with source citations.
 
 Out until explicitly agreed: student uploads, interactive exercises, scoring,
@@ -92,7 +93,10 @@ mock exam generation, personalization.
   stored; no link to users, so unknown emails are counted too. Old rows are pruned.
 - Bookmark and Completion: each one row per (user, resource). A completion
   means the student explicitly marked the resource done; un-marking deletes it.
-  A bookmark is shown to students as a "Saved resource".
+  A bookmark is shown to students as a "Saved resource". Only a published lecture, notes, exercise or
+  exam can be marked done (`src/services/progress`, `isMarkable`); un-marking always works. Progress is
+  computed live from completions of published files, never stored: counted resources (lecture, notes,
+  exercise) make chapter and course progress, exams are counted apart, solutions and other in no number.
 - Todo (`todos`; a "card" in the interface): a card on a student's to-do board. Belongs to a user
   (cascade); status (todo, in_progress, done; check constraint), position within its status (0 is
   the top, renumbered on write), title (≤200, "" allowed in the table: the service requires a title
@@ -241,7 +245,8 @@ mock exam generation, personalization.
   the percentage shown in a fit mode is the computed one, and zoom steps leave the fit mode. Zoom
   keeps the reader on the same page. The "More actions" menu (a dropdown on desktop, a bottom sheet
   on a phone) has Fit width, Fit page, Focus mode, then Save for later (or Remove from saved when it
-  is saved), Add to to-do, Download and Open outside the reader. Focus mode
+  is saved), Add to to-do, Mark as done (or Mark as not done; only for a lecture, notes, exercise or
+  exam), Download and Open outside the reader. Focus mode
   makes the card cover the whole viewport (and asks for real fullscreen where available, but does
   not depend on it); Esc leaves it (or closes an open search first). Keys (when not typing): arrows,
   PageUp/PageDown, Home/End, `+`/`-`, `0`. The page being read is remembered per resource in
@@ -252,7 +257,18 @@ mock exam generation, personalization.
   under small headings) beside it, with a full-width "Save for later" button at its top that becomes
   "Saved" (filled bookmark) once saved; pressing "Saved" removes it. Under it an outline "Add to to-do" button
   makes a card in To do linked to this file (toast "Added to To do" with "View board"; the same file may be
-  added again; signed out it goes to sign-in like Save). Phone: a back link (the course code) above the title, the card's
+  added again; signed out it goes to sign-in like Save). Under it, for a lecture, notes, exercise or exam
+  only, an outline "Mark as done" button becomes a filled success-green "Done" (check icon,
+  `aria-pressed`) once marked; pressing "Done" un-marks it. Like Save it is optimistic, shares one browser
+  store with the menu item (`src/lib/completions-client.ts`, `GET /api/v1/completions/ids` once per page
+  load, only for a signed-in viewer), rolls back with a toast on failure, and signed out goes to
+  `/sign-in?next=` with nothing marked afterwards. Toasts, both with Undo: "Marked as done. Chapter 2: 4 of
+  5." ("Marked as done." for an exam or a file in General) and "Marked as not done."; Undo itself shows no
+  toast. After a mark or un-mark the button is followed by a progress line and bar from the response:
+  "Chapter 2: 4 of 5 files done", "Exams: 3 of 6 done" for an exam, or "DEMO301: 8 of 13 files done" for a
+  file in General (the bar is primary, success green once finished). API: `PUT` / `DELETE
+  /api/v1/completions/ID` (200 `{ created, progress }` / `{ progress }`; 404 for a file that cannot be
+  marked) and `GET /api/v1/completions/ids`. Opening or downloading never marks a file. Phone: a back link (the course code) above the title, the card's
   top row sticky under the site bar with the window scrolling the pages, then the details below
   (so the Save button is below the card there).
   Back leads to Previous exams for an exam, to the chapter page for a resource in a chapter,

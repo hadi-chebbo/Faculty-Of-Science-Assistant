@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EXAM_SESSION_LABELS, LANGUAGE_NAMES, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
 import { readForPage } from "@/lib/page-errors";
 import { readerBackTarget } from "@/services/resources/back-target";
+import { isMarkable } from "@/services/progress/markable";
 import { getResourceForReader } from "@/services/resources/reader";
 import { PdfViewer } from "./pdf-viewer-loader";
 import { ReaderDetails } from "./reader-details";
@@ -111,7 +112,7 @@ async function ReaderContent({ id }: { id: string }) {
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-[minmax(0,1fr)_14rem] md:items-start md:gap-4">
         {resource.hasFile ? (
-          <PdfViewer resourceId={resource.id} />
+          <PdfViewer resourceId={resource.id} markable={isMarkable(resource.type)} />
         ) : (
           <StateBlock icon={FileQuestion}>There is no file to show for this resource.</StateBlock>
         )}
