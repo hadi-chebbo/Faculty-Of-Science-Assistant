@@ -198,7 +198,12 @@ mock exam generation, personalization.
   buttons, three facts, and a decorative course preview), a numbers strip (only from 5 courses), the
   semester cards (an empty semester is a muted card, not a link), how it works, what you will find,
   an "Exams coming up?" band with a link per session, and four questions. Only the strip and the
-  cards read the database. No claims about features that do not exist.
+  cards read the database. For a signed-in student a "Your progress" band (`ProgressBand`, `data-personal`)
+  follows the hero: loaded by the browser from `GET /api/v1/progress` after the page shows (Home stays static;
+  a visitor gets no band and no request), "N active days this week", up to three of My courses by latest
+  completion (ring, code, title, "x of y files · P%" or "✓ Finished", or "Exams: x of y done" for an
+  exams-only course) and "See all ›" to `/progress`; with no My courses it says "Mark files as done in the
+  reader to track your progress here." and leaves "See all" out. No claims about features that do not exist.
 - Course page: for a course with chapters, three areas, one visible at a time and chosen by
   links that live in the URL: Chapters (default), Previous exams (`?tab=exams`) and Other
   material (`?tab=other`, only when there is material with no chapter). Chapters are cards, each
