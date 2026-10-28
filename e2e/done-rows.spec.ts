@@ -15,9 +15,12 @@ const STUDENT_EMAIL = "demo.student@example.com"; // from the demo seed
 const STUDENT_PASSWORD = "demo-student-password";
 
 // Desktop and phone run at the same time and share the demo student, so each marks a file of its
-// own course. DEMO301's "Sample lecture 1" is in chapter 1; DEMO401 has no chapters.
+// own. They are not the files e2e/mark-done-reader.spec.ts marks: spec files run in parallel too.
 test.describe.configure({ mode: "serial" });
-const courseFor = (isMobile: boolean) => (isMobile ? "DEMO401" : "DEMO301");
+const fileFor = (isMobile: boolean) =>
+  isMobile
+    ? { course: "DEMO302", title: "Sample lecture 1", list: "/courses/DEMO302/chapters/1" }
+    : { course: "DEMO301", title: "Sample lecture 2", list: "/courses/DEMO301/chapters/2" };
 
 async function withDb<T>(work: (client: pg.Client) => Promise<T>): Promise<T> {
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -41,7 +44,8 @@ async function resourceId(courseCode: string, title: string): Promise<string> {
 }
 
 test.afterEach(async ({ isMobile }) => {
-  const id = await resourceId(courseFor(isMobile), "Sample lecture 1");
+  const { course, title } = fileFor(isMobile);
+  const id = await resourceId(course, title);
   await withDb((client) => client.query(`DELETE FROM completions WHERE resource_id = $1`, [id]));
 });
 
@@ -60,16 +64,15 @@ async function signInTo(page: Page, next: string) {
 }
 
 test("a signed-in student marks a file in the reader and its row shows Done, other rows Not done", async ({ page, isMobile }) => {
-  const course = courseFor(isMobile);
-  const id = await resourceId(course, "Sample lecture 1");
+  const { course, title, list } = fileFor(isMobile);
+  const id = await resourceId(course, title);
   await signInTo(page, `/resources/${id}`);
 
   await page.getByRole("complementary", { name: "About this file" }).getByRole("button", { name: "Mark as done" }).click();
   await expect(page.getByRole("complementary", { name: "About this file" }).getByRole("button", { name: "Done", exact: true })).toBeVisible();
 
-  const list = isMobile ? `/courses/${course}` : `/courses/${course}/chapters/1`;
   await page.goto(list);
-  const row = page.getByRole("listitem").filter({ has: page.getByRole("link", { name: /Sample lecture 1/ }) });
+  const row = page.getByRole("listitem").filter({ has: page.getByRole("link", { name: new RegExp(title) }) });
   await expect(row.getByRole("img", { name: "Done" })).toBeVisible();
   await expect(row.getByRole("img", { name: "Not done" })).toHaveCount(0);
 
@@ -93,8 +96,9 @@ test("a visitor sees no status cells and the page never asks for completed ids",
   page.on("request", (request) => {
     if (request.url().includes("/api/v1/completions/ids")) asked.push(request.url());
   });
-  await page.goto(isMobile ? "/courses/DEMO401" : "/courses/DEMO301/chapters/1");
-  await expect(page.getByRole("link", { name: /Sample lecture 1/ }).first()).toBeVisible();
+  const { title, list } = fileFor(isMobile);
+  await page.goto(list);
+  await expect(page.getByRole("link", { name: new RegExp(title) }).first()).toBeVisible();
   // Give the browser store time to ask who is signed in.
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("img", { name: /^(Done|Not done)$/ })).toHaveCount(0);
