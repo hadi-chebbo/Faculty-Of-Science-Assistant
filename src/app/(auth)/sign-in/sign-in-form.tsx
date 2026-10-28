@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useHydrated } from "@/lib/use-hydrated";
 import { RESEND_MESSAGES, requestNewLink } from "@/lib/auth/resend-client";
 import { safeNextPath } from "@/lib/auth/request";
 import { announceSessionChange } from "@/lib/auth/session-events";
@@ -17,6 +18,8 @@ export function SignInForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // The submit button stays disabled until hydration, so a native submit can never slip through.
+  const hydrated = useHydrated();
   // The address whose password was right but whose email is not confirmed yet.
   const [unconfirmed, setUnconfirmed] = useState<string | null>(null);
   const [resend, setResend] = useState<{ pending: boolean; text: string | null }>({ pending: false, text: null });
@@ -95,6 +98,7 @@ export function SignInForm() {
 
   return (
     <form
+      method="post"
       onSubmit={onSubmit}
       onChange={() => {
         setError(null);
@@ -170,7 +174,7 @@ export function SignInForm() {
           {capsLock ? "Caps Lock is on." : null}
         </p>
       </div>
-      <Button type="submit" disabled={pending} className="h-11 w-full text-base">
+      <Button type="submit" disabled={pending || !hydrated} className="h-11 w-full text-base">
         {pending && <Loader2 className="animate-spin" aria-hidden />}
         {pending ? "Signing in..." : "Sign in"}
       </Button>

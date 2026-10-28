@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useHydrated } from "@/lib/use-hydrated";
 import { SIGNUP_EMAIL_KEY } from "@/lib/auth/signup-storage";
 
 type Fields = { name?: string; email?: string; password?: string };
@@ -16,6 +17,8 @@ export function SignUpForm() {
   const [error, setError] = useState<string | null>(null);
   const [fields, setFields] = useState<Fields>({});
   const [pending, setPending] = useState(false);
+  // The submit button stays disabled until hydration, so a native submit can never slip through.
+  const hydrated = useHydrated();
   const [showPassword, setShowPassword] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -58,7 +61,7 @@ export function SignUpForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} aria-busy={pending} className="space-y-5">
+    <form method="post" onSubmit={onSubmit} aria-busy={pending} className="space-y-5">
       {error && (
         <Alert variant="destructive">
           <AlertCircle aria-hidden />
@@ -128,7 +131,7 @@ export function SignUpForm() {
         </p>
         {fields.password && <FieldError id="password-error">{fields.password}</FieldError>}
       </div>
-      <Button type="submit" disabled={pending} className="h-11 w-full text-base">
+      <Button type="submit" disabled={pending || !hydrated} className="h-11 w-full text-base">
         {pending && <Loader2 className="animate-spin" aria-hidden />}
         {pending ? "Creating account..." : "Create account"}
       </Button>
