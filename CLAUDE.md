@@ -302,6 +302,16 @@ mock exam generation, personalization.
   static: the browser asks `GET /api/v1/saved/ids` once per page load (never for a visitor) and all
   icons share the answer; toasts are the reader's. The row's `action` slot is for extra controls
   beside the bookmark.
+- Done status cell on rows: for a signed-in student every `ResourceRow` also has a read-only cell at the
+  left (`DoneStatusCell`, outside the row link, `pl-3`, a 22px circle; not a button, not focusable).
+  A completed file shows a filled success-green circle with a check (`role="img"`, label "Done"); a
+  lecture, notes, exercise or exam not completed shows an empty circle with a 1.5px border (label "Not
+  done"); solutions and other files, and every row while the answer is on its way, get an empty cell of
+  the same width, announced as nothing. A visitor gets no cell at all. It reads the completed-ids store
+  (`useDoneCell` in `src/lib/completions-client.ts`): the store has a `signed-in` state (known signed in,
+  ids not back yet) set before the ids request, so the cell is reserved before the answer and nothing
+  moves; all rows share one `GET /api/v1/completions/ids`, never made for a visitor. Rows in the
+  "Solution" sub-link strip have no cell (their text stays at the old indent).
 - To-do board (`/todo`): private like `/saved` (server-rendered, `noindex`, `no-store`, same
   `requireSignedInPage` / restore / `/sign-in?next=%2Ftodo` path), reached from "To-do" in the main
   navigation (also in the phone tab bar). Look follows prototype variant D. Desktop (md and up): breadcrumb
