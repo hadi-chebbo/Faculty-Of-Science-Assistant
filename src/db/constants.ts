@@ -33,3 +33,16 @@ export const TODO_MAX_CARDS = 500;
 // Uploaded resource files: PDF only, up to 50 MB. Checked again on the server after upload.
 export const UPLOAD_MAX_BYTES = 50 * 1024 * 1024;
 export const UPLOAD_CONTENT_TYPE = "application/pdf";
+
+// Milestones a student earns once and keeps, in the order they are shown. Must match
+// milestones_key_check.
+export const MILESTONE_KEYS = ["first_file", "files_10", "files_50", "first_chapter", "first_course", "all_exams_of_course"] as const;
+export type MilestoneKey = (typeof MILESTONE_KEYS)[number];
+export const MILESTONE_LABELS: Record<MilestoneKey, string> = {
+  first_file: "First file done",
+  files_10: "10 files done",
+  files_50: "50 files done",
+  first_chapter: "First chapter finished",
+  first_course: "First course finished",
+  all_exams_of_course: "All past exams of a course",
+};

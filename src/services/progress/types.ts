@@ -1,3 +1,5 @@
+import type { MilestoneKey } from "@/db/constants";
+
 // Progress of one student, computed live from their completions of published files.
 export interface Progress {
   // Counted resources of the whole course, in a chapter or in General.
@@ -8,10 +10,17 @@ export interface Progress {
   chapter: { id: string; position: number; title: string; done: number; total: number; finished: boolean } | null;
 }
 
+// What a mark earned. Empty for a repeated mark. More kinds of reward join this object later.
+export interface Rewards {
+  // Milestones earned by this mark, in MILESTONE_KEYS order.
+  milestones: MilestoneKey[];
+}
+
 export interface MarkResult {
   // False when the file was already marked done.
   created: boolean;
   progress: Progress;
+  rewards: Rewards;
 }
 
 // Progress of one student over a whole course (the course page). Counted files only, except `exams`.
@@ -31,6 +40,8 @@ export interface ProgressOverview {
   week: { start: string; today: string; activeDays: string[] };
   // True once the student has ever marked a file (a completion or a kept active day exists).
   hasCompletions: boolean;
+  // All six milestones in MILESTONE_KEYS order; `earnedAt` is an ISO time, or null when not earned yet.
+  milestones: { key: MilestoneKey; label: string; earnedAt: string | null }[];
   // By semester, then course code. Same figures as `CourseProgress`, without the exams of other courses.
   courses: {
     code: string;

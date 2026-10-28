@@ -49,6 +49,14 @@ describe("GET /api/v1/progress", () => {
     expect(body).toEqual({
       week: { start: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), activeDays: [] },
       hasCompletions: true,
+      milestones: [
+        { key: "first_file", label: "First file done", earnedAt: null },
+        { key: "files_10", label: "10 files done", earnedAt: null },
+        { key: "files_50", label: "50 files done", earnedAt: null },
+        { key: "first_chapter", label: "First chapter finished", earnedAt: null },
+        { key: "first_course", label: "First course finished", earnedAt: null },
+        { key: "all_exams_of_course", label: "All past exams of a course", earnedAt: null },
+      ],
       courses: [
         {
           code: "TEST301",

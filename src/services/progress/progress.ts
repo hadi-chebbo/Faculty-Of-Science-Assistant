@@ -1,11 +1,12 @@
 import { Op, QueryTypes, type Transaction } from "sequelize";
 import { z } from "zod";
+import { MILESTONE_KEYS, MILESTONE_LABELS, type MilestoneKey } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { NotFoundError } from "../errors";
 import type { Viewer } from "../viewer";
 import { addDays, beirutDate, beirutWeekStart } from "./beirut-date";
 import { COUNTED_TYPES, MARKABLE_TYPES } from "./markable";
-import type { CourseProgress, MarkResult, Progress, ProgressOverview } from "./types";
+import type { CourseProgress, MarkResult, Progress, ProgressOverview, Rewards } from "./types";
 
 // Completions: a student's explicit "Mark as done" on a file (terms in GLOSSARY.md). Opening or
 // downloading a file never makes one. Every function acts only on the viewer's own rows.
@@ -87,8 +88,53 @@ export async function markDone(viewer: NonNullable<Viewer>, resourceId: string, 
         transaction,
       });
     }
-    return { created, progress: await progressOf(viewer, resource, transaction) };
+    const rewards: Rewards = { milestones: created ? await awardMilestones(viewer, resource.courseId, transaction) : [] };
+    return { created, progress: await progressOf(viewer, resource, transaction), rewards };
   });
+}
+
+// Earns the milestones this new completion made true, in the mark's transaction. Chapter, course
+// and exam milestones are evaluated only within the marked file's course, on purpose: a mark can
+// only complete something there, so the check stays cheap. The insert ignores milestones already
+// earned (and a concurrent duplicate), so the keys it returns are exactly the ones earned now.
+// Milestones are never removed, by un-marking or by content changes.
+async function awardMilestones(viewer: NonNullable<Viewer>, courseId: string, transaction: Transaction): Promise<MilestoneKey[]> {
+  const { sequelize } = getDb();
+  const [facts] = await sequelize.query<{ files: string; chapter_done: boolean; course_done: boolean; exams_done: boolean }>(
+    `WITH mine AS (
+       SELECT r.course_id, r.chapter_id, r.type, (c.id IS NOT NULL) AS done
+       FROM resources r
+       LEFT JOIN completions c ON c.resource_id = r.id AND c.user_id = $1
+       WHERE r.is_published AND r.type = ANY($2::text[])
+     ), chapters AS (
+       SELECT chapter_id, count(*) AS total, count(*) FILTER (WHERE done) AS done
+       FROM mine WHERE course_id = $3 AND chapter_id IS NOT NULL AND type = ANY($4::text[])
+       GROUP BY chapter_id
+     )
+     SELECT
+       (SELECT count(*) FROM mine WHERE done) AS files,
+       EXISTS (SELECT 1 FROM chapters WHERE total = done) AS chapter_done,
+       (SELECT count(*) >= 1 AND count(*) = count(*) FILTER (WHERE done) FROM mine WHERE course_id = $3 AND type = ANY($4::text[])) AS course_done,
+       (SELECT count(*) >= 1 AND count(*) = count(*) FILTER (WHERE done) FROM mine WHERE course_id = $3 AND type = 'exam') AS exams_done`,
+    { bind: [viewer.id, [...MARKABLE_TYPES], courseId, [...COUNTED_TYPES]], type: QueryTypes.SELECT, transaction },
+  );
+  const files = Number(facts.files);
+  const reached: Record<MilestoneKey, boolean> = {
+    first_file: files >= 1,
+    files_10: files >= 10,
+    files_50: files >= 50,
+    first_chapter: facts.chapter_done,
+    first_course: facts.course_done,
+    all_exams_of_course: facts.exams_done,
+  };
+  const keys = MILESTONE_KEYS.filter((key) => reached[key]);
+  if (keys.length === 0) return [];
+  const earned = await sequelize.query<{ key: MilestoneKey }>(
+    `INSERT INTO milestones (user_id, key) SELECT $1, unnest($2::text[]) ON CONFLICT DO NOTHING RETURNING key`,
+    { bind: [viewer.id, keys], type: QueryTypes.SELECT, transaction },
+  );
+  const got = new Set(earned.map((row) => row.key));
+  return MILESTONE_KEYS.filter((key) => got.has(key));
 }
 
 // Un-marks a file. Always succeeds, published or not, marked or not. `progress` is null only for
@@ -179,7 +225,7 @@ export async function getProgressOverview(viewer: NonNullable<Viewer>, options: 
   const { sequelize, Course, Chapter } = getDb();
   const now = options.now ?? new Date();
   const start = beirutWeekStart(now);
-  const [activeDays, hasCompletions] = await Promise.all([
+  const [activeDays, hasCompletions, earnedAt] = await Promise.all([
     sequelize
       .query<{ day: string }>(`SELECT day::text AS day FROM study_days WHERE user_id = $1 AND day BETWEEN $2::date AND $3::date ORDER BY day`, {
         bind: [viewer.id, start, addDays(start, 6)],
@@ -193,8 +239,15 @@ export async function getProgressOverview(viewer: NonNullable<Viewer>, options: 
         { bind: [viewer.id], type: QueryTypes.SELECT },
       )
       .then(([row]) => row.found),
+    sequelize
+      .query<{ key: MilestoneKey; earned_at: Date }>(`SELECT key, earned_at FROM milestones WHERE user_id = $1`, {
+        bind: [viewer.id],
+        type: QueryTypes.SELECT,
+      })
+      .then((rows) => new Map(rows.map((row) => [row.key, row.earned_at.toISOString()]))),
   ]);
   const week = { start, today: beirutDate(now), activeDays };
+  const milestones = MILESTONE_KEYS.map((key) => ({ key, label: MILESTONE_LABELS[key], earnedAt: earnedAt.get(key) ?? null }));
   const rows = await sequelize.query<CountRow & { course_id: string; last_completed_at: Date | null }>(
     `SELECT r.course_id, r.chapter_id, (r.type = 'exam') AS is_exam,
             count(*) AS total, count(c.id) AS done, max(c.created_at) AS last_completed_at
@@ -209,7 +262,7 @@ export async function getProgressOverview(viewer: NonNullable<Viewer>, options: 
     { bind: [viewer.id, [...MARKABLE_TYPES]], type: QueryTypes.SELECT },
   );
   const courseIds = [...new Set(rows.map((row) => row.course_id))];
-  if (courseIds.length === 0) return { courses: [], week, hasCompletions };
+  if (courseIds.length === 0) return { courses: [], week, hasCompletions, milestones };
   const [courses, chapters] = await Promise.all([
     Course.findAll({ where: { id: courseIds }, attributes: ["id", "code", "title", "semester"], order: [["semester", "ASC"], ["code", "ASC"]] }),
     Chapter.findAll({ where: { courseId: courseIds }, attributes: ["id", "courseId", "position", "title"], order: [["position", "ASC"]] }),
@@ -217,6 +270,7 @@ export async function getProgressOverview(viewer: NonNullable<Viewer>, options: 
   return {
     week,
     hasCompletions,
+    milestones,
     courses: courses.map((course) => {
       const own = rows.filter((row) => row.course_id === course.id);
       const last = own.reduce<Date | null>((latest, row) => (row.last_completed_at && (!latest || row.last_completed_at > latest) ? row.last_completed_at : latest), null);
