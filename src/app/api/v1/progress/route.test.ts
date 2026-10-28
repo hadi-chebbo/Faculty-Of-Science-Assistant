@@ -26,7 +26,11 @@ describe("GET /api/v1/progress", () => {
     session.viewer = { id: user.id, role: "student" };
     const response = await GET();
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ courses: [] });
+    const body = await response.json();
+    expect(body.courses).toEqual([]);
+    expect(body.hasCompletions).toBe(false);
+    expect(body.week.activeDays).toEqual([]);
+    expect(body.week.start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("answers 200 with My courses", async () => {
@@ -43,6 +47,8 @@ describe("GET /api/v1/progress", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     const body = await response.json();
     expect(body).toEqual({
+      week: { start: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), activeDays: [] },
+      hasCompletions: true,
       courses: [
         {
           code: "TEST301",

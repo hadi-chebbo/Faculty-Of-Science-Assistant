@@ -90,6 +90,7 @@ describe("seeders", () => {
     expect(student[0].role).toBe("student");
     expect(await count("bookmarks")).toBe(3);
     expect(await count("completions")).toBe(10);
+    expect(await count("study_days")).toBeGreaterThanOrEqual(1);
 
     const admin = await query("SELECT role, password_hash FROM users WHERE email = 'admin@example.com'");
     expect(admin).toHaveLength(1);
