@@ -166,8 +166,9 @@ mock exam generation, personalization.
     use (owner-approved in the reader mockup) is a pale yellow background behind text for search
     highlights in the reader; the text itself is never yellow.
   - Success green (`--success` / `--success-foreground`: `#166534` on white text in light, `#4ADE80`
-    on `#0B1A10` text in dark; 7.1:1 and 10.3:1): for Done on the to-do board only (column bar,
-    check marks, later the Done button). Not a general positive colour.
+    on `#0B1A10` text in dark; 7.1:1 and 10.3:1): for Done on the to-do board (column bar,
+    check marks, Done button) and for Done / finished progress (the reader Done button, row checks,
+    finished chapters and courses). Not a general positive colour; progress in flight uses the primary.
   - Light theme: headings `#41454F`, body text `#575757`, page `#F5F5F5`, muted `#F8F8F8`,
     cards white. The dark theme uses dark neutral surfaces with light text.
   - Text contrast is at least 4.5:1 in both themes.
@@ -193,7 +194,20 @@ mock exam generation, personalization.
   linking to its own page (`/courses/CODE/chapters/N`) and saying what is inside; an empty
   chapter is shown muted, not as a link. In the Previous exams area, exams are grouped by
   academic year (newest first) and each row is led by its session. A course without chapters
-  shows one tab per resource type that has resources, with its count.
+  shows one tab per resource type that has resources, with its count. Progress (signed-in
+  student only, loaded by the browser after the page shows from
+  `GET /api/v1/progress/courses/CODE`: `{ course: { code, title, done, total, finished }, exams: { done,
+  total }, chapters: [{ id, position, title, done, total, finished }], general: { done, total, finished } }`,
+  live, counted files only, exams apart; 401 signed out, 404 unknown code; a visitor makes no request,
+  `useCourseProgress` in `src/lib/course-progress-client.ts` waits for the completions store and shares
+  one request): a link card to `/progress` at the right of the title from md up (56px `ProgressRing`,
+  "Your progress", "8 of 13 files done", "Exams: 2 of 6 done", the exams line left out with no exams) and,
+  on a phone, only a 44px ring at the right of the course code line; aria-label "Your progress: 62%
+  done, 8 of 13 files. Exams: 2 of 6 done." Nothing when the course has no counted file. The block is
+  out of the flow and the title keeps `md:pr-80`, so nothing moves when it appears. Chapter cards with
+  counted files show at the right of the "Chapter N" line "4 of 5 done", "Not started · 5 files" or a
+  green "Finished", plus a 4px bar along the bottom edge (primary, success green when finished, which
+  also tints the border); a chapter with no counted file shows neither, an empty card is unchanged.
 - Exams page (`/exams`): filters (semester, course, academic year, session) live in the URL, so
   views are shareable and Back works. A plain GET form with an Apply button works without
   JavaScript; with JavaScript a dropdown change submits automatically. Unusable URL values are

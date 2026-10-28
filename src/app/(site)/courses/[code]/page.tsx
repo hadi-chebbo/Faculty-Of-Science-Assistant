@@ -6,6 +6,7 @@ import { CourseSkeleton } from "@/components/site/skeletons";
 import { readForPage } from "@/lib/page-errors";
 import { getCourseByCode } from "@/services/courses/courses";
 import { AreaSwitch, ChapterCards, ExamsArea, OtherArea, parseArea } from "./course-areas";
+import { CourseProgressBlock } from "./course-progress";
 import { ResourceTabs } from "./resource-tabs";
 
 export const metadata: Metadata = { title: "Course" };
@@ -41,9 +42,16 @@ async function CourseContent({ code, tab }: { code: string; tab: string | string
           { label: course.code },
         ]}
       />
-      <PageTitle description={<span className="font-mono text-sm text-link">{course.code}</span>}>
-        {course.title}
-      </PageTitle>
+      {/* The progress block is out of the flow and the title keeps room for it from md up, so it
+          appears without moving the title. */}
+      <div className="relative">
+        <div className="md:pr-80">
+          <PageTitle description={<span className="font-mono text-sm text-link">{course.code}</span>}>
+            {course.title}
+          </PageTitle>
+        </div>
+        <CourseProgressBlock code={course.code} />
+      </div>
       {course.groups.length === 0 ? (
         <p>No resources yet for this course.</p>
       ) : !hasChapters ? (

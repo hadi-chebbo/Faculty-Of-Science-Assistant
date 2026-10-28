@@ -208,3 +208,16 @@ export function useDoneCell(resourceId: string): DoneCell {
   if (snapshot.status === "ready") return snapshot.ids.has(resourceId) ? "done" : "not-done";
   return "none";
 }
+
+// Whether the viewer is known to be signed in (the ids may still be on their way). Other browser
+// stores wait on this instead of asking who is signed in again.
+export function useKnownSignedIn(): boolean {
+  const snapshot = useSyncExternalStore(subscribe, () => store, () => UNKNOWN);
+  useEffect(() => {
+    ensureLoaded();
+  }, []);
+  return snapshot.status === "signed-in" || snapshot.status === "ready";
+}
+
+// Fetch with the store's renew-on-401 behaviour.
+export const requestWithRenew = request;

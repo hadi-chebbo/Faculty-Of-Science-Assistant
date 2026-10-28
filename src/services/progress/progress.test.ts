@@ -4,7 +4,7 @@ import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { NotFoundError } from "../errors";
 import type { Viewer } from "../viewer";
-import { listCompletedIds, markDone, unmarkDone } from "./progress";
+import { getCourseProgress, listCompletedIds, markDone, unmarkDone } from "./progress";
 
 const MISSING_ID = "33333333-3333-4333-8333-333333333333";
 
@@ -204,5 +204,69 @@ describe("listCompletedIds", () => {
     await s.general.destroy();
     expect(await listCompletedIds(student)).toEqual([]);
     expect(await getDb().Completion.count()).toBe(0);
+  });
+});
+
+describe("getCourseProgress", () => {
+  it("counts lectures, notes and exercises; exams apart; solutions and other files nowhere", async () => {
+    const student = await user();
+    const s = await seed();
+    await getDb().Chapter.create({ courseId: s.course.id, position: 3, title: "Empty" });
+    expect(await getCourseProgress(student, "TEST301")).toEqual({
+      course: { code: "TEST301", title: "Course A", done: 0, total: 5, finished: false },
+      exams: { done: 0, total: 2 },
+      chapters: [
+        { id: s.one.id, position: 1, title: "Basics", done: 0, total: 3, finished: false },
+        { id: s.two.id, position: 2, title: "Sorting", done: 0, total: 1, finished: false },
+        expect.objectContaining({ position: 3, title: "Empty", done: 0, total: 0, finished: false }),
+      ],
+      general: { done: 0, total: 1, finished: false },
+    });
+  });
+
+  it("counts marks in the chapter, General, exams and the course", async () => {
+    const student = await user();
+    const s = await seed();
+    for (const file of [s.lecture1, s.general, s.exam1]) await markDone(student, file.id);
+    const progress = await getCourseProgress(student, "TEST301");
+    expect(progress.course).toMatchObject({ done: 2, total: 5 });
+    expect(progress.exams).toEqual({ done: 1, total: 2 });
+    expect(progress.chapters[0]).toMatchObject({ done: 1, total: 3 });
+    expect(progress.general).toEqual({ done: 1, total: 1, finished: true });
+  });
+
+  it("finishes exactly at the last counted file, and a new published file un-finishes", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id);
+    await markDone(student, s.lecture2.id);
+    expect((await getCourseProgress(student, "TEST301")).chapters[0].finished).toBe(false);
+    await markDone(student, s.exercise.id);
+    expect((await getCourseProgress(student, "TEST301")).chapters[0]).toMatchObject({ done: 3, total: 3, finished: true });
+    await getDb().Resource.create({ courseId: s.course.id, chapterId: s.one.id, type: "notes", title: "New", fileKey: "k", isPublished: true });
+    expect((await getCourseProgress(student, "TEST301")).chapters[0]).toMatchObject({ done: 3, total: 4, finished: false });
+  });
+
+  it("drops an unpublished file from both numbers and brings the mark back when republished", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id);
+    await s.lecture1.update({ isPublished: false });
+    expect((await getCourseProgress(student, "TEST301")).chapters[0]).toMatchObject({ done: 0, total: 2 });
+    await s.lecture1.update({ isPublished: true });
+    expect((await getCourseProgress(student, "TEST301")).chapters[0]).toMatchObject({ done: 1, total: 3 });
+  });
+
+  it("never counts another student's completions, and gives the admin the same figures", async () => {
+    const one = await user("one@example.com");
+    const admin = { ...(await user("a@example.com")), role: "admin" as const };
+    const s = await seed();
+    await markDone(one, s.lecture1.id);
+    expect((await getCourseProgress(admin, "TEST301")).course).toMatchObject({ done: 0, total: 5 });
+    expect((await getCourseProgress(one, "TEST301")).course).toMatchObject({ done: 1, total: 5 });
+  });
+
+  it("is not found for an unknown code", async () => {
+    await expect(getCourseProgress(await user(), "NOPE")).rejects.toBeInstanceOf(NotFoundError);
   });
 });

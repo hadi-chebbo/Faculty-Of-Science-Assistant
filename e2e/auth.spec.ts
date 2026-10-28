@@ -230,6 +230,11 @@ test("public pages render the same signed in and signed out", async ({ page }) =
       await page.waitForLoadState("networkidle");
       // The home page shows a live count of chapters, which other specs change while this one
       // runs. That figure depends on the moment, not on who is looking, so it is left out.
+      // Parts that differ by viewer on purpose (a student's progress) are marked `data-personal`
+      // and hidden before reading, so everything else must still match exactly.
+      await page.locator("main [data-personal]").evaluateAll((elements) =>
+        elements.forEach((element) => ((element as HTMLElement).style.display = "none")),
+      );
       texts.push((await page.locator("main").innerText()).replace(/(Chapters\s+)\d+/, "$1#"));
     }
     return texts;
