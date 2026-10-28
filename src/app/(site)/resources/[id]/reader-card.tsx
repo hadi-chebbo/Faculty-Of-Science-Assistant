@@ -105,7 +105,7 @@ export function ReaderCard({
   markable: boolean;
 }) {
   const savedState = useSavedResource(resourceId);
-  const doneState = useDoneResource(resourceId);
+  const doneState = useDoneResource(resourceId, markable);
   const addToTodo = useAddToTodo(resourceId);
   const total = pdf.numPages;
   const desktop = useMediaQuery("(min-width: 768px)");

@@ -34,13 +34,12 @@ export function MarkDoneButton({ resourceId, isExam }: { resourceId: string; isE
 // How far the student is where this file sits: its chapter, the exams for an exam, or the course
 // for a file in General. Known once the file has been marked or un-marked on this page.
 function ProgressLine({ progress, isExam }: { progress: Progress; isExam: boolean }) {
-  const { label, done, total } = isExam
-    ? { label: "Exams", ...progress.exams }
+  const { label, done, total, finished } = isExam
+    ? { label: "Exams", ...progress.exams, finished: progress.exams.total >= 1 && progress.exams.done === progress.exams.total }
     : progress.chapter
       ? { label: `Chapter ${progress.chapter.position}`, ...progress.chapter }
       : { label: progress.course.code, ...progress.course };
   if (total === 0) return null;
-  const finished = done === total;
   return (
     <div className="px-0.5 text-[0.8125rem]">
       <p>

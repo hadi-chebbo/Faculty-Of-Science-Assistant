@@ -101,6 +101,7 @@ function markedMessage(progress: Progress | null): string {
 // A change made by Undo shows no second Undo.
 async function change(resourceId: string, done: boolean, undoable: boolean): Promise<"done" | "signed-out"> {
   set({ ids: withId(store.ids, resourceId, done), pending: withId(store.pending, resourceId, true) });
+  const failed = done ? "Couldn't mark it as done. Try again." : "Couldn't mark it as not done. Try again.";
   const fail = (message: string) => {
     set({ ids: withId(store.ids, resourceId, !done) });
     toast.error(message);
@@ -117,14 +118,15 @@ async function change(resourceId: string, done: boolean, undoable: boolean): Pro
       const { progress } = (await response.json()) as { progress: Progress | null };
       const nextProgress = new Map(store.progress);
       if (progress) nextProgress.set(resourceId, progress);
+      else nextProgress.delete(resourceId);
       set({ progress: nextProgress });
       if (undoable) {
         showUndoToast(done ? markedMessage(progress) : "Marked as not done.", () => void undo(resourceId, !done));
       }
     } else if (response.status === 404 && done) fail("This file can't be marked as done.");
-    else fail(done ? "Couldn't mark it as done. Try again." : "Couldn't mark it as not done. Try again.");
+    else fail(failed);
   } catch {
-    fail(done ? "Couldn't mark it as done. Try again." : "Couldn't mark it as not done. Try again.");
+    fail(failed);
   } finally {
     set({ pending: withId(store.pending, resourceId, false) });
   }
@@ -139,7 +141,11 @@ async function undo(resourceId: string, done: boolean): Promise<void> {
 
 // The done state of one file, the progress its last mark answered with, and a toggle. Signed out,
 // the toggle goes to sign-in and back to this page; nothing is marked automatically afterwards.
-export function useDoneResource(resourceId: string): {
+// `markable` false (a solution or other file): nothing is asked of the server.
+export function useDoneResource(
+  resourceId: string,
+  markable = true,
+): {
   status: DoneStatus;
   pending: boolean;
   progress: Progress | null;
@@ -147,7 +153,9 @@ export function useDoneResource(resourceId: string): {
 } {
   const router = useRouter();
   const snapshot = useSyncExternalStore(subscribe, () => store, () => UNKNOWN);
-  useEffect(ensureLoaded, []);
+  useEffect(() => {
+    if (markable) ensureLoaded();
+  }, [markable]);
 
   const goToSignIn = useCallback(() => {
     const here = window.location.pathname + window.location.search;
