@@ -6,6 +6,7 @@ import { ProgressSkeleton } from "@/components/site/skeletons";
 import { requireSignedInPage } from "@/lib/auth/page-guard";
 import { getProgressOverview } from "@/services/progress/progress";
 import { ProgressOverviewList } from "./progress-overview-list";
+import { ThisWeek } from "./this-week";
 
 export const metadata: Metadata = { title: "Your progress", robots: { index: false, follow: false } };
 
@@ -28,5 +29,14 @@ export default function ProgressPage() {
 async function ProgressContent() {
   const { viewer } = await requireSignedInPage("/progress");
   const overview = await getProgressOverview(viewer);
-  return <ProgressOverviewList courses={overview.courses} />;
+  return (
+    <div className="space-y-8">
+      {overview.hasCompletions && (
+        <div className="md:max-w-[360px]">
+          <ThisWeek week={overview.week} />
+        </div>
+      )}
+      <ProgressOverviewList courses={overview.courses} />
+    </div>
+  );
 }

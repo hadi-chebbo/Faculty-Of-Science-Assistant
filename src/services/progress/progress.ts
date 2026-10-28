@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb } from "@/db/models";
 import { NotFoundError } from "../errors";
 import type { Viewer } from "../viewer";
+import { addDays, beirutDate, beirutWeekStart } from "./beirut-date";
 import { COUNTED_TYPES, MARKABLE_TYPES } from "./markable";
 import type { CourseProgress, MarkResult, Progress, ProgressOverview } from "./types";
 
@@ -63,7 +64,9 @@ async function progressOf(viewer: NonNullable<Viewer>, resource: ResourceRef, tr
 // Marks a file as done. Marking twice is fine (`created` is then false). Only a published lecture,
 // notes, exercise or exam can be marked, the admin included; anything else is not found. The
 // insert ignores a duplicate, so two requests at once cannot collide.
-export async function markDone(viewer: NonNullable<Viewer>, resourceId: string): Promise<MarkResult> {
+// A new completion also records the Beirut day as an active day, in the same transaction; the
+// day is never removed, by un-marking or otherwise.
+export async function markDone(viewer: NonNullable<Viewer>, resourceId: string, options: { now?: Date } = {}): Promise<MarkResult> {
   const { sequelize, Resource } = getDb();
   const resource = validId(resourceId)
     ? await Resource.findOne({
@@ -77,7 +80,14 @@ export async function markDone(viewer: NonNullable<Viewer>, resourceId: string):
       `INSERT INTO completions (user_id, resource_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING id`,
       { bind: [viewer.id, resourceId], type: QueryTypes.SELECT, transaction },
     );
-    return { created: inserted.length > 0, progress: await progressOf(viewer, resource, transaction) };
+    const created = inserted.length > 0;
+    if (created) {
+      await sequelize.query(`INSERT INTO study_days (user_id, day) VALUES ($1, $2) ON CONFLICT DO NOTHING`, {
+        bind: [viewer.id, beirutDate(options.now ?? new Date())],
+        transaction,
+      });
+    }
+    return { created, progress: await progressOf(viewer, resource, transaction) };
   });
 }
 
@@ -165,8 +175,26 @@ export async function getCourseProgress(viewer: NonNullable<Viewer>, courseCode:
 // file (My courses), by semester then code. All of them are counted in one grouped query (by
 // course, chapter and exam or not), then split per course in memory with the same rules as the
 // course page. `lastCompletedAt` is the latest completion in the course.
-export async function getProgressOverview(viewer: NonNullable<Viewer>): Promise<ProgressOverview> {
+export async function getProgressOverview(viewer: NonNullable<Viewer>, options: { now?: Date } = {}): Promise<ProgressOverview> {
   const { sequelize, Course, Chapter } = getDb();
+  const now = options.now ?? new Date();
+  const start = beirutWeekStart(now);
+  const [activeDays, hasCompletions] = await Promise.all([
+    sequelize
+      .query<{ day: string }>(`SELECT day::text AS day FROM study_days WHERE user_id = $1 AND day BETWEEN $2::date AND $3::date ORDER BY day`, {
+        bind: [viewer.id, start, addDays(start, 6)],
+        type: QueryTypes.SELECT,
+      })
+      .then((rows) => rows.map((row) => row.day)),
+    // Ever marked anything: a completion now, or an active day kept after un-marking.
+    sequelize
+      .query<{ found: boolean }>(
+        `SELECT (EXISTS (SELECT 1 FROM completions WHERE user_id = $1) OR EXISTS (SELECT 1 FROM study_days WHERE user_id = $1)) AS found`,
+        { bind: [viewer.id], type: QueryTypes.SELECT },
+      )
+      .then(([row]) => row.found),
+  ]);
+  const week = { start, today: beirutDate(now), activeDays };
   const rows = await sequelize.query<CountRow & { course_id: string; last_completed_at: Date | null }>(
     `SELECT r.course_id, r.chapter_id, (r.type = 'exam') AS is_exam,
             count(*) AS total, count(c.id) AS done, max(c.created_at) AS last_completed_at
@@ -181,12 +209,14 @@ export async function getProgressOverview(viewer: NonNullable<Viewer>): Promise<
     { bind: [viewer.id, [...MARKABLE_TYPES]], type: QueryTypes.SELECT },
   );
   const courseIds = [...new Set(rows.map((row) => row.course_id))];
-  if (courseIds.length === 0) return { courses: [] };
+  if (courseIds.length === 0) return { courses: [], week, hasCompletions };
   const [courses, chapters] = await Promise.all([
     Course.findAll({ where: { id: courseIds }, attributes: ["id", "code", "title", "semester"], order: [["semester", "ASC"], ["code", "ASC"]] }),
     Chapter.findAll({ where: { courseId: courseIds }, attributes: ["id", "courseId", "position", "title"], order: [["position", "ASC"]] }),
   ]);
   return {
+    week,
+    hasCompletions,
     courses: courses.map((course) => {
       const own = rows.filter((row) => row.course_id === course.id);
       const last = own.reduce<Date | null>((latest, row) => (row.last_completed_at && (!latest || row.last_completed_at > latest) ? row.last_completed_at : latest), null);

@@ -275,7 +275,7 @@ describe("getProgressOverview", () => {
   it("is empty when nothing is marked", async () => {
     const student = await user();
     await seed();
-    expect(await getProgressOverview(student)).toEqual({ courses: [] });
+    expect((await getProgressOverview(student)).courses).toEqual([]);
   });
 
   it("lists only My courses, by semester then code, with the same figures as the course page", async () => {
@@ -310,7 +310,7 @@ describe("getProgressOverview", () => {
     const s = await seed();
     await markDone(student, s.lecture1.id);
     await s.lecture1.update({ isPublished: false });
-    expect(await getProgressOverview(student)).toEqual({ courses: [] });
+    expect((await getProgressOverview(student)).courses).toEqual([]);
     await s.lecture1.update({ isPublished: true });
     expect((await getProgressOverview(student)).courses).toHaveLength(1);
   });
@@ -334,9 +334,97 @@ describe("getProgressOverview", () => {
     const other = await user("other@example.com");
     const s = await seed();
     await markDone(other, s.lecture1.id);
-    expect(await getProgressOverview(mine)).toEqual({ courses: [] });
+    expect((await getProgressOverview(mine)).courses).toEqual([]);
     await markDone(mine, s.lecture2.id);
     const [course] = (await getProgressOverview(mine)).courses;
     expect(course.course.done).toBe(1);
+  });
+});
+
+async function days(userId: string): Promise<string[]> {
+  const rows = await getDb().StudyDay.findAll({ where: { userId }, order: [["day", "ASC"]], raw: true });
+  return rows.map((row) => row.day);
+}
+
+describe("active days", () => {
+  it("a new mark records today's Beirut day", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id, { now: new Date("2026-10-28T10:00:00Z") });
+    expect(await days(student.id)).toEqual(["2026-10-28"]);
+  });
+
+  it("two marks the same day leave one row", async () => {
+    const student = await user();
+    const s = await seed();
+    const now = new Date("2026-10-28T10:00:00Z");
+    await markDone(student, s.lecture1.id, { now });
+    await markDone(student, s.lecture2.id, { now: new Date("2026-10-28T15:00:00Z") });
+    expect(await days(student.id)).toEqual(["2026-10-28"]);
+  });
+
+  it("marking an already done file adds nothing", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id, { now: new Date("2026-10-28T10:00:00Z") });
+    const again = await markDone(student, s.lecture1.id, { now: new Date("2026-10-29T10:00:00Z") });
+    expect(again.created).toBe(false);
+    expect(await days(student.id)).toEqual(["2026-10-28"]);
+  });
+
+  it("a mark at 23:30 UTC counts for the next Beirut day", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id, { now: new Date("2026-12-10T23:30:00Z") });
+    expect(await days(student.id)).toEqual(["2026-12-11"]);
+  });
+
+  it("un-marking keeps the day", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id, { now: new Date("2026-10-28T10:00:00Z") });
+    await unmarkDone(student, s.lecture1.id);
+    expect(await days(student.id)).toEqual(["2026-10-28"]);
+  });
+
+  it("deleting the user removes their days", async () => {
+    const student = await user();
+    const s = await seed();
+    await markDone(student, s.lecture1.id);
+    await getDb().User.destroy({ where: { id: student.id } });
+    expect(await getDb().StudyDay.count()).toBe(0);
+  });
+});
+
+describe("getProgressOverview week", () => {
+  const add = (userId: string, day: string) => getDb().StudyDay.create({ userId, day });
+
+  it("starts on Monday in Beirut time and lists only that week's days, ascending", async () => {
+    const student = await user();
+    for (const day of ["2026-10-25", "2026-11-01", "2026-10-28", "2026-10-26", "2026-11-02"]) await add(student.id, day);
+    // Sunday 2026-11-01 23:30 Beirut (UTC+2): still the week of Monday 2026-10-26.
+    const { week } = await getProgressOverview(student, { now: new Date("2026-11-01T21:30:00Z") });
+    expect(week).toEqual({ start: "2026-10-26", today: "2026-11-01", activeDays: ["2026-10-26", "2026-10-28", "2026-11-01"] });
+    // 30 minutes later it is Monday 2026-11-02 in Beirut: a new week.
+    const next = await getProgressOverview(student, { now: new Date("2026-11-01T22:30:00Z") });
+    expect(next.week).toEqual({ start: "2026-11-02", today: "2026-11-02", activeDays: ["2026-11-02"] });
+  });
+
+  it("never shows another user's days", async () => {
+    const mine = await user();
+    const other = await user("other@example.com");
+    await add(other.id, "2026-10-28");
+    const overview = await getProgressOverview(mine, { now: new Date("2026-10-28T10:00:00Z") });
+    expect(overview.week.activeDays).toEqual([]);
+    expect(overview.hasCompletions).toBe(false);
+  });
+
+  it("hasCompletions is true after a mark, also once it is un-marked", async () => {
+    const student = await user();
+    const s = await seed();
+    expect((await getProgressOverview(student)).hasCompletions).toBe(false);
+    await markDone(student, s.lecture1.id);
+    await unmarkDone(student, s.lecture1.id);
+    expect((await getProgressOverview(student)).hasCompletions).toBe(true);
   });
 });

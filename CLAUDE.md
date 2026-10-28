@@ -54,7 +54,7 @@ mock exam generation, personalization.
   titles and resources. The real course list and files are loaded in a
   separate data-gathering phase; do not ask for them or invent real-looking
   ones before then. The seeded demo student has a few completions (DEMO610: chapter 1 finished, two files of chapter 2,
-  one exam; DEMO410: one lecture) so demos show progress; e2e specs that mark files must not use those courses.
+  one exam; DEMO410: one lecture) and active days (today and up to two earlier days of the current Beirut week) so demos show progress; e2e specs that mark files must not use those courses.
 - Every resource has a stored file (owner's decision, 2026-10-13). A link is
   never the resource itself: `external_url` is an optional backup shown beside
   the file. A resource cannot be published without a file; a draft may be
@@ -98,6 +98,9 @@ mock exam generation, personalization.
   exam can be marked done (`src/services/progress`, `isMarkable`); un-marking always works. Progress is
   computed live from completions of published files, never stored: counted resources (lecture, notes,
   exercise) make chapter and course progress, exams are counted apart, solutions and other in no number.
+- StudyDay (`study_days`): an active day. Belongs to a user (cascade); `day` is a Beirut (Asia/Beirut)
+  calendar date; unique per (user, day). Recorded by `markDone` inside the mark's transaction, only for a new
+  completion (`src/services/progress/beirut-date.ts` gives the date); never removed, so un-marking keeps it.
 - Todo (`todos`; a "card" in the interface): a card on a student's to-do board. Belongs to a user
   (cascade); status (todo, in_progress, done; check constraint), position within its status (0 is
   the top, renumbered on write), title (≤200, "" allowed in the table: the service requires a title
@@ -326,6 +329,14 @@ mock exam generation, personalization.
   (34px, `data-personal`, labelled "Your progress: 62% done") at the right of the course card of each started course,
   loaded by the browser after the page shows from the same `GET /api/v1/progress` (`useProgressOverview`, one request
   per page, none for a visitor); a finished course shows a check in the ring.
+  "This week" panel above the course list (`this-week.tsx`; shown whenever the student has ever marked a file, i.e.
+  `hasCompletions`, otherwise only the empty state): label "THIS WEEK", seven dots Monday to Sunday (Beirut time,
+  28px, 30px on a phone) labelled M T W T F S S (`aria-hidden`). Active day: filled primary; today not active: 2px
+  primary outline; today and active: filled with a ring offset; other days: 1.5px border outline. Under it "**3 active
+  days** this week", "**1 active day** this week" or "No active days yet this week" (no zero, no streaks, nothing resets).
+  The dots are a `ul` labelled "This week" whose items read "Monday, active" / "Tuesday" / "Friday, today". On desktop
+  it sits in a 360px column. Primary only, never success green. `getProgressOverview(viewer, { now? })` also returns
+  `week: { start (Monday), today, activeDays }` and `hasCompletions`, so `GET /api/v1/progress` has them too.
 - Save bookmark on rows: every resource row (`ResourceRow`: course page areas and tabs, chapter pages,
   exams, search results, Saved) carries a bookmark button in its own cell at the right, outside the
   row link, 44px on a phone, always rendered so nothing moves when the state arrives. Outline when not

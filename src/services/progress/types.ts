@@ -26,6 +26,11 @@ export interface CourseProgress {
 
 // The progress page: one entry per course where the student has marked a published file as done.
 export interface ProgressOverview {
+  // The current Beirut week: its Monday, today, and the student's active days in it (all
+  // "YYYY-MM-DD", days ascending).
+  week: { start: string; today: string; activeDays: string[] };
+  // True once the student has ever marked a file (a completion or a kept active day exists).
+  hasCompletions: boolean;
   // By semester, then course code. Same figures as `CourseProgress`, without the exams of other courses.
   courses: {
     code: string;

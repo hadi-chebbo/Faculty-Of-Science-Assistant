@@ -5,6 +5,22 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { hash } = require('@node-rs/argon2');
 
+// Beirut calendar day ("YYYY-MM-DD") of an instant, same rule as src/services/progress/beirut-date.ts.
+function beirutDate(instant) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Beirut', year: 'numeric', month: '2-digit', day: '2-digit' })
+      .formatToParts(instant)
+      .map((part) => [part.type, part.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function addDays(date, days) {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 const EMAIL = 'demo.student@example.com';
 const PASSWORD = 'demo-student-password';
 
@@ -77,6 +93,18 @@ module.exports = {
       await queryInterface.bulkInsert(
         'completions',
         demo.filter((r) => !ids.has(r.id)).map((r) => ({ user_id: user.id, resource_id: r.id, created_at: now })),
+        { transaction },
+      );
+
+      // Active days for the "This week" panel: today (Beirut) and up to two earlier days of the
+      // current Beirut week, so a local demo always shows a few filled dots.
+      const today = beirutDate(now);
+      const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
+      const sinceMonday = (weekday + 6) % 7;
+      const days = [0, 2, 3].filter((back) => back <= sinceMonday).map((back) => addDays(today, -back));
+      await queryInterface.bulkInsert(
+        'study_days',
+        days.map((day) => ({ user_id: user.id, day, created_at: now })),
         { transaction },
       );
     });
