@@ -447,8 +447,8 @@ describe("milestones", () => {
   it("first_file comes with the first mark only", async () => {
     const student = await user();
     const s = await seed();
-    expect((await markDone(student, s.lecture1.id)).rewards).toEqual({ milestones: ["first_file"] });
-    expect((await markDone(student, s.lecture2.id)).rewards).toEqual({ milestones: [] });
+    expect((await markDone(student, s.lecture1.id)).rewards).toEqual({ milestones: ["first_file"], chapterFinished: null, courseFinished: null });
+    expect((await markDone(student, s.lecture2.id)).rewards).toEqual({ milestones: [], chapterFinished: null, courseFinished: null });
   });
 
   it("files_10 at the tenth file, not the ninth", async () => {
@@ -524,7 +524,7 @@ describe("milestones", () => {
     const student = await user();
     const s = await seed();
     await markDone(student, s.lecture1.id);
-    expect((await markDone(student, s.lecture1.id)).rewards).toEqual({ milestones: [] });
+    expect((await markDone(student, s.lecture1.id)).rewards).toEqual({ milestones: [], chapterFinished: null, courseFinished: null });
   });
 
   it("un-marking keeps milestones, and re-marking earns them no second time", async () => {
@@ -534,7 +534,7 @@ describe("milestones", () => {
     const before = await getDb().Milestone.findOne({ where: { userId: student.id, key: "first_file" } });
     await unmarkDone(student, s.lecture1.id);
     expect(await earned(student.id)).toEqual(["first_file"]);
-    expect((await markDone(student, s.lecture1.id)).rewards).toEqual({ milestones: [] });
+    expect((await markDone(student, s.lecture1.id)).rewards).toEqual({ milestones: [], chapterFinished: null, courseFinished: null });
     const after = await getDb().Milestone.findOne({ where: { userId: student.id, key: "first_file" } });
     expect(after?.earnedAt).toEqual(before?.earnedAt);
   });
