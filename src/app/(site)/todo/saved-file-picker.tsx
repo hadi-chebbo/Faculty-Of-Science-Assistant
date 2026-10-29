@@ -110,7 +110,7 @@ export function SavedFilePicker({ onPick, onClose }: { onPick: (file: PickedFile
                         type="button"
                         variant="ghost"
                         className="h-11 w-full justify-start gap-2 px-2 md:h-9"
-                        onClick={() => onPick({ available: true, id: item.id, title: item.title, type: item.type, courseCode: item.courseCode })}
+                        onClick={() => onPick({ available: true, id: item.id, title: item.title, type: item.type, courseCode: item.courseCode, done: false })}
                       >
                         <Icon className="size-4 shrink-0 text-link" aria-hidden />
                         <span className="truncate">{item.title}</span>

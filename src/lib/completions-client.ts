@@ -3,8 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { toast } from "sonner";
-import { MILESTONE_LABELS, type MilestoneKey } from "@/db/constants";
-import { celebrate } from "@/lib/celebrations";
+import { celebrate, showMilestones } from "@/lib/celebrations";
 import { askMe, renew } from "@/lib/auth/client-session";
 import { SESSION_CHANGED_EVENT } from "@/lib/auth/session-events";
 import { showUndoToast } from "@/lib/undo-toast";
@@ -101,16 +100,6 @@ function withId(set_: ReadonlySet<string>, id: string, present: boolean): Readon
 function markedMessage(progress: Progress | null): string {
   const chapter = progress?.chapter;
   return chapter ? `Marked as done. Chapter ${chapter.position}: ${chapter.done} of ${chapter.total}.` : "Marked as done.";
-}
-
-// One toast per milestone the mark earned, after the mark's own Undo toast. The server returns a
-// key only the first time, so each shows once without anything kept in the browser. An Undo never
-// takes a milestone away. `navigate` is the caller's router push, so "View" works wherever the mark
-// was made (the reader now, the board later).
-function showMilestones(keys: readonly MilestoneKey[], navigate: (href: string) => void): void {
-  for (const key of keys) {
-    toast(`Milestone: ${MILESTONE_LABELS[key]}`, { action: { label: "View", onClick: () => navigate("/progress") } });
-  }
 }
 
 // Optimistic: the state changes at once and is put back, with a message, if the server refuses.
@@ -240,6 +229,14 @@ export function useKnownSignedIn(): boolean {
     ensureLoaded();
   }, []);
   return snapshot.status === "signed-in" || snapshot.status === "ready";
+}
+
+// Another page of this app (the to-do board) marked or un-marked a file: keep the shared ids in step,
+// so a later client-side visit to the reader or a list shows the right state. Does nothing before
+// the ids have loaded (they will be fetched fresh).
+export function syncDone(resourceId: string, done: boolean): void {
+  if (store.status !== "ready") return;
+  set({ ids: withId(store.ids, resourceId, done) });
 }
 
 // Fetch with the store's renew-on-401 behaviour.

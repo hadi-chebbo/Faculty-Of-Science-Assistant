@@ -114,8 +114,9 @@ mock exam generation, personalization.
   unless a resource is linked), note (≤2000, "" when none), optional resource (only a published one can be linked, else 404; set to null if the
   resource is deleted; a card whose resource is later unpublished shows it as unavailable), created/updated/status-changed times, soft-delete time (kept a day so
   Undo works; the user's old ones are purged whenever their board is loaded). At most 500 live
-  cards per user (`BoardFullError`, 409 `board_full`). Moving a card to Done never creates or
-  removes a completion. Spec: `docs/specs/saved-and-todo.md`.
+  cards per user (`BoardFullError`, 409 `board_full`). Moving a card into Done from another column
+  marks its linked file as done in the move's transaction (only an available lecture, notes, exercise or exam); moving a card
+  out of Done, within Done, creating or restoring a card, or linking a file to a card already in Done never marks or un-marks one. Spec: `docs/specs/saved-and-todo.md`.
 
 ## Stack (proposed)
 
@@ -439,8 +440,9 @@ mock exam generation, personalization.
   and place (its "since" date becomes the time of the undo) and is not itself undoable. A card that
   reaches Done gets a ~600 ms green ring and its check pops in (`done-ring`, `done-check` in
   `globals.css`, only under `prefers-reduced-motion: no-preference`; the toast still shows). Done cards
-  have a struck-through title and "Done … ago". Moving a card to Done never creates or changes a
-  completion. After a move the focus follows the card; on a phone, when it leaves the tab on screen,
+  have a struck-through title and "Done … ago". Moving a card into Done from another column
+  also marks its linked file as done, when it is available, markable (lecture, notes, exercise, exam) and not done yet (see
+  "Marking from the board" below). Moving out of Done or within Done never marks or un-marks. After a move the focus follows the card; on a phone, when it leaves the tab on screen,
   the focus stays on the selected tab. Linked files: a card made from "Add to to-do" (or `POST /api/v1/todos` / `PATCH /api/v1/todos/ID`
   with `resourceId`; `null` removes the link) shows the file as a tile under the title and note,
   like an attachment (no "Note" label): the type icon, the file's title (left out when the card has no title of its own, as the
@@ -465,7 +467,16 @@ mock exam generation, personalization.
   A 404 when linking (the file was unpublished meanwhile) is not retried: the last saved file is put back with the
   toast "This file can no longer be linked." (in the composer: the optimistic card is removed with "This file can no
   longer be added."). Cards carry `resource`: null,
-  `{ available: true, id, title, type, courseCode }` or `{ available: false }`.
+  `{ available: true, id, title, type, courseCode, done }` (`done`: the viewer has a completion of the file) or `{ available: false }`.
+  Marking from the board: `POST /api/v1/todos/ID/move` answers `{ card, fileMarked, rewards, progress }`; `fileMarked` is true only
+  when the move made a new completion, and `rewards` / `progress` (the progress service's shapes, `progress` added so the chapter toast
+  can name its count) are null unless a mark happened (`moveCard` calls `markDoneWithin` in its own transaction). The move and the Done
+  ring are instant as before, but for such a card the toast waits for the answer: "Nice, that's done. File marked as done too." with Undo
+  (a chapter or course finish shows the reader's toast or dialog instead, through `celebrate`, with that message, then a toast per
+  milestone through `showMilestones`; the dialog gives focus back to the card). Its Undo moves the card back and, only when
+  `fileMarked` was true, then sends `DELETE /api/v1/completions/ID` (failure: "Couldn't mark the file as not done."); a file that was
+  already done keeps "Nice, that's done." and Undo only moves the card back. A tile whose file is done shows a small success-green
+  "✓ File done" before "Open ›". The board and the reader share the done state in the browser (`syncDone`).
   Drag and drop (desktop, md and up only; `todo-dnd.tsx`, `@dnd-kit`): the whole card is the drag source
   (mouse or pen; a press that moves about 6px starts a drag, so a click without movement still opens the
   card view). A press on a button or link other than the title button (the "…" menu, Start, Done, Open) never

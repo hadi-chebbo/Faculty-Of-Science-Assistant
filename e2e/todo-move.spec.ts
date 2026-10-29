@@ -258,7 +258,7 @@ test("reaching Done plays the celebration, and nothing animates with reduced mot
   await expect(card(page, "Still")).toHaveCSS("animation-name", "none");
 });
 
-test("Done never creates a completion, and a failed move rolls back with a message", async ({ page, isMobile }) => {
+test("Done on a card with no file creates no completion, and a failed move rolls back with a message", async ({ page, isMobile }) => {
   test.skip(isMobile, "desktop layout");
   await seedCards(isMobile, [
     { title: "Stays", status: "in_progress" },

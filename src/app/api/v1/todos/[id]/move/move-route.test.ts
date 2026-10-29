@@ -82,4 +82,33 @@ describe("POST /api/v1/todos/{id}/move", () => {
     expect((await response.json()).card).toMatchObject({ id: card.id, status: "done", position: 0 });
     expect(await getDb().Todo.findOne({ where: { title: "already done" } })).toMatchObject({ position: 1 });
   });
+
+  it("answers fileMarked false with null rewards and progress when nothing was marked", async () => {
+    const me = await signIn();
+    const card = await createCard(me, { title: "note" });
+    const body = await (await move(card.id, { status: "done", index: 0 })).json();
+    expect(body).toMatchObject({ card: { id: card.id, status: "done" }, fileMarked: false, rewards: null, progress: null });
+  });
+
+  it("marks the linked file when the card enters Done and answers rewards and progress", async () => {
+    const me = await signIn();
+    const { Course, Resource, Completion } = getDb();
+    const course = await Course.create({ code: "DEMO301", title: "Placeholder", semester: 3 });
+    const file = await Resource.create({ courseId: course.id, type: "lecture", title: "L", fileKey: "k", isPublished: true });
+    const card = await createCard(me, { title: "c", resourceId: file.id });
+    const response = await move(card.id, { status: "done", index: 0 });
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      card: { status: "done", resource: { available: true, id: file.id, done: true } },
+      fileMarked: true,
+      rewards: { milestones: ["first_file", "first_course"], chapterFinished: null, courseFinished: { code: "DEMO301" } },
+      progress: { course: { code: "DEMO301", done: 1, total: 1 } },
+    });
+    expect(await Completion.count({ where: { userId: me.id, resourceId: file.id } })).toBe(1);
+    // Moving out and in again marks nothing new.
+    await move(card.id, { status: "todo", index: 0 });
+    const again = await (await move(card.id, { status: "done", index: 0 })).json();
+    expect(again).toMatchObject({ fileMarked: false, card: { resource: { done: true } } });
+  });
 });

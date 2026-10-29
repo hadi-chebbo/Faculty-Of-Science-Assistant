@@ -1,5 +1,7 @@
 import { Op, QueryTypes, type Transaction } from "sequelize";
 import { TODO_MAX_CARDS, TODO_STATUSES } from "@/db/constants";
+import { MARKABLE_TYPES } from "@/services/progress/markable";
+import { markDoneWithin } from "@/services/progress/progress";
 import { getDb } from "@/db/models";
 import type { Todo } from "@/db/models/todo";
 import { BoardFullError, NotFoundError, ValidationError } from "../errors";
@@ -14,7 +16,7 @@ import {
   type MoveCardInput,
   type UpdateCardInput,
 } from "./schemas";
-import type { LinkedFile, TodoCard } from "./types";
+import type { LinkedFile, MoveResult, TodoCard } from "./types";
 
 // Every function acts only on the viewer's own rows.
 
@@ -25,20 +27,37 @@ function linkedFile(row: Todo): LinkedFile | null {
   const resource = row.resource;
   if (!resource) return null;
   if (!resource.isPublished) return { available: false };
-  return { available: true, id: resource.id, title: resource.title, type: resource.type, courseCode: resource.course?.code ?? "" };
-}
-
-// Loads the resource and its course with the card, so the linked file needs no extra queries.
-function withFile(transaction?: Transaction) {
-  const { Resource, Course } = getDb();
   return {
-    transaction,
-    include: [{ model: Resource, as: "resource", include: [{ model: Course, as: "course", attributes: ["code"] }] }],
+    available: true,
+    id: resource.id,
+    title: resource.title,
+    type: resource.type,
+    courseCode: resource.course?.code ?? "",
+    done: (resource.completions?.length ?? 0) > 0,
   };
 }
 
-async function reload(id: string, transaction: Transaction): Promise<Todo> {
-  const row = await getDb().Todo.findByPk(id, withFile(transaction));
+// Loads the resource, its course and the viewer's own completion of it (a LEFT JOIN: a file that is
+// not done still lists) with the card, so the linked file needs no extra queries.
+function withFile(userId: string, transaction?: Transaction) {
+  const { Resource, Course, Completion } = getDb();
+  return {
+    transaction,
+    include: [
+      {
+        model: Resource,
+        as: "resource",
+        include: [
+          { model: Course, as: "course", attributes: ["code"] },
+          { model: Completion, as: "completions", where: { userId }, required: false, attributes: ["id"] },
+        ],
+      },
+    ],
+  };
+}
+
+async function reload(userId: string, id: string, transaction: Transaction): Promise<Todo> {
+  const row = await getDb().Todo.findByPk(id, withFile(userId, transaction));
   if (!row) throw new NotFoundError("Card not found");
   return row;
 }
@@ -75,7 +94,7 @@ export async function listBoard(viewer: NonNullable<Viewer>): Promise<TodoCard[]
   await Todo.destroy({
     where: { userId: viewer.id, deletedAt: { [Op.lt]: new Date(Date.now() - SOFT_DELETE_KEEP_MS) } },
   });
-  const rows = await Todo.findAll({ where: { userId: viewer.id, deletedAt: null }, order: [["position", "ASC"]], ...withFile() });
+  const rows = await Todo.findAll({ where: { userId: viewer.id, deletedAt: null }, order: [["position", "ASC"]], ...withFile(viewer.id) });
   const rank = (status: string) => TODO_STATUSES.indexOf(status as (typeof TODO_STATUSES)[number]);
   return rows.map(toTodoCard).sort((a, b) => rank(a.status) - rank(b.status) || a.position - b.position);
 }
@@ -98,7 +117,7 @@ export async function createCard(viewer: NonNullable<Viewer>, input: CreateCardI
       { userId: viewer.id, status: data.status, position: 0, title: data.title, note: data.note, resourceId },
       { transaction },
     );
-    return toTodoCard(await reload(created.id, transaction));
+    return toTodoCard(await reload(viewer.id, created.id, transaction));
   });
 }
 
@@ -108,7 +127,7 @@ async function lockedCard(viewer: NonNullable<Viewer>, id: string, transaction: 
   const { User, Todo } = getDb();
   await User.findByPk(viewer.id, { attributes: ["id"], transaction, lock: transaction.LOCK.UPDATE });
   const row = cardIdSchema.safeParse(id).success
-    ? await Todo.findOne({ where: { id, userId: viewer.id }, ...withFile(transaction) })
+    ? await Todo.findOne({ where: { id, userId: viewer.id }, ...withFile(viewer.id, transaction) })
     : null;
   if (!row) throw new NotFoundError("Card not found");
   return row;
@@ -131,7 +150,7 @@ export async function updateCard(viewer: NonNullable<Viewer>, id: string, input:
     const relinked = resourceId !== row.resourceId;
     row.resourceId = resourceId;
     await row.save({ transaction });
-    return toTodoCard(relinked ? await reload(row.id, transaction) : row);
+    return toTodoCard(relinked ? await reload(viewer.id, row.id, transaction) : row);
   });
 }
 
@@ -177,14 +196,19 @@ export async function restoreCard(viewer: NonNullable<Viewer>, id: string): Prom
 // Moves a live card to `index` (0 = top) of a column, which may be its own. The index is clamped
 // to the column's length. Both columns are renumbered from 0 in the same transaction, so they stay
 // gapless. `statusChangedAt` changes only when the column changes. A move to the place the card
-// already has changes nothing. Completions are never touched: Done on the board is not "done" on a
-// file.
-export async function moveCard(viewer: NonNullable<Viewer>, id: string, input: MoveCardInput): Promise<TodoCard> {
+// already has changes nothing.
+// Completions: a card entering Done from another column, linked to a published lecture, notes,
+// exercise or exam, marks that file as done in this same transaction (progress tracking replaced
+// the old "Done never touches completions" rule). `fileMarked` is true only when the completion is
+// new, and `rewards` / `progress` come from that mark; all three are empty otherwise. Moving out
+// of Done, within Done, or any other move never marks or un-marks anything.
+export async function moveCard(viewer: NonNullable<Viewer>, id: string, input: MoveCardInput): Promise<MoveResult> {
   const data = parseInput(moveCardSchema, input);
   const { sequelize, Todo } = getDb();
   return sequelize.transaction(async (transaction) => {
     const row = await lockedCard(viewer, id, transaction);
     if (row.deletedAt) throw new NotFoundError("Card not found");
+    const unchanged = (card: TodoCard): MoveResult => ({ card, fileMarked: false, rewards: null, progress: null });
     const column = (status: string) =>
       Todo.findAll({ where: { userId: viewer.id, status, deletedAt: null }, order: [["position", "ASC"]], transaction });
     const source = await column(row.status);
@@ -192,7 +216,7 @@ export async function moveCard(viewer: NonNullable<Viewer>, id: string, input: M
     const target = sameColumn ? source : await column(data.status);
     const others = target.filter((c) => c.id !== row.id);
     const index = Math.min(data.index, others.length);
-    if (sameColumn && source.findIndex((c) => c.id === row.id) === index) return toTodoCard(row);
+    if (sameColumn && source.findIndex((c) => c.id === row.id) === index) return unchanged(toTodoCard(row));
 
     const placed = [...others.slice(0, index), row, ...others.slice(index)];
     const closed = sameColumn ? [] : source.filter((c) => c.id !== row.id);
@@ -208,6 +232,16 @@ export async function moveCard(viewer: NonNullable<Viewer>, id: string, input: M
         await card.save({ transaction });
       }
     }
-    return toTodoCard(row);
+    const file = row.resource;
+    const marks =
+      !sameColumn && data.status === "done" && file?.isPublished && (MARKABLE_TYPES as readonly string[]).includes(file.type);
+    if (!marks) return unchanged(toTodoCard(row));
+    const result = await markDoneWithin(viewer, file.id, transaction);
+    return {
+      card: toTodoCard(await reload(viewer.id, row.id, transaction)),
+      fileMarked: result.created,
+      rewards: result.rewards,
+      progress: result.progress,
+    };
   });
 }
