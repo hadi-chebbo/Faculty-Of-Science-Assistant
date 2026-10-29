@@ -124,7 +124,8 @@ icon; tapping it takes them to sign-in and back to the same page.
   server: saved state is fetched by the browser after the page has loaded, like the header account
   control does.
 - "Saved resource" in the interface; the existing, unused `bookmarks` table stores it.
-- A card in Done is never a completion and nothing is turned into a percentage.
+- A card in Done is not itself a completion and nothing is turned into a percentage. (Replaced by
+  `docs/specs/progress-tracking.md`: moving a card with a linked file into Done now marks that file as done.)
 - Drafts are never shown outside /admin: a resource that is not published is hidden from Saved and
   shown on a card only as "This file is no longer available", without its title or a link.
 

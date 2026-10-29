@@ -25,8 +25,8 @@ _Avoid_: State, stage, progress
 
 **Completion**:
 A student's explicit statement that a resource is done, made by marking it done or by moving a
-card linked to it into Done. Opening or downloading a resource never makes one, and moving a card
-out of Done never removes one.
+card linked to it into Done from another column. Opening or downloading a resource never makes one, and moving a card
+out of Done (or within Done) never makes or removes one.
 _Avoid_: Finished, read, seen
 
 ## Progress (signed-in students)
