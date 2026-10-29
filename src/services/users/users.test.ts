@@ -2,9 +2,9 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { UserRole } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
-import { ForbiddenError, ValidationError } from "../errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
 import type { Viewer } from "../viewer";
-import { listUsers } from "./users";
+import { getUserDetail, listUsers } from "./users";
 
 beforeEach(async () => {
   await truncateAllTables();
@@ -123,5 +123,118 @@ describe("listUsers", () => {
     const a = await admin();
     await expect(listUsers(a, { page: 0 })).rejects.toBeInstanceOf(ValidationError);
     await expect(listUsers(a, { q: "x".repeat(300) })).rejects.toBeInstanceOf(ValidationError);
+  });
+});
+
+describe("getUserDetail", () => {
+  const NOW = new Date("2026-10-29T12:00:00Z");
+  const MISSING_ID = "33333333-3333-4333-8333-333333333333";
+
+  it("is for the admin only", async () => {
+    const student = await make("s@example.com");
+    await expect(getUserDetail({ id: student.id, role: "student" }, student.id)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(getUserDetail(null, student.id)).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("is not found for an unknown or malformed id", async () => {
+    const a = await admin();
+    for (const id of [MISSING_ID, "not-a-uuid", ""]) {
+      await expect(getUserDetail(a, id)).rejects.toBeInstanceOf(NotFoundError);
+    }
+  });
+
+  it("returns the profile with last activity from the newest refresh token", async () => {
+    const a = await admin();
+    const u = await make("p@example.com", { name: "Pat", confirmed: false });
+    const detail = await getUserDetail(a, u.id, NOW);
+    expect(detail).toMatchObject({
+      id: u.id,
+      email: "p@example.com",
+      name: "Pat",
+      role: "student",
+      emailConfirmedAt: null,
+      lastActiveAt: null,
+      createdAt: new Date(T0).toISOString(),
+    });
+    await getDb().RefreshToken.create({
+      userId: u.id,
+      tokenHash: "a".padEnd(64, "0"),
+      familyId: "11111111-1111-4111-8111-111111111111",
+      expiresAt: new Date(NOW.getTime() + DAY),
+      createdAt: new Date(T0 + DAY),
+    });
+    expect((await getUserDetail(a, u.id, NOW)).lastActiveAt).toBe(new Date(T0 + DAY).toISOString());
+  });
+
+  it("counts only this user's rows, and not soft-deleted cards", async () => {
+    const a = await admin();
+    const u = await make("u@example.com");
+    const other = await make("other@example.com");
+    const { Course, Resource, Bookmark, Completion, Todo, Milestone, StudyDay } = getDb();
+    const course = await Course.create({ code: "TEST301", title: "Course A", semester: 3 });
+    const files = await Promise.all(
+      ["A", "B", "C"].map((title) => Resource.create({ courseId: course.id, type: "lecture", title, fileKey: "k", isPublished: true })),
+    );
+    for (const owner of [u, other]) {
+      for (const f of files.slice(0, owner === u ? 3 : 2)) {
+        await Bookmark.create({ userId: owner.id, resourceId: f.id });
+      }
+      for (const f of files.slice(0, owner === u ? 2 : 3)) {
+        await Completion.create({ userId: owner.id, resourceId: f.id });
+      }
+    }
+    const card = (userId: string, position: number, deletedAt: Date | null) =>
+      Todo.create({ userId, status: "todo", position, title: `c${position}`, deletedAt });
+    await card(u.id, 0, null);
+    await card(u.id, 1, null);
+    await card(u.id, 2, NOW);
+    await card(other.id, 0, null);
+    await Milestone.create({ userId: u.id, key: "first_file" });
+    await Milestone.create({ userId: other.id, key: "first_file" });
+    await Milestone.create({ userId: other.id, key: "files_10" });
+    for (const day of ["2026-10-27", "2026-10-28", "2026-10-29"]) await StudyDay.create({ userId: u.id, day });
+    await StudyDay.create({ userId: other.id, day: "2026-10-29" });
+
+    expect((await getUserDetail(a, u.id, NOW)).counts).toEqual({ saved: 3, cards: 2, completions: 2, milestones: 1, activeDays: 3 });
+    expect((await getUserDetail(a, other.id, NOW)).counts).toEqual({ saved: 2, cards: 1, completions: 3, milestones: 2, activeDays: 1 });
+  });
+
+  it("counts open sessions: not revoked and not expired", async () => {
+    const a = await admin();
+    const u = await make("u@example.com");
+    const other = await make("other@example.com");
+    const token = (userId: string, hash: string, expiresInDays: number, revoked: boolean) =>
+      getDb().RefreshToken.create({
+        userId,
+        tokenHash: hash.padEnd(64, "0"),
+        familyId: "11111111-1111-4111-8111-111111111111",
+        expiresAt: new Date(NOW.getTime() + expiresInDays * DAY),
+        revokedAt: revoked ? NOW : null,
+        createdAt: new Date(NOW.getTime() - 40 * DAY),
+      });
+    await token(u.id, "a", 5, false);
+    await token(u.id, "b", 20, false);
+    await token(u.id, "c", 5, true);
+    await token(u.id, "d", -1, false);
+    await token(other.id, "e", 5, false);
+    expect((await getUserDetail(a, u.id, NOW)).sessions).toBe(2);
+  });
+
+  it("counts failed sign-ins of this email in the last 7 days", async () => {
+    const a = await admin();
+    const u = await make("Mixed@example.com");
+    const { FailedSignIn } = getDb();
+    const fail = (email: string, daysAgo: number) =>
+      FailedSignIn.create({ email, ip: "10.0.0.1", createdAt: new Date(NOW.getTime() - daysAgo * DAY) });
+    await fail("mixed@example.com", 0.5);
+    await fail("mixed@example.com", 3);
+    await fail("mixed@example.com", 6.9);
+    await fail("mixed@example.com", 7.1);
+    await fail("someone-else@example.com", 1);
+    const detail = await getUserDetail(a, u.id, NOW);
+    expect(detail.failedSignIns).toEqual({ count: 3, latestAt: new Date(NOW.getTime() - 0.5 * DAY).toISOString() });
+
+    const quiet = await make("quiet@example.com");
+    expect((await getUserDetail(a, quiet.id, NOW)).failedSignIns).toEqual({ count: 0, latestAt: null });
   });
 });

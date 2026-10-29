@@ -6,10 +6,8 @@ import { Pagination, PaginationContent, PaginationItem, PaginationNext, Paginati
 import { readForPage } from "@/lib/page-errors";
 import { listUsers, type UserListItem } from "@/services/users/users";
 import type { Viewer } from "@/services/viewer";
+import { formatDate } from "./format";
 import { parseUsersParams, usersHref } from "./params";
-
-const DATE = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Beirut", day: "numeric", month: "short", year: "numeric" });
-const formatDate = (iso: string) => DATE.format(new Date(iso));
 
 const ROLE_LABELS = { admin: "Admin", student: "Student" } as const;
 
@@ -37,6 +35,8 @@ export async function UserList({ viewer, raw }: { viewer: Viewer; raw: Record<st
   const pages = Math.max(1, Math.ceil(result.total / result.pageSize));
   const previous = params.page > 1 ? usersHref({ ...params, page: params.page - 1 }) : null;
   const next = params.page < pages ? usersHref({ ...params, page: params.page + 1 }) : null;
+  // The detail page carries the list's own params so its back link returns to this view.
+  const detailQuery = usersHref(params).replace("/admin/users", "");
   const filtered = params.q !== undefined || params.status !== undefined;
 
   return (
@@ -92,9 +92,17 @@ export async function UserList({ viewer, raw }: { viewer: Viewer; raw: Record<st
               {result.items.map((u) => (
                 <li
                   key={u.id}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 rounded-lg border bg-card p-4 md:grid-cols-[minmax(0,2.5fr)_minmax(0,1.5fr)_5rem_7rem_7rem_7rem] md:gap-y-0 md:py-3"
+                  className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 rounded-lg border bg-card p-4 md:grid-cols-[minmax(0,2.5fr)_minmax(0,1.5fr)_5rem_7rem_7rem_7rem] md:gap-y-0 md:py-3"
                 >
-                  <p className="min-w-0 break-all font-medium text-heading md:col-start-1 md:row-start-1">{u.email}</p>
+                  <p className="min-w-0 break-all font-medium text-heading md:col-start-1 md:row-start-1">
+                    {/* The whole row is the target: the link's box is stretched over the row. */}
+                    <Link
+                      href={`/admin/users/${u.id}${detailQuery}`}
+                      className="underline-offset-4 before:absolute before:inset-0 before:rounded-lg hover:underline focus-visible:outline-none focus-visible:before:ring-2 focus-visible:before:ring-ring"
+                    >
+                      {u.email}
+                    </Link>
+                  </p>
                   <div className="justify-self-end md:col-start-5 md:row-start-1 md:justify-self-start">
                     <StatusBadge user={u} />
                   </div>
