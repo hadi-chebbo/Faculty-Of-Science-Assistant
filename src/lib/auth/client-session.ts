@@ -3,21 +3,40 @@
 
 export type Account = { name: string | null; role: "student" | "admin" };
 
-export async function askMe(): Promise<{ user: Account | null; renewable: boolean }> {
+type Me = { user: Account | null; renewable: boolean };
+
+// One fresh request to /api/v1/auth/me, never shared.
+async function fetchMe(): Promise<Me> {
   const response = await fetch("/api/v1/auth/me", { cache: "no-store" });
   if (!response.ok) return { user: null, renewable: false };
-  return response.json();
+  return (await response.json()) as Me;
+}
+
+// Callers that ask at the same moment (the header and the progress stores on a page load) share one
+// request; once it has answered, the next call asks again. `renew` never uses this: it needs an
+// answer sent after the lock was taken (see there).
+let askingMe: Promise<Me> | null = null;
+
+export function askMe(): Promise<Me> {
+  if (!askingMe) {
+    askingMe = fetchMe().finally(() => {
+      askingMe = null;
+    });
+  }
+  return askingMe;
 }
 
 // Renews the session, one caller at a time across every tab of this browser. A refresh token works
 // once and a second use signs the whole session out, so tabs that load together must not all
 // present the same one: each waits for the lock and first checks whether another already renewed.
+// Both checks use a fresh request: a shared one sent before another tab renewed (or before our own
+// refresh) would still say "renewable" and make this tab present an already-used token.
 export async function renew(): Promise<Account | null> {
   const work = async () => {
-    const again = await askMe();
+    const again = await fetchMe();
     if (again.user || !again.renewable) return again.user;
     const refreshed = await fetch("/api/v1/auth/refresh", { method: "POST" });
-    return refreshed.ok ? (await askMe()).user : null;
+    return refreshed.ok ? (await fetchMe()).user : null;
   };
   // Browsers without the Web Locks API renew unguarded.
   return navigator.locks ? navigator.locks.request("ua-session-refresh", work) : work();
