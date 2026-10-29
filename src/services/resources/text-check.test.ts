@@ -138,6 +138,8 @@ describe("the scanned filter", () => {
     const titles = (await listResources(f.admin, { text: "scanned" })).items.map((r) => r.title).sort();
     expect(titles).toEqual(["Partly", "Scanned"]);
     expect((await listResources(f.admin)).total).toBe(4);
+    expect((await listResources(f.admin, { text: "scanned", courseCode: "test301" })).total).toBe(2);
+    expect((await listResources(f.admin, { text: "scanned", courseCode: "OTHER" })).total).toBe(0);
   });
 
   it("is ignored for students", async () => {

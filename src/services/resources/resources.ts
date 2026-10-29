@@ -86,8 +86,8 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
   if (academicYearStart !== undefined) where.push({ academicYearStart });
   if (examSession) where.push({ examSession });
   if (language) where.push({ language });
-  // Admin only. Both columns are null when not checked, and a comparison with null is never true.
-  if (text === "scanned" && isAdmin(viewer)) where.push(Sequelize.literal('"Resource"."text_page_count" < "Resource"."page_count"'));
+  // Admin only. The columns are unqualified because the count query aliases the table differently. Both columns are null when not checked, and a comparison with null is never true.
+  if (text === "scanned" && isAdmin(viewer)) where.push(Sequelize.literal("text_page_count < page_count"));
 
   const courseWhere: WhereOptions[] = [];
   // Course codes are unique regardless of letter case, so match the same way.
