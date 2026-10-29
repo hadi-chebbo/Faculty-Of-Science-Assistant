@@ -92,6 +92,13 @@ export function createR2Storage(
       return out.subarray(0, length);
     },
 
+    async read(key) {
+      const response = await call(key, { method: "GET" });
+      if (response.status === 404) return null;
+      if (!response.ok) fail("read", response);
+      return new Uint8Array(await response.arrayBuffer());
+    },
+
     async delete(key) {
       const response = await call(key, { method: "DELETE" });
       if (!response.ok && response.status !== 404) fail("delete", response);

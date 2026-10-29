@@ -73,6 +73,14 @@ describe("r2 driver requests", () => {
     );
   });
 
+  it("read returns the whole object, null for 404 and throws for 500", async () => {
+    const whole = setup(() => new Response("%PDF-1.4 all", { status: 200 }));
+    expect(Buffer.from((await whole.storage.read(KEY))!).toString()).toBe("%PDF-1.4 all");
+    expect(whole.requests[0].method).toBe("GET");
+    expect(await setup(() => new Response(null, { status: 404 })).storage.read(KEY)).toBeNull();
+    await expect(setup(() => new Response(null, { status: 500 })).storage.read(KEY)).rejects.toThrow("R2 read failed with HTTP 500");
+  });
+
   it("readStart sends a Range header and accepts 206", async () => {
     const { storage, requests } = setup(() => new Response("%PDF-", { status: 206 }));
     expect(Buffer.from((await storage.readStart(KEY, 5))!).toString()).toBe("%PDF-");

@@ -25,6 +25,9 @@ export class Resource extends Model<InferAttributes<Resource>, InferCreationAttr
   declare examSession: CreationOptional<ExamSession | null>;
   declare language: CreationOptional<Language>;
   declare fileKey: CreationOptional<string | null>;
+  // The upload-time text check: pages in the file and pages with text; both null when not checked.
+  declare pageCount: CreationOptional<number | null>;
+  declare textPageCount: CreationOptional<number | null>;
   declare externalUrl: CreationOptional<string | null>;
   declare chapterId: CreationOptional<ForeignKey<Chapter["id"]> | null>;
   declare solutionOfId: CreationOptional<ForeignKey<Resource["id"]> | null>;
@@ -57,6 +60,8 @@ export function initResource(sequelize: Sequelize): typeof Resource {
         validate: { isIn: [[...LANGUAGES]] },
       },
       fileKey: { type: DataTypes.TEXT, allowNull: true },
+      pageCount: { type: DataTypes.INTEGER, allowNull: true },
+      textPageCount: { type: DataTypes.INTEGER, allowNull: true },
       externalUrl: { type: DataTypes.TEXT, allowNull: true },
       chapterId: { type: DataTypes.UUID, allowNull: true },
       solutionOfId: { type: DataTypes.UUID, allowNull: true },

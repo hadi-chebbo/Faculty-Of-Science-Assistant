@@ -8,7 +8,7 @@ import { requireCurrentAdmin } from "../auth/require-admin";
 import { NotFoundError, ValidationError } from "../errors";
 import { parseInput } from "../validation";
 import type { Viewer } from "../viewer";
-import { getResource } from "./resources";
+import { getResource, toTextCheck } from "./resources";
 import { idSchema, resourceInputSchema, type ResourceInput, type ResourceInputData } from "./schemas";
 import type { ResourceDetail, ResourceForEdit } from "./types";
 
@@ -49,10 +49,21 @@ async function acceptUpload(ticket: string): Promise<string> {
   return key;
 }
 
+// The text-check columns that go with a file. They describe the file, so they are written only when
+// a new file comes in: the browser's result, or nulls (not checked) when it sent none. A request
+// without a new file ignores `textCheck` and leaves the columns as they are.
+function textColumns(
+  newFileKey: string | null,
+  textCheck: { pageCount: number; textPageCount: number } | null,
+): { pageCount?: number | null; textPageCount?: number | null } {
+  if (!newFileKey) return {};
+  return { pageCount: textCheck?.pageCount ?? null, textPageCount: textCheck?.textPageCount ?? null };
+}
+
 // The checks that need the database. `resource` is the row being edited, or null when creating.
 // All problems are collected so the form can mark every offending field at once.
 async function checkAgainstDatabase(
-  input: Omit<ResourceInputData, "fileTicket">,
+  input: Omit<ResourceInputData, "fileTicket" | "textCheck">,
   resource: { id: string; courseId: string; fileKey: string | null } | null,
   newFileKey: string | null,
   transaction: Transaction,
@@ -121,6 +132,7 @@ export async function getResourceForEdit(viewer: Viewer, id: string): Promise<Re
     externalUrl: row.externalUrl ?? null,
     isPublished: row.isPublished,
     hasFile: row.fileKey != null,
+    textCheck: toTextCheck(row),
     chapterId: row.chapterId ?? null,
     solutionOf: target ? { id: target.id, title: target.title } : null,
     solutionCount,
@@ -130,14 +142,14 @@ export async function getResourceForEdit(viewer: Viewer, id: string): Promise<Re
 
 export async function createResource(viewer: Viewer, input: ResourceInput): Promise<ResourceDetail> {
   const admin = await requireCurrentAdmin(viewer);
-  const { fileTicket, ...data } = parseInput(resourceInputSchema, input);
+  const { fileTicket, textCheck, ...data } = parseInput(resourceInputSchema, input);
   // The stored object is inspected before the transaction opens, so no lock waits on storage.
   const newFileKey = fileTicket ? await acceptUpload(fileTicket) : null;
 
   const id = await getDb().sequelize.transaction(async (transaction) => {
     await checkAgainstDatabase(data, null, newFileKey, transaction);
     const { Resource } = getDb();
-    return (await Resource.create({ ...data, fileKey: newFileKey }, { transaction })).id;
+    return (await Resource.create({ ...data, fileKey: newFileKey, ...textColumns(newFileKey, textCheck) }, { transaction })).id;
   });
   return getResource(admin, id);
 }
@@ -147,7 +159,7 @@ export async function createResource(viewer: Viewer, input: ResourceInput): Prom
 export async function updateResource(viewer: Viewer, id: string, input: ResourceInput): Promise<ResourceDetail> {
   const admin = await requireCurrentAdmin(viewer);
   if (!idSchema.safeParse(id).success) throw new NotFoundError("Resource not found");
-  const { fileTicket, ...data } = parseInput(resourceInputSchema, input);
+  const { fileTicket, textCheck, ...data } = parseInput(resourceInputSchema, input);
   const newFileKey = fileTicket ? await acceptUpload(fileTicket) : null;
 
   const replacedKey = await getDb().sequelize.transaction(async (transaction) => {
@@ -157,7 +169,7 @@ export async function updateResource(viewer: Viewer, id: string, input: Resource
     if (!row) throw new NotFoundError("Resource not found");
     const oldKey = row.fileKey ?? null;
     await checkAgainstDatabase(data, { id: row.id, courseId: row.courseId, fileKey: oldKey }, newFileKey, transaction);
-    await row.update(newFileKey ? { ...data, fileKey: newFileKey } : data, { transaction });
+    await row.update(newFileKey ? { ...data, fileKey: newFileKey, ...textColumns(newFileKey, textCheck) } : data, { transaction });
     return newFileKey && oldKey && oldKey !== newFileKey ? oldKey : null;
   });
   if (replacedKey) await removeStoredFile(replacedKey, id);

@@ -66,6 +66,14 @@ export function createLocalStorage(dir: string): FileStorage {
         await handle.close();
       }
     },
+    async read(key) {
+      try {
+        return new Uint8Array(await fs.readFile(fileOf(key)));
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT" || (error as NodeJS.ErrnoException).code === "EISDIR") return null;
+        throw error;
+      }
+    },
     async delete(key) {
       const file = fileOf(key);
       await fs.rm(file, { force: true });

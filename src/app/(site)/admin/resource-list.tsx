@@ -1,5 +1,6 @@
 import { ExternalLink, Pencil, Plus, Upload } from "lucide-react";
 import Link from "next/link";
+import { TextLayerBadge } from "@/components/admin/text-layer-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -23,10 +24,10 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
   const parsed = parseAdminParams(raw);
   // A code that matches no course is ignored; a known one is written with its real letter case.
   const known = courses.find((c) => c.code.toLowerCase() === parsed.course?.toLowerCase());
-  const params: AdminParams = { course: known?.code, page: parsed.page };
+  const params: AdminParams = { course: known?.code, text: parsed.text, page: parsed.page };
 
   const result = await readForPage(() =>
-    listResources(viewer, { courseCode: params.course, page: params.page, pageSize: PAGE_SIZE }),
+    listResources(viewer, { courseCode: params.course, text: params.text, page: params.page, pageSize: PAGE_SIZE }),
   );
   const pages = Math.max(1, Math.ceil(result.total / result.pageSize));
   const previous = params.page > 1 ? adminHref({ ...params, page: params.page - 1 }) : null;
@@ -69,6 +70,13 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
             ))}
           </NativeSelect>
         </div>
+        <div className="sm:w-64">
+          <label htmlFor="admin-text" className="mb-1.5 block text-sm font-medium text-heading">Text in the file</label>
+          <NativeSelect id="admin-text" name="text" defaultValue={params.text ?? ""} className="w-full [&_select]:h-11 md:[&_select]:h-9">
+            <NativeSelectOption value="">All files</NativeSelectOption>
+            <NativeSelectOption value="scanned">Scanned or partly scanned</NativeSelectOption>
+          </NativeSelect>
+        </div>
         <Button type="submit" className="h-11 px-4 md:h-9 md:px-3">Apply</Button>
       </form>
 
@@ -105,6 +113,11 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
                     {r.courseCode} - {RESOURCE_TYPE_LABELS[r.type]}
                     {r.academicYearStart !== null && ` - ${formatAcademicYear(r.academicYearStart)}`}
                     {r.examSession !== null && ` - ${EXAM_SESSION_LABELS[r.examSession]}`}
+                    {r.textCheck && (
+                      <span className="ml-2 inline-flex align-middle">
+                        <TextLayerBadge pageCount={r.textCheck.pageCount} textPageCount={r.textCheck.textPageCount} />
+                      </span>
+                    )}
                   </p>
                   <div className="col-span-2 flex flex-wrap items-center gap-2 md:col-span-1 md:col-start-4 md:row-start-1 md:justify-end">
                     {!r.hasSource && <span className="mr-auto text-sm text-muted-foreground md:mr-0">No file or link yet</span>}

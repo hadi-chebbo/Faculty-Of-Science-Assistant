@@ -29,6 +29,8 @@ export const resourceFiltersSchema = z.object({
   academicYearStart: optional(z.coerce.number().int().min(ACADEMIC_YEAR_MIN).max(ACADEMIC_YEAR_MAX)),
   examSession: optional(z.enum(EXAM_SESSIONS)),
   language: optional(z.enum(LANGUAGES)),
+  // Admin only: "scanned" lists resources whose file has no text on some or all pages. Ignored for students.
+  text: optional(z.enum(["scanned"])),
   page: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(10_000).default(1)),
   pageSize: z.preprocess(
     blankToUndefined,
@@ -45,6 +47,7 @@ export interface ResourceFilters {
   academicYearStart?: number;
   examSession?: ExamSession;
   language?: Language;
+  text?: "scanned";
   page?: number;
   pageSize?: number;
 }
@@ -57,6 +60,16 @@ const httpsUrl = z
   .string()
   .trim()
   .refine((value) => value.startsWith("https://") && URL.canParse(value));
+
+export const MAX_CHECKED_PAGES = 10_000;
+
+// A malformed check is an error like any other bad input: the admin's browser only sends valid ones.
+export const textCheckSchema = z
+  .object({
+    pageCount: z.number().int().min(1).max(MAX_CHECKED_PAGES),
+    textPageCount: z.number().int().min(0),
+  })
+  .refine((check) => check.textPageCount <= check.pageCount, { path: ["textPageCount"] });
 
 // What an admin may set on a resource; the same for create and update. Rules that need the
 // database (course, solution target, source) are checked by the write service.
@@ -77,6 +90,8 @@ export const resourceInputSchema = z
     isPublished: z.boolean().default(false),
     // Proof of a file uploaded through createResourceUpload; blank, null or absent means no new file.
     fileTicket: given(z.string().trim()).transform((value) => value ?? null),
+    // The browser's text check of the file behind `fileTicket`. Absent or null: not checked.
+    textCheck: given(textCheckSchema).transform((value) => value ?? null),
   })
   .superRefine((input, ctx) => {
     if (input.type === "exam" && input.examSession === null) {
@@ -109,4 +124,5 @@ export interface ResourceInput {
   chapterId?: string | null;
   isPublished?: boolean;
   fileTicket?: string | null;
+  textCheck?: { pageCount: number; textPageCount: number } | null;
 }

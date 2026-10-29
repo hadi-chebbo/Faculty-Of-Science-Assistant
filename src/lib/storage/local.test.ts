@@ -26,6 +26,12 @@ describe("local driver", () => {
     expect(Buffer.from((await storage.readStart("resources/a.pdf", 5))!).toString()).toBe("%PDF-");
   });
 
+  it("reads a whole file, and null for a missing one", async () => {
+    await storage.put("whole.pdf", bytes("%PDF-1.7 whole"), "application/pdf");
+    expect(Buffer.from((await storage.read("whole.pdf"))!).toString()).toBe("%PDF-1.7 whole");
+    expect(await storage.read("missing.pdf")).toBeNull();
+  });
+
   it("returns fewer bytes for a short file", async () => {
     await storage.put("short.pdf", bytes("abc"), "application/pdf");
     expect((await storage.readStart("short.pdf", 100))!.length).toBe(3);

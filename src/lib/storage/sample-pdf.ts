@@ -125,3 +125,35 @@ export function samplePdf(lines: string[], pages = 1, options: SamplePdfOptions 
   out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefAt}\n%%EOF\n`;
   return new TextEncoder().encode(out);
 }
+
+// A PDF whose pages are only a picture and have no text, like a scan. Each page draws one small
+// grey image (an image XObject) and uses no text operators. For tests of the text-layer check.
+// `textPages` (1-based) get a text line instead, to make a partly scanned file.
+export function scannedPdf(pages = 1, textPages: number[] = [], text = "This page has real text on it, enough to count."): Uint8Array {
+  const pageIds = Array.from({ length: pages }, (_, i) => 4 + 2 * i);
+  // Object 1 catalog, 2 page tree, 3 the image, 4... pages (page, content).
+  const objects = [
+    `<< /Type /Catalog /Pages 2 0 R >>`,
+    `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pages} >>`,
+    `<< /Type /XObject /Subtype /Image /Width 2 /Height 2 /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /ASCIIHexDecode /Length 9 >>\nstream\n0080ff40>\nendstream`,
+    ...pageIds.flatMap((id, i) => {
+      const hasText = textPages.includes(i + 1);
+      const content = hasText ? `BT /F1 14 Tf 72 700 Td (${text.replace(/[\\()]/g, "")}) Tj ET` : "q 400 0 0 400 100 200 cm /Im1 Do Q";
+      return [
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /XObject << /Im1 3 0 R >> /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> /Contents ${id + 1} 0 R >>`,
+        `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+      ];
+    }),
+  ];
+  let out = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  objects.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xrefAt = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const offset of offsets) out += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefAt}\n%%EOF\n`;
+  return new TextEncoder().encode(out);
+}
