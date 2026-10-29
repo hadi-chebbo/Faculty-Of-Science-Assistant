@@ -5,6 +5,7 @@ import { getDb } from "@/db/models";
 import { EMAIL_MAX_LENGTH } from "../auth/schemas";
 import type { Page } from "../types";
 import { blankToUndefined, parseInput } from "../validation";
+import { NotFoundError } from "../errors";
 import { requireAdmin, type Viewer } from "../viewer";
 
 export const USER_PAGE_SIZE = 50;
@@ -39,6 +40,22 @@ export interface UserListItem {
   lastActiveAt: string | null;
 }
 
+const iso = (value: Date | string | null) => (value === null ? null : new Date(value).toISOString());
+
+// Last activity of the given users in one grouped query: the creation time of each one's newest refresh token.
+// Written without a correlated subquery on purpose: the table alias Sequelize gives a model follows the class
+// name, which a production build renames.
+async function lastActiveByUser(userIds: string[]): Promise<Map<string, Date>> {
+  const { RefreshToken } = getDb();
+  const newest = await RefreshToken.findAll({
+    where: { userId: userIds },
+    attributes: ["userId", [fn("max", col("created_at")), "lastActiveAt"]],
+    group: ["userId"],
+    raw: true,
+  });
+  return new Map(newest.map((row) => [row.userId, (row as unknown as { lastActiveAt: Date }).lastActiveAt]));
+}
+
 // `%`, `_` and the escape character itself would otherwise act as wildcards in ILIKE.
 function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (c) => `\\${c}`);
@@ -63,19 +80,8 @@ export async function listUsers(viewer: Viewer, filters: UserFilters = {}): Prom
     raw: true,
   });
 
-  // Last activity for just this page's users, in one grouped query (not one per user). Written without a
-  // correlated subquery on purpose: the table alias Sequelize gives a model follows the class name, which a
-  // production build renames.
-  const { RefreshToken } = getDb();
-  const newest = await RefreshToken.findAll({
-    where: { userId: rows.map((row) => row.id) },
-    attributes: ["userId", [fn("max", col("created_at")), "lastActiveAt"]],
-    group: ["userId"],
-    raw: true,
-  });
-  const lastActive = new Map(newest.map((row) => [row.userId, (row as unknown as { lastActiveAt: Date }).lastActiveAt]));
+  const lastActive = await lastActiveByUser(rows.map((row) => row.id));
 
-  const iso = (value: Date | string | null) => (value === null ? null : new Date(value).toISOString());
   return {
     items: rows.map((row) => ({
       id: row.id,
@@ -89,5 +95,61 @@ export async function listUsers(viewer: Viewer, filters: UserFilters = {}): Prom
     total: count,
     page,
     pageSize,
+  };
+}
+
+export const FAILED_SIGN_IN_WINDOW_DAYS = 7;
+
+// Everything the admin user page shows. Dates are ISO strings.
+export interface UserDetail extends UserListItem {
+  counts: { saved: number; cards: number; completions: number; milestones: number; activeDays: number };
+  // Refresh tokens that are neither revoked nor expired.
+  sessions: number;
+  // Failed sign-ins for this email in the last 7 days.
+  failedSignIns: { count: number; latestAt: string | null };
+}
+
+const idSchema = z.uuid();
+
+// Admin only. A malformed or unknown id is NotFoundError. `now` is for tests.
+export async function getUserDetail(viewer: Viewer, id: string, now: Date = new Date()): Promise<UserDetail> {
+  requireAdmin(viewer);
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) throw new NotFoundError("User not found");
+  const { User, Bookmark, Todo, Completion, Milestone, StudyDay, RefreshToken, FailedSignIn } = getDb();
+
+  const user = await User.findByPk(parsed.data, {
+    attributes: ["id", "email", "name", "role", "createdAt", "emailConfirmedAt"],
+    raw: true,
+  });
+  if (!user) throw new NotFoundError("User not found");
+
+  const userId = user.id;
+  const since = new Date(now.getTime() - FAILED_SIGN_IN_WINDOW_DAYS * 86_400_000);
+  const failedWhere = { email: user.email.toLowerCase(), createdAt: { [Op.gte]: since, [Op.lte]: now } };
+  const [saved, cards, completions, milestones, activeDays, sessions, failedCount, failedLatest, lastActive] =
+    await Promise.all([
+      Bookmark.count({ where: { userId } }),
+      Todo.count({ where: { userId, deletedAt: null } }),
+      Completion.count({ where: { userId } }),
+      Milestone.count({ where: { userId } }),
+      StudyDay.count({ where: { userId } }),
+      RefreshToken.count({ where: { userId, revokedAt: null, expiresAt: { [Op.gt]: now } } }),
+      FailedSignIn.count({ where: failedWhere }),
+      FailedSignIn.max<Date, InstanceType<typeof FailedSignIn>>("createdAt", { where: failedWhere }),
+      lastActiveByUser([userId]),
+    ]);
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    createdAt: user.createdAt.toISOString(),
+    emailConfirmedAt: iso(user.emailConfirmedAt),
+    lastActiveAt: iso(lastActive.get(userId) ?? null),
+    counts: { saved, cards, completions, milestones, activeDays },
+    sessions,
+    failedSignIns: { count: failedCount, latestAt: failedCount > 0 ? iso(failedLatest) : null },
   };
 }
