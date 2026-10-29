@@ -2,9 +2,12 @@
 
 import { FileText, Upload } from "lucide-react";
 import { useEffect, useRef, useState, type DragEvent } from "react";
+import { TextLayerBadge } from "@/components/admin/text-layer-badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
+import { describeTextCheck, textLayerStatus, type TextCheck } from "@/lib/pdf-text-check";
+import { checkFileTextLayer } from "@/lib/pdf-text-check-client";
 import { cn } from "@/lib/utils";
 import {
   MAX_SIZE_LABEL,
@@ -28,18 +31,24 @@ const BUTTON = "h-11 md:h-9";
 export function FileField({
   id,
   ticket,
+  textCheck,
   onTicketChange,
   onUploadingChange,
   storedFileHref,
+  storedTextCheck,
   serverError,
   onSignedOut,
 }: {
   id: string;
   ticket: string | null;
-  onTicketChange: (ticket: string | null) => void;
+  // The text check of the file behind `ticket`, or null when it could not be made.
+  textCheck: TextCheck | null;
+  onTicketChange: (ticket: string | null, textCheck: TextCheck | null) => void;
   onUploadingChange: (uploading: boolean) => void;
   // Set on the edit page of a resource that has a stored file.
   storedFileHref?: string;
+  // The text check of the stored file (null: not checked). Set together with `storedFileHref`.
+  storedTextCheck?: TextCheck | null;
   serverError?: string;
   onSignedOut: () => void;
 }) {
@@ -91,12 +100,15 @@ export function FileField({
     setPicked({ name: file.name, size: file.size });
     setProgress(0);
     setBusy(true);
+    // The text check runs beside the upload and never fails; it is only waited for once the bytes are sent.
+    const check = checkFileTextLayer(file);
     try {
       const newTicket = await uploadPdf(file, { signal: controller.signal, onProgress: setProgress, onSignedOut });
+      const result = await check;
       if (controller.signal.aborted) return;
       controllerRef.current = null;
       setBusy(false);
-      onTicketChange(newTicket);
+      onTicketChange(newTicket, result);
     } catch (caught) {
       // Cancelled by the admin or replaced by a newer choice: that one reports its own result.
       if (controller.signal.aborted) return;
@@ -144,9 +156,14 @@ export function FileField({
       <div className="space-y-3">
         <FileLine picked={picked} />
         <p className="text-sm text-foreground">Ready. It is saved with the resource.</p>
+        {textCheck && textLayerStatus(textCheck.pageCount, textCheck.textPageCount) !== "text" && (
+          <p className="text-sm text-muted-foreground" data-testid="text-check-note">
+            {describeTextCheck(textCheck.pageCount, textCheck.textPageCount)}
+          </p>
+        )}
         {storedFileHref && <p className="text-sm text-muted-foreground">Replaces the stored file when you save.</p>}
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="outline" className={BUTTON} onClick={() => onTicketChange(null)}>
+          <Button type="button" variant="outline" className={BUTTON} onClick={() => onTicketChange(null, null)}>
             Remove
           </Button>
         </div>
@@ -159,6 +176,20 @@ export function FileField({
           <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           A PDF is stored.
         </p>
+        {storedTextCheck !== undefined && (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground" data-testid="stored-text-check">
+            {storedTextCheck ? (
+              <>
+                <span>
+                  Text: {storedTextCheck.textPageCount} of {storedTextCheck.pageCount} {storedTextCheck.pageCount === 1 ? "page" : "pages"}
+                </span>
+                <TextLayerBadge pageCount={storedTextCheck.pageCount} textPageCount={storedTextCheck.textPageCount} />
+              </>
+            ) : (
+              "Not checked"
+            )}
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <a href={storedFileHref} target="_blank" rel="noopener" className="inline-flex h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline md:h-9">
             View current file

@@ -44,6 +44,13 @@ export function toResourceListItem(resource: Resource, courseCode: string, solut
   };
 }
 
+// The stored text check of a file, or null when it was not checked.
+export function toTextCheck(resource: Resource): { pageCount: number; textPageCount: number } | null {
+  return resource.pageCount != null && resource.textPageCount != null
+    ? { pageCount: resource.pageCount, textPageCount: resource.textPageCount }
+    : null;
+}
+
 function toRef(resource: Resource): ResourceRef {
   return { id: resource.id, type: resource.type, title: resource.title };
 }
@@ -68,7 +75,7 @@ export async function visibleSolutionsOf(viewer: Viewer, ids: string[]): Promise
 }
 
 export async function listResources(viewer: Viewer, filters: ResourceFilters = {}): Promise<Page<ResourceListItem>> {
-  const { courseCode, semester, type, academicYearStart, examSession, language, page, pageSize } = parseInput(
+  const { courseCode, semester, type, academicYearStart, examSession, language, text, page, pageSize } = parseInput(
     resourceFiltersSchema,
     filters,
   );
@@ -79,6 +86,8 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
   if (academicYearStart !== undefined) where.push({ academicYearStart });
   if (examSession) where.push({ examSession });
   if (language) where.push({ language });
+  // Admin only. The columns are unqualified because the count query aliases the table differently. Both columns are null when not checked, and a comparison with null is never true.
+  if (text === "scanned" && isAdmin(viewer)) where.push(Sequelize.literal("text_page_count < page_count"));
 
   const courseWhere: WhereOptions[] = [];
   // Course codes are unique regardless of letter case, so match the same way.
@@ -104,8 +113,12 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
   });
 
   const solutions = await visibleSolutionsOf(viewer, rows.map((row) => row.id));
+  const admin = isAdmin(viewer);
   return {
-    items: rows.map((row) => toResourceListItem(row, row.course!.code, solutions.get(row.id) ?? [])),
+    items: rows.map((row) => {
+      const item = toResourceListItem(row, row.course!.code, solutions.get(row.id) ?? []);
+      return admin ? { ...item, textCheck: toTextCheck(row) } : item;
+    }),
     total: count,
     page,
     pageSize,

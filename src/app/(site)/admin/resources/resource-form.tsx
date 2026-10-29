@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { EXAM_SESSIONS, RESOURCE_TITLE_MAX_LENGTH } from "@/db/constants";
 import type { ExamSession, Language, ResourceType } from "@/db/constants";
 import { adminFetch } from "@/lib/admin-fetch";
+import type { TextCheck } from "@/lib/pdf-text-check";
 import { MAX_SIZE_LABEL } from "@/lib/upload-file";
 import { EXAM_SESSION_LABELS, formatAcademicYear } from "@/lib/labels";
 import type { ChapterOption } from "@/services/chapters/options";
@@ -75,6 +76,7 @@ export function ResourceForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [fileTicket, setFileTicket] = useState<string | null>(null);
+  const [textCheck, setTextCheck] = useState<TextCheck | null>(null);
   const [uploading, setUploading] = useState(false);
   const [pending, setPending] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -105,7 +107,7 @@ export function ResourceForm({
       solutionOfId: type === "solution" && solutionOfId ? solutionOfId : null,
       chapterId: type !== "exam" && chapterId ? chapterId : null,
       isPublished,
-      ...(fileTicket ? { fileTicket } : {}),
+      ...(fileTicket ? { fileTicket, ...(textCheck ? { textCheck } : {}) } : {}),
     };
 
     setPending(true);
@@ -127,7 +129,10 @@ export function ResourceForm({
         const fields = Array.isArray(data.fields) ? data.fields.filter((f): f is string => typeof f === "string") : [];
         setErrors(Object.fromEntries(fields.map((f) => [f, FIELD_MESSAGES[f] ?? "Check this value."])));
         // That upload is unusable: the admin has to choose the file again.
-        if (fields.includes("file")) setFileTicket(null);
+        if (fields.includes("file")) {
+          setFileTicket(null);
+          setTextCheck(null);
+        }
         setFormError("The resource was not saved. Check the marked fields.");
       } else if (response.status === 401) {
         setFormError("Your session has ended. Redirecting to sign in.");
@@ -342,12 +347,17 @@ export function ResourceForm({
           <FileField
             id="file"
             ticket={fileTicket}
-            onTicketChange={setFileTicket}
+            textCheck={textCheck}
+            onTicketChange={(ticket, check) => {
+              setFileTicket(ticket);
+              setTextCheck(check);
+            }}
             onUploadingChange={(value) => {
               setUploading(value);
               if (value) setErrors((current) => Object.fromEntries(Object.entries(current).filter(([name]) => name !== "file")));
             }}
             storedFileHref={resource && hasFile ? `/api/v1/resources/${resource.id}/open` : undefined}
+            storedTextCheck={resource && hasFile ? resource.textCheck : undefined}
             serverError={errors.file}
             onSignedOut={() => router.replace("/sign-in")}
           />

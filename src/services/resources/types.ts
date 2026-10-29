@@ -12,6 +12,9 @@ export interface ResourceListItem {
   isPublished: boolean;
   // Whether opening it can lead anywhere (a link or a stored file). Neither value is exposed.
   hasSource: boolean;
+  // The upload-time text check of the stored file, set by `listResources` for an admin viewer only
+  // (null: not checked). Students never get this field.
+  textCheck?: { pageCount: number; textPageCount: number } | null;
   // Solutions of this resource that the viewer may see.
   solutions: ResourceRef[];
 }
@@ -67,6 +70,7 @@ export interface ResourceForEdit {
   externalUrl: string | null;
   isPublished: boolean;
   hasFile: boolean;
+  textCheck: { pageCount: number; textPageCount: number } | null;
   chapterId: string | null;
   solutionOf: { id: string; title: string } | null;
   // How many resources, drafts included, are a solution of this one.

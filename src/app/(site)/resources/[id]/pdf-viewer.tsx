@@ -4,6 +4,7 @@ import { FileWarning } from "lucide-react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { loadPdfjs } from "@/lib/pdfjs-client";
 import { ReaderActions } from "./reader-actions";
 import { ReaderCard, type PageSize } from "./reader-card";
 import { ViewerSkeleton } from "./viewer-skeleton";
@@ -12,17 +13,6 @@ type State =
   | { status: "loading"; percent: number | null }
   | { status: "error" }
   | { status: "ready"; pdf: PDFDocumentProxy; sizes: PageSize[] };
-
-async function loadPdfjs() {
-  const pdfjs = await import("pdfjs-dist");
-  // The worker is a separate file. `new URL(..., import.meta.url)` makes Next.js (Turbopack)
-  // copy it to the build output and gives its address, both in `next dev` and `next build`;
-  // PDF.js then starts it as a module worker. Set once, before the first document.
-  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
-  }
-  return pdfjs;
-}
 
 // Loads one PDF and hands it to the document card, which shows all its pages in a single vertical
 // scroll, each drawn on a canvas with a text layer over it. The file comes from the same-origin open route, which redirects to a

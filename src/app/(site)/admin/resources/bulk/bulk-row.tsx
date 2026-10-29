@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { EXAM_SESSIONS, LANGUAGES, RESOURCE_TITLE_MAX_LENGTH, RESOURCE_TYPES } from "@/db/constants";
 import type { ExamSession, Language, ResourceType } from "@/db/constants";
 import { EXAM_SESSION_LABELS, LANGUAGE_NAMES, RESOURCE_TYPE_SINGULAR_LABELS } from "@/lib/labels";
+import { describeTextCheck, textLayerStatus, type TextCheck } from "@/lib/pdf-text-check";
 import { formatFileSize } from "@/lib/upload-file";
 import type { ChapterOption } from "@/services/chapters/options";
 import type { YearOption } from "../form-helpers";
@@ -28,6 +29,8 @@ export interface BulkRow {
   status: RowStatus;
   progress: number;
   ticket: string | null;
+  // The browser's text check of the uploaded file; null when it could not be made.
+  textCheck: TextCheck | null;
   // Why the file is unusable (status "failed"), and whether picking it again from memory can help.
   fileError: string | null;
   retryable: boolean;
@@ -253,6 +256,11 @@ function RowStatusLine({ row, onRetry }: { row: BulkRow; onRetry: () => void }) 
   return (
     <>
       <p className="mt-1 text-xs text-foreground">Uploaded.</p>
+      {row.textCheck && textLayerStatus(row.textCheck.pageCount, row.textCheck.textPageCount) !== "text" && (
+        <p className="mt-1 text-xs text-muted-foreground" data-testid="text-check-note">
+          {describeTextCheck(row.textCheck.pageCount, row.textCheck.textPageCount)}
+        </p>
+      )}
       {row.error && (
         <p role="alert" className="mt-1 text-sm font-medium text-destructive">
           {row.error}

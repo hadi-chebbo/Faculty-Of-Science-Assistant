@@ -80,7 +80,11 @@ mock exam generation, personalization.
   (required to publish), optional backup link,
   optional link to the resource it is a solution of, optional chapter of the
   same course (never on exams; a resource with no chapter is listed under
-  General), published flag.
+  General), published flag, and the text check of its file: `page_count` and `text_page_count` (both null
+  when not checked). A page has text with at least 30 non-whitespace characters (PDF.js); no text page is
+  Scanned, some is Partly scanned, derived and never stored. The admin's browser checks at upload and sends it
+  with the file ticket; a replaced file without a check resets both to null. Admin-only badge and filter; it
+  never blocks saving or publishing. `npm run text-layers:check` backfills stored files.
 - Chapter: belongs to one course; position unique within the course; title.
 - User: email (stored lowercase), optional name, password hash, role
   (student or admin), `email_confirmed_at` (null until the emailed link is used;

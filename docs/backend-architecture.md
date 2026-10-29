@@ -129,6 +129,27 @@ Bucket settings the owner applies in the Cloudflare dashboard (R2 → the bucket
 
 Demo files: the demo seeder (`SEED_DEMO_DATA=true`) gives every seeded resource that has a source a generated placeholder PDF (`src/lib/storage/sample-pdf.ts`, one A4 page marked "SAMPLE FILE"). The files are stored through the configured driver (`.storage` locally, R2 with `STORAGE_DRIVER=r2`) under generated keys, before the rows are inserted; if the insert fails they are removed again. Seeding again replaces them, and the seeder's `down` deletes them with the rows. The seeder loads the TypeScript storage code through `db/seeders/lib/storage.mjs`, so seeding needs Node 22.18 or newer.
 
+### Scanned PDF check
+
+A scanned PDF has no text layer: the reader cannot search it and the planned AI assistant cannot read it.
+The admin's browser checks each chosen PDF with PDF.js while it uploads (`src/lib/pdf-text-check.ts`,
+`src/lib/pdf-text-check-client.ts`; a page "has text" with at least 30 non-whitespace characters) and sends
+`textCheck: { pageCount, textPageCount }` with the `fileTicket`. The server validates its shape and stores it in
+`resources.page_count` and `resources.text_page_count` only when a new file is attached; a new file without a
+check resets both to null (not checked), and saving other fields leaves them. A check that fails in the browser
+(damaged or encrypted PDF) is simply not sent; the upload and save are never affected. `GET /admin?text=scanned`
+lists Scanned and Partly scanned files.
+
+Files stored before the check existed are filled in by a script that reads them through `src/lib/storage`
+(`FileStorage.read`) and runs the same check with PDF.js's Node build:
+
+    npm run text-layers:check -- [--all] [--dry-run] [--allow-r2]
+
+It prints the storage driver and the database host first. Warning: `.env` may point at the real R2 bucket and
+database; the script refuses to run with `STORAGE_DRIVER=r2` unless `--allow-r2` is given, so for development set
+`STORAGE_DRIVER=local` and a local `DATABASE_URL`. `--dry-run` writes nothing; `--all` re-checks files that already
+have a result.
+
 ## Email jobs
 
 Outgoing email goes through a Postgres queue, the table `email_jobs` (kind, `to_email`, `payload` jsonb, status `pending | sent | failed`, attempts, `next_attempt_at`, short `last_error`, `sent_at`), so an email is never lost when a request ends or a provider is down. Code: `src/services/email-jobs/` (framework-free), `src/lib/mail/` (drivers), `src/lib/send-email-job-after-response.ts`.

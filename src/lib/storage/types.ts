@@ -11,6 +11,9 @@ export interface FileStorage {
   stat(key: string): Promise<{ size: number; contentType: string | null } | null>;
   // The first `bytes` bytes of a stored file (fewer if it is shorter), or null when there is none.
   readStart(key: string, bytes: number): Promise<Uint8Array | null>;
+  // The whole file, or null when there is none. For server-side work that needs the content (the
+  // text-layer check); students and admins download through signed URLs instead.
+  read(key: string): Promise<Uint8Array | null>;
   // A URL the browser can GET the file from, valid for a short time. `inline` shows it in the
   // page; `attachment` downloads it under `filename`.
   createReadUrl(

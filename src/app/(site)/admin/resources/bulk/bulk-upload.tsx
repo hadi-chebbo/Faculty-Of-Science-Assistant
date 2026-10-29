@@ -18,6 +18,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { adminFetch } from "@/lib/admin-fetch";
+import { checkFileTextLayer } from "@/lib/pdf-text-check-client";
 import { MAX_SIZE_LABEL, SignedOutError, UPLOAD_FAILED_MESSAGE, UploadError, checkPdfFile, uploadPdf } from "@/lib/upload-file";
 import type { ChapterOption } from "@/services/chapters/options";
 import type { CourseOption } from "@/services/courses/types";
@@ -49,6 +50,7 @@ function newRow(file: File): BulkRow {
     status: problem ? "failed" : "queued",
     progress: 0,
     ticket: null,
+    textCheck: null,
     fileError: problem,
     retryable: false,
     errors: {},
@@ -110,14 +112,17 @@ export function BulkUpload({
     const controller = new AbortController();
     controllers.current.set(key, controller);
     patchRow(key, { status: "uploading", progress: 0 });
+    // Runs beside the upload and never fails (null: not checked); waited for once the bytes are sent.
+    const check = checkFileTextLayer(file);
     try {
       const ticket = await uploadPdf(file, {
         signal: controller.signal,
         onProgress: (progress) => patchRow(key, { progress }),
         onSignedOut: () => router.replace("/sign-in"),
       });
+      const textCheck = await check;
       if (controller.signal.aborted) return;
-      patchRow(key, { status: "ready", ticket, progress: 100 });
+      patchRow(key, { status: "ready", ticket, textCheck, progress: 100 });
     } catch (caught) {
       if (controller.signal.aborted || caught instanceof SignedOutError) return;
       const message = caught instanceof UploadError ? caught.message : UPLOAD_FAILED_MESSAGE;
@@ -170,7 +175,7 @@ export function BulkUpload({
 
   function retryRow(key: string) {
     started.current.delete(key);
-    patchRow(key, { status: "queued", fileError: null, retryable: false, ticket: null, progress: 0 });
+    patchRow(key, { status: "queued", fileError: null, retryable: false, ticket: null, textCheck: null, progress: 0 });
   }
 
   function changeCourse(id: string) {
@@ -197,6 +202,7 @@ export function BulkUpload({
       chapterId: row.type !== "exam" && row.chapterId ? row.chapterId : null,
       isPublished,
       fileTicket: row.ticket,
+      ...(row.textCheck ? { textCheck: row.textCheck } : {}),
     };
     try {
       const response = await adminFetch(
@@ -215,7 +221,7 @@ export function BulkUpload({
         const fields = Array.isArray(data.fields) ? data.fields.filter((f): f is string => typeof f === "string") : [];
         if (fields.includes("file")) {
           // The upload is unusable: it has to be sent again.
-          patchRow(row.key, { status: "failed", ticket: null, fileError: FILE_REJECTED, retryable: files.current.has(row.key), errors: {}, error: null });
+          patchRow(row.key, { status: "failed", ticket: null, textCheck: null, fileError: FILE_REJECTED, retryable: files.current.has(row.key), errors: {}, error: null });
           return;
         }
         patchRow(row.key, {
