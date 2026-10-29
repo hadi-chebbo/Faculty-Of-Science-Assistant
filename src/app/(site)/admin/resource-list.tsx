@@ -70,13 +70,11 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
             ))}
           </NativeSelect>
         </div>
-        <div className="sm:w-64">
-          <label htmlFor="admin-text" className="mb-1.5 block text-sm font-medium text-heading">Text in the file</label>
-          <NativeSelect id="admin-text" name="text" defaultValue={params.text ?? ""} className="w-full [&_select]:h-11 md:[&_select]:h-9">
-            <NativeSelectOption value="">All files</NativeSelectOption>
-            <NativeSelectOption value="scanned">Scanned or partly scanned</NativeSelectOption>
-          </NativeSelect>
-        </div>
+        {/* A checkbox, not a select: unchecked it adds nothing to the address. */}
+        <label htmlFor="admin-text" className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-heading md:min-h-9">
+          <input id="admin-text" type="checkbox" name="text" value="scanned" defaultChecked={params.text === "scanned"} className="size-4 accent-primary" />
+          Scanned or partly scanned only
+        </label>
         <Button type="submit" className="h-11 px-4 md:h-9 md:px-3">Apply</Button>
       </form>
 

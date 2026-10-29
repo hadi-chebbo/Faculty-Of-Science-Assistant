@@ -118,7 +118,7 @@ test.describe("scanned PDF check", () => {
 
       // The control sets the same address.
       await page.goto(`/admin?course=${COURSE}`);
-      await page.getByLabel("Text in the file").selectOption("scanned");
+      await page.getByLabel("Scanned or partly scanned only").check();
       await page.getByRole("button", { name: "Apply" }).click();
       await expect(page).toHaveURL(/text=scanned/);
       await expect(rowFor(page, scanned)).toBeVisible();
