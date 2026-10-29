@@ -5,6 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useHydrated } from "@/lib/use-hydrated";
 import { RESEND_COOLDOWN_SECONDS, RESEND_MESSAGES, requestNewLink } from "@/lib/auth/resend-client";
 
 // "Send a new link". With a known email it is just a button; without one it asks for the address.
@@ -13,6 +14,8 @@ export function ResendLink({ email, waitOnArrival }: { email: string | null; wai
   const [typed, setTyped] = useState("");
   const [seconds, setSeconds] = useState(waitOnArrival ? RESEND_COOLDOWN_SECONDS : 0);
   const [pending, setPending] = useState(false);
+  // The submit button stays disabled until hydration, so a native submit can never slip through.
+  const hydrated = useHydrated();
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
 
   useEffect(() => {
@@ -39,7 +42,7 @@ export function ResendLink({ email, waitOnArrival }: { email: string | null; wai
   }
 
   return (
-    <form onSubmit={onSubmit} aria-busy={pending} className="space-y-4">
+    <form method="post" onSubmit={onSubmit} aria-busy={pending} className="space-y-4">
       {email === null && (
         <div className="space-y-2">
           <Label htmlFor="resend-email">Email</Label>
@@ -56,7 +59,7 @@ export function ResendLink({ email, waitOnArrival }: { email: string | null; wai
           />
         </div>
       )}
-      <Button type="submit" variant="outline" disabled={pending || seconds > 0} className="h-11 w-full text-base">
+      <Button type="submit" variant="outline" disabled={pending || seconds > 0 || !hydrated} className="h-11 w-full text-base">
         {pending && <Loader2 className="animate-spin" aria-hidden />}
         {seconds > 0 ? `Send a new link (${seconds} s)` : "Send a new link"}
       </Button>
