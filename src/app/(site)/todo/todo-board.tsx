@@ -7,16 +7,19 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TODO_STATUSES, type TodoStatus } from "@/db/constants";
+import { celebrate, showMilestones } from "@/lib/celebrations";
+import { requestWithRenew, syncDone } from "@/lib/completions-client";
 import { showUndoToast } from "@/lib/undo-toast";
 import { useMediaQuery } from "@/lib/use-media-query";
-import type { TodoCard } from "@/services/todos/types";
+import { isMarkable } from "@/services/progress/markable";
+import type { MoveResult, TodoCard } from "@/services/todos/types";
 import { BOARD_FULL_MESSAGE, boardRequest } from "@/lib/board-api";
 import { BoardFilterBar } from "./board-filter-bar";
 import { courseCodes, effectiveChip, isFiltering, matchesFilter, NO_FILTER, realIndexFor, type BoardFilter } from "./board-filter";
 import { CardComposer } from "./card-composer";
 import { CardViewDialog } from "./card-view-dialog";
 import type { PickedFile } from "./saved-file-picker";
-import { ColumnEmpty, focusMovedCard, moveMessage, titleOf, TodoCardView, visibleElement, type BoardCard, type MoveHow } from "./todo-card";
+import { ColumnEmpty, DONE_AND_MARKED_MESSAGE, focusMovedCard, moveMessage, titleOf, TodoCardView, visibleElement, type BoardCard, type MoveHow } from "./todo-card";
 import { BoardDnd, DRAG_QUIET_MS, SortableColumn, useActiveColumn } from "./todo-dnd";
 import { STATUS_LOOK } from "./todo-status";
 import { useCardSaver, type Edit } from "./use-card-saver";
@@ -316,18 +319,52 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
     });
   }
 
+  // Sets `done` on every card linked to this file, here and in what the server last sent.
+  function setFileDone(fileId: string, done: boolean) {
+    const apply = (resource: BoardCard["resource"]) => (resource?.available && resource.id === fileId ? { ...resource, done } : resource);
+    for (const [id, info] of saved.current) saved.current.set(id, { ...info, resource: apply(info.resource) });
+    const next = latest.current.map((c) => ({ ...c, resource: apply(c.resource) }));
+    latest.current = next;
+    setCards(next);
+    syncDone(fileId, done);
+  }
+
+  // Undo of a move that marked the file: after the card has gone back (same queue), the file is
+  // marked as not done.
+  function unmarkFile(fileId: string) {
+    queue.current = queue.current.then(async () => {
+      try {
+        const response = await requestWithRenew(() => fetch(`/api/v1/completions/${encodeURIComponent(fileId)}`, { method: "DELETE" }));
+        if (response.ok) setFileDone(fileId, false);
+        else if (response.status === 401) router.push(SIGN_IN);
+        else toast.error("Couldn't mark the file as not done.");
+      } catch {
+        toast.error("Couldn't mark the file as not done.");
+      }
+    });
+  }
+
   // Moves a card to `index` of `status` (0 = top) at once, then asks the server; if the server
   // refuses, the card goes back where it was. Every move, except one made by Undo, offers Undo.
-  function move(id: string, status: TodoStatus, index: number, how: MoveHow, isUndo = false) {
+  // A card entering Done with a linked, markable file that is not done yet also marks the file on
+  // the server: its toast waits for the answer (it says so, and shows any celebration), and its
+  // Undo also marks the file as not done when this move was what marked it.
+  // Returns whether a move was started.
+  function move(id: string, status: TodoStatus, index: number, how: MoveHow, isUndo = false): boolean {
     const all = latest.current;
     const card = all.find((c) => c.id === id);
-    if (!card || card.pending) return;
+    if (!card || card.pending) return false;
     const column = all.filter((c) => c.status === card.status);
     const from = column.indexOf(card);
     const size = status === card.status ? column.length - 1 : all.filter((c) => c.status === status).length;
     const to = Math.max(0, Math.min(index, size));
-    if (status === card.status && to === from) return;
+    if (status === card.status && to === from) return false;
     const before = { status: card.status, index: from, changedAt: card.statusChangedAt };
+    const file = card.resource?.available ? card.resource : null;
+    const marks = !isUndo && status === "done" && card.status !== "done" && !!file && !file.done && isMarkable(file.type);
+    const undoMove = (unmark: boolean) => {
+      if (move(id, before.status, before.index, how, true) && unmark && file) unmarkFile(file.id);
+    };
 
     const next = place(all, id, status, to, status === card.status ? undefined : new Date().toISOString());
     latest.current = next;
@@ -336,7 +373,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
       setCelebrating(id);
       setTimeout(() => setCelebrating((current) => (current === id ? null : current)), 700);
     }
-    const toastId = isUndo ? null : showUndoToast(how.message, () => move(id, before.status, before.index, how, true));
+    const toastId = isUndo || marks ? null : showUndoToast(how.message, () => undoMove(false));
     if (!how.keepFocus) {
       // After the menu has handed the focus back to its button. The card may have left the tab that
       // is on screen (a phone shows one column); then the tab itself keeps the focus.
@@ -353,10 +390,36 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
       try {
         const response = await boardRequest("POST", `/${id}/move`, { status, index: to });
         if (response.ok) {
-          const { card: fresh } = (await response.json()) as { card: TodoCard };
+          const { card: fresh, fileMarked, rewards, progress } = (await response.json()) as MoveResult;
+          const takeFile = (c: BoardCard) =>
+            c.resource?.available && fresh.resource?.available && c.resource.id === fresh.resource.id ? fresh.resource : c.resource;
           setCards((current) =>
-            current.map((c) => (c.id === id ? { ...c, statusChangedAt: fresh.statusChangedAt, updatedAt: fresh.updatedAt } : c)),
+            current.map((c) =>
+              c.id === id ? { ...c, statusChangedAt: fresh.statusChangedAt, updatedAt: fresh.updatedAt, resource: takeFile(c) } : c,
+            ),
           );
+          if (fresh.resource?.available) {
+            const known = saved.current.get(id);
+            if (known && known.resource?.available && known.resource.id === fresh.resource.id) saved.current.set(id, { ...known, resource: fresh.resource });
+            if (fileMarked) syncDone(fresh.resource.id, true);
+          }
+          if (marks) {
+            if (fileMarked && rewards && progress && file) {
+              celebrate(
+                { progress, rewards },
+                {
+                  resourceId: file.id,
+                  undo: () => undoMove(true),
+                  navigate: router.push,
+                  focusTarget: () => visibleElement(`[data-card-open="${id}"]`) ?? null,
+                  message: DONE_AND_MARKED_MESSAGE,
+                },
+              );
+              showMilestones(rewards.milestones, router.push);
+            } else {
+              showUndoToast(how.message, () => undoMove(false));
+            }
+          }
         } else if (response.status === 401) {
           rollback();
           router.push(SIGN_IN);
@@ -369,6 +432,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
         toast.error("Couldn't move the card. Try again.");
       }
     });
+    return true;
   }
 
   // While a filter is on, a card moved up, down or dropped goes past its visible neighbour; the

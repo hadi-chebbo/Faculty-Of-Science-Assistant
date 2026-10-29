@@ -18,6 +18,8 @@ import type { TodoCard as Card } from "@/services/todos/types";
 import { STATUS_LOOK } from "./todo-status";
 
 export const DONE_MESSAGE = "Nice, that's done.";
+// The toast when the move also marked the linked file as done.
+export const DONE_AND_MARKED_MESSAGE = "Nice, that's done. File marked as done too.";
 
 // The message of the Undo toast after a card moved to a column.
 export const moveMessage = (status: TodoStatus) => (status === "done" ? DONE_MESSAGE : `Moved to ${STATUS_LOOK[status].label}`);
@@ -280,6 +282,11 @@ function FileTile({ file, cardTitle, live }: { file: NonNullable<Card["resource"
           meta
         )}
       </span>
+      {file.done && (
+        <span className="inline-flex shrink-0 items-center gap-0.5 text-[11px] font-semibold text-success" aria-hidden>
+          <Check className="size-3" /> File done
+        </span>
+      )}
       <span className="inline-flex shrink-0 items-center gap-0.5 pr-1 text-xs font-medium text-link" aria-hidden>
         Open <ChevronRight className="size-3.5" />
       </span>
@@ -290,7 +297,7 @@ function FileTile({ file, cardTitle, live }: { file: NonNullable<Card["resource"
   return (
     <Link
       href={`/resources/${file.id}`}
-      aria-label={`Open ${file.title} in the reader`}
+      aria-label={`Open ${file.title} in the reader${file.done ? " (file done)" : ""}`}
       className={`${look} relative z-10 transition-colors hover:border-primary/40 hover:bg-primary/5 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none`}
     >
       {body}

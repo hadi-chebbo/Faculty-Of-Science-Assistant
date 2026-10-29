@@ -68,36 +68,46 @@ async function progressOf(viewer: NonNullable<Viewer>, resource: ResourceRef, tr
 // A new completion also records the Beirut day as an active day, in the same transaction; the
 // day is never removed, by un-marking or otherwise.
 export async function markDone(viewer: NonNullable<Viewer>, resourceId: string, options: { now?: Date } = {}): Promise<MarkResult> {
+  return getDb().sequelize.transaction((transaction) => markDoneWithin(viewer, resourceId, transaction, options));
+}
+
+// The body of `markDone`, for callers that already hold a transaction (moving a to-do card into
+// Done marks its file in the move's own transaction).
+export async function markDoneWithin(
+  viewer: NonNullable<Viewer>,
+  resourceId: string,
+  transaction: Transaction,
+  options: { now?: Date } = {},
+): Promise<MarkResult> {
   const { sequelize, Resource } = getDb();
   const resource = validId(resourceId)
     ? await Resource.findOne({
         where: { id: resourceId, isPublished: true, type: { [Op.in]: [...MARKABLE_TYPES] } },
         attributes: ["id", "courseId", "chapterId", "type"],
+        transaction,
       })
     : null;
   if (!resource) throw new NotFoundError("Resource not found");
-  return sequelize.transaction(async (transaction) => {
-    const inserted = await sequelize.query(
-      `INSERT INTO completions (user_id, resource_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING id`,
-      { bind: [viewer.id, resourceId], type: QueryTypes.SELECT, transaction },
-    );
-    const created = inserted.length > 0;
-    if (created) {
-      await sequelize.query(`INSERT INTO study_days (user_id, day) VALUES ($1, $2) ON CONFLICT DO NOTHING`, {
-        bind: [viewer.id, beirutDate(options.now ?? new Date())],
-        transaction,
-      });
-    }
-    const progress = await progressOf(viewer, resource, transaction);
-    const milestones = created ? await awardMilestones(viewer, resource.courseId, transaction) : [];
-    const counted = created && (COUNTED_TYPES as readonly string[]).includes(resource.type);
-    const rewards: Rewards = {
-      milestones,
-      chapterFinished: counted && progress.chapter?.finished ? await chapterReward(progress.chapter, resource.courseId, transaction) : null,
-      courseFinished: counted && progress.course.finished ? await courseReward(progress, resource.courseId, transaction) : null,
-    };
-    return { created, progress, rewards };
-  });
+  const inserted = await sequelize.query(
+    `INSERT INTO completions (user_id, resource_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING id`,
+    { bind: [viewer.id, resourceId], type: QueryTypes.SELECT, transaction },
+  );
+  const created = inserted.length > 0;
+  if (created) {
+    await sequelize.query(`INSERT INTO study_days (user_id, day) VALUES ($1, $2) ON CONFLICT DO NOTHING`, {
+      bind: [viewer.id, beirutDate(options.now ?? new Date())],
+      transaction,
+    });
+  }
+  const progress = await progressOf(viewer, resource, transaction);
+  const milestones = created ? await awardMilestones(viewer, resource.courseId, transaction) : [];
+  const counted = created && (COUNTED_TYPES as readonly string[]).includes(resource.type);
+  const rewards: Rewards = {
+    milestones,
+    chapterFinished: counted && progress.chapter?.finished ? await chapterReward(progress.chapter, resource.courseId, transaction) : null,
+    courseFinished: counted && progress.course.finished ? await courseReward(progress, resource.courseId, transaction) : null,
+  };
+  return { created, progress, rewards };
 }
 
 // The chapter celebration: the next chapter is the first one after it with a counted published file.

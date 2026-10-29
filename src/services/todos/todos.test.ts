@@ -332,8 +332,37 @@ describe("linked files", () => {
     const [after] = await listBoard(me);
     expect(after.resource).toEqual({ available: false });
     expect(JSON.stringify(after)).not.toContain("Published file");
-    expect((await moveCard(me, card.id, { status: "done", index: 0 })).resource).toEqual({ available: false });
+    expect((await moveCard(me, card.id, { status: "done", index: 0 })).card.resource).toEqual({ available: false });
     await deleteCard(me, card.id);
     expect((await restoreCard(me, card.id)).resource).toEqual({ available: false });
+  });
+
+  it("shows done for the viewer's own completion only, and still lists cards whose file is not done", async () => {
+    const me = await student("a@example.com");
+    const other = await student("b@example.com");
+    const { pub } = await files();
+    const mine = await createCard(me, { title: "mine", resourceId: pub.id });
+    const plain = await createCard(me, { title: "plain" });
+    expect((await listBoard(me)).find((c) => c.id === mine.id)?.resource).toMatchObject({ available: true, done: false });
+    expect((await listBoard(me)).map((c) => c.id).sort()).toEqual([mine.id, plain.id].sort());
+    await getDb().Completion.create({ userId: other.id, resourceId: pub.id });
+    expect((await listBoard(me)).find((c) => c.id === mine.id)?.resource).toMatchObject({ done: false });
+    await getDb().Completion.create({ userId: me.id, resourceId: pub.id });
+    expect((await listBoard(me)).find((c) => c.id === mine.id)?.resource).toMatchObject({ done: true });
+    expect((await listBoard(other)).length).toBe(0);
+  });
+
+  it("does not mark the file when a card is created in Done, linked while in Done, or restored", async () => {
+    const me = await student("a@example.com");
+    const { pub } = await files();
+    const { Completion } = getDb();
+    const direct = await createCard(me, { title: "direct", status: "done", resourceId: pub.id });
+    expect(direct.resource).toMatchObject({ done: false });
+    const plain = await createCard(me, { title: "plain", status: "done" });
+    const linked = await updateCard(me, plain.id, { resourceId: pub.id });
+    expect(linked.resource).toMatchObject({ done: false });
+    await deleteCard(me, direct.id);
+    expect((await restoreCard(me, direct.id)).resource).toMatchObject({ done: false });
+    expect(await Completion.count()).toBe(0);
   });
 });

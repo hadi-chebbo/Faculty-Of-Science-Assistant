@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ALL_COURSES, courseCodes, effectiveChip, matchesFilter, NOTES_ONLY, realIndexFor } from "./board-filter";
 
-const file = (courseCode: string) => ({ available: true as const, id: "r", title: "T", type: "lecture" as const, courseCode });
+const file = (courseCode: string) => ({ available: true as const, id: "r", title: "T", type: "lecture" as const, courseCode, done: false });
 const note = (text = "") => ({ note: text, resource: null });
 const linked = (code: string, text = "") => ({ note: text, resource: file(code) });
 const codes = ["DEMO301", "DEMO502"];

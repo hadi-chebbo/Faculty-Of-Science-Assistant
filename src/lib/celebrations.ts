@@ -1,10 +1,11 @@
 import { toast } from "sonner";
+import { MILESTONE_LABELS, type MilestoneKey } from "@/db/constants";
 import { showUndoToast } from "@/lib/undo-toast";
 import type { MarkResult, Rewards } from "@/services/progress/types";
 
 // What finishing something looks like in the browser. The server decides (`rewards` in the mark
-// response); this module only presents it, so any page that marks a file (the reader now, the
-// to-do board later) calls `celebrate` with the same result. Nothing here is stored.
+// response); this module only presents it, so any page that marks a file (the reader, the
+// to-do board) calls `celebrate` with the same result. Nothing here is stored.
 
 // How long the chapter toast stays: longer than a plain Undo, so "Next chapter" is reachable.
 const CHAPTER_TOAST_MS = 8000;
@@ -88,5 +89,15 @@ export function celebrate(result: Pick<MarkResult, "progress" | "rewards">, opti
     pulse(resourceId);
   } else {
     showUndoToast(message, undo);
+  }
+}
+
+// One toast per milestone the mark earned, after the mark's own Undo toast. The server returns a
+// key only the first time, so each shows once without anything kept in the browser. An Undo never
+// takes a milestone away. `navigate` is the caller's router push, so "View" works wherever the mark
+// was made (the reader or the to-do board).
+export function showMilestones(keys: readonly MilestoneKey[], navigate: (href: string) => void): void {
+  for (const key of keys) {
+    toast(`Milestone: ${MILESTONE_LABELS[key]}`, { action: { label: "View", onClick: () => navigate("/progress") } });
   }
 }
