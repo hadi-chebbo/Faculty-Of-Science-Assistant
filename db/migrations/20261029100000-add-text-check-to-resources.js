@@ -13,7 +13,7 @@ module.exports = {
         fields: ['page_count', 'text_page_count'],
         type: 'check',
         where: Sequelize.literal(
-          '(page_count IS NULL AND text_page_count IS NULL) OR (page_count >= 1 AND text_page_count >= 0 AND text_page_count <= page_count)'
+          '(page_count IS NULL) = (text_page_count IS NULL) AND (page_count IS NULL OR (page_count >= 1 AND text_page_count >= 0 AND text_page_count <= page_count))'
         ),
         name: 'resources_text_check_valid_check',
         transaction,
