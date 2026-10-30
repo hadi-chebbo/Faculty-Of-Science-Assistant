@@ -59,7 +59,7 @@ test("the admin opens Users, searches and filters unconfirmed accounts", async (
 
   await page.getByLabel("Email").fill("DEMO.STUDENT@");
   await page.getByRole("button", { name: "Search" }).click();
-  await expect(page).toHaveURL(/\/admin\/users\?q=DEMO\.STUDENT%40(&status=)?$/);
+  await expect(page).toHaveURL(/\/admin\/users\?q=DEMO\.STUDENT%40$/);
   const student = page.getByRole("listitem").filter({ hasText: "demo.student@example.com" });
   await expect(student).toBeVisible();
   await expect(student).toContainText("Student");
@@ -72,8 +72,8 @@ test("the admin opens Users, searches and filters unconfirmed accounts", async (
   await expect(mine.getByText("Unconfirmed", { exact: true })).toBeVisible();
   await expect(mine.getByText("Never")).toBeVisible();
 
-  // The status select combines with the search and lives in the address.
-  await page.getByLabel("Status").selectOption("unconfirmed");
+  // The checkbox combines with the search and lives in the address.
+  await page.getByLabel("Unconfirmed only").check();
   await page.getByRole("button", { name: "Search" }).click();
   await expect(page).toHaveURL(new RegExp(`\\?q=${stamp}&status=unconfirmed$`));
   await expect(page.getByRole("listitem").filter({ hasText: email })).toBeVisible();
@@ -201,9 +201,9 @@ test("the admin blocks a user, who cannot sign in, then unblocks them", async ({
     // The list shows the badge and the Blocked filter finds the account.
     await page.goto(`/admin/users?q=${stamp}`);
     await expect(page.getByRole("listitem").filter({ hasText: email }).getByText("Blocked", { exact: true })).toBeVisible();
-    await page.getByLabel("Status").selectOption("blocked");
+    await page.getByLabel("Blocked only").check();
     await page.getByRole("button", { name: "Search" }).click();
-    await expect(page).toHaveURL(new RegExp(`\\?q=${stamp}&status=blocked$`));
+    await expect(page).toHaveURL(new RegExp(`\\?q=${stamp}&blocked=1$`));
     await expect(page.getByRole("listitem").filter({ hasText: email })).toBeVisible();
 
     // The blocked user sees the message with the right password and the usual one with a wrong password.
