@@ -197,6 +197,29 @@ describe("signUp: an existing confirmed address", () => {
   });
 });
 
+describe("signUp: a blocked address", () => {
+  it("changes nothing, sends nothing and answers like any other address", async () => {
+    const blockedAt = new Date("2026-10-30T10:00:00Z");
+    for (const confirmed of [true, false]) {
+      await truncateAllTables();
+      await getDb().User.create({
+        email: EMAIL,
+        passwordHash: await hash(PASSWORD),
+        emailConfirmedAt: confirmed ? new Date() : null,
+        blockedAt,
+      });
+      const before = (await userByEmail())!;
+      const result = await signUp({ email: EMAIL, password: "attacker-chosen-password", name: "Evil", ip: IP }, T0);
+      expect(result).toEqual({ jobId: null });
+      const after = (await userByEmail())!;
+      expect(after.passwordHash).toBe(before.passwordHash);
+      expect(after.name).toBeNull();
+      expect(after.blockedAt).toEqual(blockedAt);
+      expect(await jobs()).toHaveLength(0);
+    }
+  });
+});
+
 describe("signUp: limits", () => {
   it("refuses a 6th sign-up from one IP within an hour, with a retry time, and frees it later", async () => {
     for (let i = 0; i < SIGN_UP_LIMIT_PER_IP; i++) {
@@ -334,6 +357,12 @@ describe("resendConfirmation", () => {
     expect(await jobs()).toHaveLength(0);
   });
 
+  it("sends nothing to a blocked account", async () => {
+    await getDb().User.create({ email: EMAIL, passwordHash: "x", blockedAt: new Date() });
+    expect(await resendConfirmation({ email: EMAIL }, T0)).toEqual({ jobId: null });
+    expect(await jobs()).toHaveLength(0);
+  });
+
   it("limits every address alike: once a minute, 5 a day, counting unknown addresses too", async () => {
     for (const email of [EMAIL, "nobody@example.com"]) {
       await resendConfirmation({ email }, T0);
@@ -392,10 +421,11 @@ describe("deleteUnconfirmedAccounts", () => {
     await make("young@example.com", { createdAt: at(-(UNCONFIRMED_ACCOUNT_TTL_SECONDS * SECOND - MINUTE)) });
     await make("confirmed@example.com", { createdAt: old, emailConfirmedAt: at(-DAY) });
     await make("admin@example.com", { createdAt: old, role: "admin" });
+    await make("blocked@example.com", { createdAt: old, blockedAt: at(-DAY) });
 
     expect(await deleteUnconfirmedAccounts(T0)).toBe(1);
     const left = (await User.findAll()).map((u) => u.email).sort();
-    expect(left).toEqual(["admin@example.com", "confirmed@example.com", "young@example.com"]);
+    expect(left).toEqual(["admin@example.com", "blocked@example.com", "confirmed@example.com", "young@example.com"]);
     expect(await EmailConfirmation.count()).toBe(0); // cascade
     expect(await deleteUnconfirmedAccounts(T0)).toBe(0);
   });

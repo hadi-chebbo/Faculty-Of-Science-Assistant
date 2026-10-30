@@ -10,6 +10,7 @@ import { getUserDetail, type UserDetail } from "@/services/users/users";
 import { requireAdminPage } from "../../guard";
 import { formatDate, formatDateTime } from "../format";
 import { parseUsersParams, usersHref } from "../params";
+import { BlockButton } from "./block-button";
 import { ConfirmEmailButton } from "./confirm-email-button";
 
 export const metadata: Metadata = { title: "User", robots: { index: false, follow: false } };
@@ -96,6 +97,17 @@ function Account({ user }: { user: UserDetail }) {
             "Email",
             user.emailConfirmedAt ? `Confirmed ${formatDate(user.emailConfirmedAt)}` : <Badge variant="secondary">Unconfirmed</Badge>,
           ],
+          [
+            "Status",
+            user.blockedAt ? (
+              <span className="inline-flex flex-wrap items-center gap-2">
+                <Badge variant="destructive">Blocked</Badge>
+                {formatDate(user.blockedAt)}
+              </span>
+            ) : (
+              "Active"
+            ),
+          ],
           ["Last active", user.lastActiveAt ? formatDate(user.lastActiveAt) : "Never"],
         ]}
       />
@@ -103,13 +115,15 @@ function Account({ user }: { user: UserDetail }) {
   );
 }
 
-// Block and delete will join here. Nothing is shown when no action applies.
+// Delete will join here. Nothing is shown when no action applies. An admin account cannot be blocked.
 function Actions({ user }: { user: UserDetail }) {
-  if (user.emailConfirmedAt) return null;
+  const canBlock = user.role === "student";
+  if (user.emailConfirmedAt && !canBlock) return null;
   return (
     <Section title="Actions">
       <div className="flex flex-wrap gap-2">
-        <ConfirmEmailButton userId={user.id} />
+        {!user.emailConfirmedAt && <ConfirmEmailButton userId={user.id} />}
+        {canBlock && <BlockButton userId={user.id} email={user.email} blocked={user.blockedAt !== null} />}
       </div>
     </Section>
   );

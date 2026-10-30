@@ -4,13 +4,13 @@ import { EMAIL_MAX_LENGTH } from "@/services/auth/schemas";
 export interface UsersParams {
   // Part of an email address.
   q?: string;
-  // "unconfirmed": only accounts whose email is not confirmed. An enum so more statuses can be added.
-  status?: "unconfirmed";
+  // "unconfirmed": only accounts whose email is not confirmed. "blocked": only blocked accounts.
+  status?: "unconfirmed" | "blocked";
   page: number;
 }
 
 const q = z.string().trim().min(1).max(EMAIL_MAX_LENGTH);
-const status = z.literal("unconfirmed");
+const status = z.enum(["unconfirmed", "blocked"]);
 const page = z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(10_000));
 
 const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);

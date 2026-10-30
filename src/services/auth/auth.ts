@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { verify } from "@node-rs/argon2";
 import { Op, type Transaction } from "sequelize";
 import { getDb } from "@/db/models";
-import { EmailNotConfirmedError, InvalidCredentialsError, InvalidSessionError, TooManyAttemptsError } from "../errors";
+import { AccountBlockedError, EmailNotConfirmedError, InvalidCredentialsError, InvalidSessionError, TooManyAttemptsError } from "../errors";
 import { parseInput } from "../validation";
 import type { Viewer } from "../viewer";
 import { signAccessToken } from "./access-token";
@@ -117,6 +117,7 @@ export async function signIn(
   }
   // Only after the password is right, so this reveals nothing to someone who does not know it. It
   // is not a failed attempt: the student did nothing wrong, and earlier failures are kept.
+  if (user.blockedAt) throw new AccountBlockedError();
   if (!user.emailConfirmedAt) throw new EmailNotConfirmedError();
 
   await FailedSignIn.destroy({ where: { email } });
@@ -146,7 +147,8 @@ export async function refreshSession(rawRefreshToken: string, now: Date = new Da
 
     // Read the role again, so a demotion takes effect at the next refresh.
     const user = await User.findByPk(token.userId, { transaction });
-    if (!user) return { kind: "invalid", revokeFamily: token.familyId };
+    // A blocked account cannot refresh; blocking normally revoked its tokens already.
+    if (!user || user.blockedAt) return { kind: "invalid", revokeFamily: token.familyId };
 
     await token.update({ revokedAt: now }, { transaction });
     const tokens = await issueTokens(user, token.familyId, now, transaction);

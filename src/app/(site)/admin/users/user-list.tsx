@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { readForPage } from "@/lib/page-errors";
 import { listUsers, type UserListItem } from "@/services/users/users";
@@ -12,10 +13,11 @@ import { parseUsersParams, usersHref } from "./params";
 const ROLE_LABELS = { admin: "Admin", student: "Student" } as const;
 
 function StatusBadge({ user }: { user: UserListItem }) {
-  return user.emailConfirmedAt ? (
-    <Badge variant="outline">Confirmed</Badge>
-  ) : (
-    <Badge variant="secondary">Unconfirmed</Badge>
+  return (
+    <span className="inline-flex flex-wrap justify-end gap-1 md:justify-start">
+      {user.emailConfirmedAt ? <Badge variant="outline">Confirmed</Badge> : <Badge variant="secondary">Unconfirmed</Badge>}
+      {user.blockedAt && <Badge variant="destructive">Blocked</Badge>}
+    </span>
   );
 }
 
@@ -30,7 +32,7 @@ const Dash = () => (
 export async function UserList({ viewer, raw }: { viewer: Viewer; raw: Record<string, string | string[] | undefined> }) {
   const params = parseUsersParams(raw);
   const result = await readForPage(() =>
-    listUsers(viewer, { q: params.q, unconfirmed: params.status === "unconfirmed", page: params.page }),
+    listUsers(viewer, { q: params.q, unconfirmed: params.status === "unconfirmed", blocked: params.status === "blocked", page: params.page }),
   );
   const pages = Math.max(1, Math.ceil(result.total / result.pageSize));
   const previous = params.page > 1 ? usersHref({ ...params, page: params.page - 1 }) : null;
@@ -59,11 +61,14 @@ export async function UserList({ viewer, raw }: { viewer: Viewer; raw: Record<st
             className="h-11 md:h-9"
           />
         </div>
-        {/* A checkbox, not a select: unchecked it adds nothing to the address. */}
-        <label htmlFor="admin-users-status" className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-heading md:min-h-9">
-          <input id="admin-users-status" type="checkbox" name="status" value="unconfirmed" defaultChecked={params.status === "unconfirmed"} className="size-4 accent-primary" />
-          Unconfirmed only
-        </label>
+        <div className="sm:w-44">
+          <label htmlFor="admin-users-status" className="mb-1.5 block text-sm font-medium text-heading">Status</label>
+          <NativeSelect id="admin-users-status" name="status" defaultValue={params.status ?? ""} className="w-full [&_select]:h-11 md:[&_select]:h-9">
+            <NativeSelectOption value="">All</NativeSelectOption>
+            <NativeSelectOption value="unconfirmed">Unconfirmed</NativeSelectOption>
+            <NativeSelectOption value="blocked">Blocked</NativeSelectOption>
+          </NativeSelect>
+        </div>
         <Button type="submit" className="h-11 px-4 md:h-9 md:px-3">Search</Button>
       </form>
 

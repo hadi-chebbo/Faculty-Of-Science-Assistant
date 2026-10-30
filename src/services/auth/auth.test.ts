@@ -5,7 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { UserRole } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
-import { InvalidCredentialsError, InvalidSessionError, TooManyAttemptsError, ValidationError } from "../errors";
+import { AccountBlockedError, InvalidCredentialsError, InvalidSessionError, TooManyAttemptsError, ValidationError } from "../errors";
 import { signAccessToken } from "./access-token";
 import { getAccount, refreshSession, signIn, signOut, verifyAccessToken } from "./auth";
 import {
@@ -397,5 +397,41 @@ describe("getAccount", () => {
     expect(await getAccount(null)).toBeNull();
     await user.destroy();
     expect(await getAccount({ id: user.id, role: "admin" })).toBeNull();
+  });
+});
+
+describe("a blocked account", () => {
+  const block = (email = EMAIL) => getDb().User.update({ blockedAt: new Date() }, { where: { email } });
+
+  it("is refused with the right password, without tokens or a recorded failure", async () => {
+    await createUser("student");
+    await block();
+    await expect(signIn({ email: EMAIL, password: PASSWORD, ip: IP })).rejects.toBeInstanceOf(AccountBlockedError);
+    expect(await getDb().RefreshToken.count()).toBe(0);
+    expect(await getDb().FailedSignIn.count()).toBe(0);
+  });
+
+  it("gets the usual failure for a wrong password, which says nothing about the block", async () => {
+    await createUser("student");
+    await block();
+    await expect(signIn({ email: EMAIL, password: "wrong", ip: IP })).rejects.toBeInstanceOf(InvalidCredentialsError);
+    expect(await getDb().FailedSignIn.count()).toBe(1);
+  });
+
+  it("can sign in again once unblocked", async () => {
+    await createUser("student");
+    await block();
+    await getDb().User.update({ blockedAt: null }, { where: { email: EMAIL } });
+    await expect(signIn({ email: EMAIL, password: PASSWORD, ip: IP })).resolves.toBeDefined();
+  });
+
+  it("cannot refresh: the session is invalid and its family is revoked", async () => {
+    await createUser("student");
+    const session = await signIn({ email: EMAIL, password: PASSWORD, ip: IP });
+    await block();
+    await expect(refreshSession(session.refreshToken)).rejects.toBeInstanceOf(InvalidSessionError);
+    const rows = await getDb().RefreshToken.findAll();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].revokedAt).not.toBeNull();
   });
 });

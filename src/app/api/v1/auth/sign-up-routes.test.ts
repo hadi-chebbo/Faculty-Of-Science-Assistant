@@ -160,3 +160,16 @@ describe("POST /api/v1/auth/sign-in with an unconfirmed account", () => {
     expect(wrong.status).toBe(401);
   });
 });
+
+describe("POST /api/v1/auth/sign-in with a blocked account", () => {
+  it("answers 403 account_blocked after a correct password, with no cookies; a wrong password stays 401", async () => {
+    await getDb().User.create({ email: "b@example.com", passwordHash: await hash(PASSWORD), emailConfirmedAt: new Date(), blockedAt: new Date() });
+    const response = await signIn(post("/api/v1/auth/sign-in", { email: "b@example.com", password: PASSWORD }));
+    expect(response.status).toBe(403);
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(await response.json()).toEqual({ error: "Account blocked", code: "account_blocked" });
+
+    const wrong = await signIn(post("/api/v1/auth/sign-in", { email: "b@example.com", password: "wrong-password-here" }));
+    expect(wrong.status).toBe(401);
+  });
+});

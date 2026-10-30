@@ -35,6 +35,7 @@ async function enqueueLimited(
 // - New address: create the account and send a confirmation email.
 // - Unconfirmed account: "last sign-up wins". The password and name are replaced and old links stop
 //   working, so a student who forgot the password before confirming can simply sign up again.
+// - Blocked account: nothing changes and nothing is sent.
 // - Confirmed account: nothing changes; the address gets an "already have an account" email.
 // The password is always hashed, so timing does not tell the cases apart.
 export async function signUp(
@@ -62,6 +63,9 @@ export async function signUp(
         );
         return { jobId: await enqueueLimited(email, CONFIRM_EMAIL_KIND, { userId: user.id }, now, transaction) };
       }
+
+      // A blocked account keeps its row and the address stays taken: nothing changes and nothing is sent.
+      if (existing.blockedAt) return { jobId: null };
 
       if (existing.emailConfirmedAt) {
         return { jobId: await enqueueLimited(email, ALREADY_REGISTERED_KIND, {}, now, transaction) };
@@ -117,19 +121,20 @@ export async function resendConfirmation(input: { email: string }, now: Date = n
     await recordRateLimitEvent("confirmation-email", email, now, transaction);
 
     const user = await User.findOne({ where: { email }, lock: transaction.LOCK.UPDATE, transaction });
-    if (!user || user.emailConfirmedAt) return { jobId: null };
+    if (!user || user.emailConfirmedAt || user.blockedAt) return { jobId: null };
 
     const jobId = await enqueueEmailJob({ kind: CONFIRM_EMAIL_KIND, to: email, payload: { userId: user.id } }, transaction);
     return { jobId };
   });
 }
 
-// Deletes accounts that were never confirmed within 7 days. Admins and confirmed accounts stay.
+// Deletes accounts that were never confirmed within 7 days. Admins, confirmed and blocked accounts stay.
 export async function deleteUnconfirmedAccounts(now: Date = new Date()): Promise<number> {
   const { User } = getDb();
   return User.destroy({
     where: {
       emailConfirmedAt: null,
+      blockedAt: null,
       role: "student",
       createdAt: { [Op.lt]: new Date(now.getTime() - UNCONFIRMED_ACCOUNT_TTL_SECONDS * 1000) },
     },
