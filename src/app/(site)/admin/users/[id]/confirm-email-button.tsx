@@ -22,15 +22,18 @@ export function ConfirmEmailButton({ userId }: { userId: string }) {
       if (response.ok) {
         toast.success("Email confirmed.");
         router.refresh();
-      } else if (response.status === 401) {
+        return;
+      }
+      if (response.status === 401) {
         toast.error("Your session has ended. Redirecting to sign in.");
-      } else {
-        toast.error("Couldn't confirm the email. Try again.");
+        return;
       }
     } catch {
-      toast.error("Couldn't confirm the email. Try again.");
+      // Network failure: same message as a refusal.
+    } finally {
+      setPending(false);
     }
-    setPending(false);
+    toast.error("Couldn't confirm the email. Try again.");
   }
 
   return (

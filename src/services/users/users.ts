@@ -167,6 +167,6 @@ export async function confirmUserEmail(viewer: Viewer, id: string, now: Date = n
     if (!user) throw new NotFoundError("User not found");
     if (!user.emailConfirmedAt) await user.update({ emailConfirmedAt: now, updatedAt: now }, { transaction });
     await EmailConfirmation.destroy({ where: { userId: user.id, usedAt: null }, transaction });
-    return { emailConfirmedAt: new Date(user.emailConfirmedAt ?? now).toISOString() };
+    return { emailConfirmedAt: (user.emailConfirmedAt ?? now).toISOString() };
   });
 }
