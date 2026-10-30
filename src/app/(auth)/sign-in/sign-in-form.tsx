@@ -68,9 +68,7 @@ export function SignInForm() {
       } else if (response.status === 403) {
         const body: { code?: string } | null = await response.json().catch(() => null);
         if (body?.code === "email_not_confirmed") setUnconfirmed(email);
-        else if (body?.code === "account_blocked") {
-          setError("This account is blocked. If you think this is a mistake, contact the site owner.");
-        }
+        else if (body?.code === "account_blocked") setError("This account is blocked. If you think this is a mistake, contact the site owner.");
         else setError("Something went wrong. Please try again.");
       } else if (response.status === 401) {
         setError("Invalid email or password.");
