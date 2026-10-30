@@ -85,7 +85,7 @@ test("the admin opens Users, searches and filters unconfirmed accounts", async (
   await expect(page).toHaveURL(/\/admin\/users$/);
 
   // Unusable values are ignored.
-  await page.goto("/admin/users?status=blocked&page=zero");
+  await page.goto("/admin/users?status=deleted&page=zero");
   await expect(page.getByRole("heading", { name: "Users", level: 1 })).toBeVisible();
 });
 
@@ -158,6 +158,95 @@ test("the admin confirms a user's email by hand and the user can then sign in", 
   } finally {
     await context.close();
   }
+});
+
+test("the admin blocks a user, who cannot sign in, then unblocks them", async ({ page, browser, request, baseURL }) => {
+  const stamp = randomBytes(5).toString("hex");
+  const email = `e2e.block.${stamp}@example.com`;
+  const password = "e2e-long-enough-password";
+  const blockedMessage = "This account is blocked. If you think this is a mistake, contact the site owner.";
+  const signUp = await request.post("/api/v1/auth/sign-up", {
+    headers: { origin: baseURL!, "x-forwarded-for": ownIp() },
+    data: { email, password, name: "Block Spec" },
+  });
+  expect(signUp.status()).toBe(202);
+
+  await signIn(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+  await page.goto(`/admin/users?q=${stamp}`);
+  await page.getByRole("link", { name: email }).click();
+  await page.getByRole("button", { name: "Confirm email" }).click();
+  await expect(page.getByText("Email confirmed.")).toBeVisible();
+
+  // The user signs in once, in their own browser.
+  const context = await browser.newContext({ baseURL });
+  try {
+    const userPage = await context.newPage();
+    await signIn(userPage, email, password);
+    expect(new URL(userPage.url()).pathname).toBe("/");
+
+    // Cancel changes nothing; Block asks first.
+    await page.getByRole("button", { name: "Block user" }).click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toContainText(`Block ${email}?`);
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByRole("region", { name: "Account" }).getByText("Blocked", { exact: true })).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Block user" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Block", exact: true }).click();
+    await expect(page.getByText("User blocked.")).toBeVisible();
+    const account = page.getByRole("region", { name: "Account" });
+    await expect(account.getByText("Blocked", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Unblock user" })).toBeVisible();
+
+    // The list shows the badge and the Blocked filter finds the account.
+    await page.goto(`/admin/users?q=${stamp}`);
+    await expect(page.getByRole("listitem").filter({ hasText: email }).getByText("Blocked", { exact: true })).toBeVisible();
+    await page.getByLabel("Blocked only").check();
+    await page.getByRole("button", { name: "Search" }).click();
+    await expect(page).toHaveURL(new RegExp(`\\?q=${stamp}&blocked=1$`));
+    await expect(page.getByRole("listitem").filter({ hasText: email })).toBeVisible();
+
+    // The blocked user sees the message with the right password and the usual one with a wrong password.
+    const other = await browser.newContext({ baseURL });
+    try {
+      const attempt = await other.newPage();
+      await ownAddress(attempt);
+      await attempt.goto("/sign-in");
+      await attempt.getByLabel("Email").fill(email);
+      await attempt.getByLabel("Password", { exact: true }).fill(password);
+      await attempt.getByRole("button", { name: "Sign in" }).click();
+      await expect(attempt.getByText(blockedMessage)).toBeVisible();
+      await expect(attempt).toHaveURL(/\/sign-in/);
+
+      await attempt.getByLabel("Password", { exact: true }).fill("not-the-password-at-all");
+      await attempt.getByRole("button", { name: "Sign in" }).click();
+      await expect(attempt.getByText("Invalid email or password.")).toBeVisible();
+      await expect(attempt.getByText(blockedMessage)).toHaveCount(0);
+
+      // Unblock from the detail page.
+      await page.getByRole("link", { name: email }).click();
+      await page.getByRole("button", { name: "Unblock user" }).click();
+      await expect(page.getByRole("alertdialog")).toContainText(`Unblock ${email}?`);
+      await page.getByRole("alertdialog").getByRole("button", { name: "Unblock", exact: true }).click();
+      await expect(page.getByText("User unblocked.")).toBeVisible();
+      await expect(page.getByRole("region", { name: "Account" }).getByText("Blocked", { exact: true })).toHaveCount(0);
+
+      await signIn(attempt, email, password);
+      expect(new URL(attempt.url()).pathname).toBe("/");
+    } finally {
+      await other.close();
+    }
+  } finally {
+    await context.close();
+  }
+});
+
+test("an admin's own page has no block button", async ({ page }) => {
+  await signIn(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+  await page.goto(`/admin/users?q=${encodeURIComponent(ADMIN_EMAIL.toLowerCase())}`);
+  await page.getByRole("link", { name: ADMIN_EMAIL.toLowerCase() }).click();
+  await expect(page.getByRole("heading", { name: ADMIN_EMAIL.toLowerCase(), level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: /block user/i })).toHaveCount(0);
 });
 
 test("an unknown or malformed user id is the 404 page", async ({ page }) => {

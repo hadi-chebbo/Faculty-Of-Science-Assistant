@@ -83,3 +83,12 @@ export class EmailNotConfirmedError extends Error {
     this.name = "EmailNotConfirmedError";
   }
 }
+
+// The password was right but the admin has blocked the account. Only raised after the password
+// check, so it reveals nothing to someone who does not know the password.
+export class AccountBlockedError extends Error {
+  constructor() {
+    super("Account blocked");
+    this.name = "AccountBlockedError";
+  }
+}

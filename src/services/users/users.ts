@@ -5,7 +5,7 @@ import { getDb } from "@/db/models";
 import { EMAIL_MAX_LENGTH } from "../auth/schemas";
 import type { Page } from "../types";
 import { blankToUndefined, parseInput } from "../validation";
-import { NotFoundError } from "../errors";
+import { ForbiddenError, NotFoundError } from "../errors";
 import { requireAdmin, type Viewer } from "../viewer";
 
 export const USER_PAGE_SIZE = 50;
@@ -17,6 +17,8 @@ const userFiltersSchema = z.object({
   q: optional(z.string().trim().max(EMAIL_MAX_LENGTH)),
   // Only accounts whose email has not been confirmed.
   unconfirmed: z.boolean().default(false),
+  // Only blocked accounts.
+  blocked: z.boolean().default(false),
   page: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(10_000).default(1)),
   pageSize: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(100).default(USER_PAGE_SIZE)),
 });
@@ -24,6 +26,7 @@ const userFiltersSchema = z.object({
 export interface UserFilters {
   q?: string;
   unconfirmed?: boolean;
+  blocked?: boolean;
   page?: number;
   pageSize?: number;
 }
@@ -36,6 +39,8 @@ export interface UserListItem {
   role: UserRole;
   createdAt: string;
   emailConfirmedAt: string | null;
+  // When the admin blocked the account; null if not blocked.
+  blockedAt: string | null;
   // Creation time of the newest refresh token (a token is rotated on every use); null if none.
   lastActiveAt: string | null;
 }
@@ -64,16 +69,17 @@ function escapeLike(value: string): string {
 // Admin only. Newest sign-up first. The rows and count come from one query, last activity from a second for the same page.
 export async function listUsers(viewer: Viewer, filters: UserFilters = {}): Promise<Page<UserListItem>> {
   requireAdmin(viewer);
-  const { q, unconfirmed, page, pageSize } = parseInput(userFiltersSchema, filters);
+  const { q, unconfirmed, blocked, page, pageSize } = parseInput(userFiltersSchema, filters);
   const { User } = getDb();
 
   const where: WhereOptions[] = [];
   if (q) where.push({ email: { [Op.iLike]: `%${escapeLike(q)}%` } });
   if (unconfirmed) where.push({ emailConfirmedAt: null });
+  if (blocked) where.push({ blockedAt: { [Op.ne]: null } });
 
   const { rows, count } = await User.findAndCountAll({
     where: { [Op.and]: where },
-    attributes: ["id", "email", "name", "role", "createdAt", "emailConfirmedAt"],
+    attributes: ["id", "email", "name", "role", "createdAt", "emailConfirmedAt", "blockedAt"],
     order: [["createdAt", "DESC"], ["id", "ASC"]],
     limit: pageSize,
     offset: (page - 1) * pageSize,
@@ -90,6 +96,7 @@ export async function listUsers(viewer: Viewer, filters: UserFilters = {}): Prom
       role: row.role,
       createdAt: row.createdAt.toISOString(),
       emailConfirmedAt: iso(row.emailConfirmedAt),
+      blockedAt: iso(row.blockedAt),
       lastActiveAt: iso(lastActive.get(row.id) ?? null),
     })),
     total: count,
@@ -119,7 +126,7 @@ export async function getUserDetail(viewer: Viewer, id: string, now: Date = new 
   const { User, Bookmark, Todo, Completion, Milestone, StudyDay, RefreshToken, FailedSignIn } = getDb();
 
   const user = await User.findByPk(parsed.data, {
-    attributes: ["id", "email", "name", "role", "createdAt", "emailConfirmedAt"],
+    attributes: ["id", "email", "name", "role", "createdAt", "emailConfirmedAt", "blockedAt"],
     raw: true,
   });
   if (!user) throw new NotFoundError("User not found");
@@ -147,6 +154,7 @@ export async function getUserDetail(viewer: Viewer, id: string, now: Date = new 
     role: user.role,
     createdAt: user.createdAt.toISOString(),
     emailConfirmedAt: iso(user.emailConfirmedAt),
+    blockedAt: iso(user.blockedAt),
     lastActiveAt: iso(lastActive.get(userId) ?? null),
     counts: { saved, cards, completions, milestones, activeDays },
     sessions,
@@ -168,5 +176,39 @@ export async function confirmUserEmail(viewer: Viewer, id: string, now: Date = n
     if (!user.emailConfirmedAt) await user.update({ emailConfirmedAt: now, updatedAt: now }, { transaction });
     await EmailConfirmation.destroy({ where: { userId: user.id, usedAt: null }, transaction });
     return { emailConfirmedAt: (user.emailConfirmedAt ?? now).toISOString() };
+  });
+}
+
+// Admin only. Blocks the account and revokes every refresh token of the user, so they are signed out
+// everywhere (an access token already issued works until it expires, 15 minutes at most). The first block
+// time is kept when called again. An admin account cannot be blocked (ForbiddenError). `now` is for tests.
+export async function blockUser(viewer: Viewer, id: string, now: Date = new Date()): Promise<{ blockedAt: string }> {
+  requireAdmin(viewer);
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) throw new NotFoundError("User not found");
+  const { sequelize, User, RefreshToken } = getDb();
+
+  return sequelize.transaction(async (transaction) => {
+    const user = await User.findByPk(parsed.data, { lock: transaction.LOCK.UPDATE, transaction });
+    if (!user) throw new NotFoundError("User not found");
+    if (user.role === "admin") throw new ForbiddenError("An admin account cannot be blocked");
+    if (!user.blockedAt) await user.update({ blockedAt: now, updatedAt: now }, { transaction });
+    await RefreshToken.update({ revokedAt: now }, { where: { userId: user.id, revokedAt: null }, transaction });
+    return { blockedAt: (user.blockedAt ?? now).toISOString() };
+  });
+}
+
+// Admin only. Lets the user sign in again. Safe to repeat. `now` is for tests.
+export async function unblockUser(viewer: Viewer, id: string, now: Date = new Date()): Promise<{ blockedAt: null }> {
+  requireAdmin(viewer);
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) throw new NotFoundError("User not found");
+  const { sequelize, User } = getDb();
+
+  return sequelize.transaction(async (transaction) => {
+    const user = await User.findByPk(parsed.data, { lock: transaction.LOCK.UPDATE, transaction });
+    if (!user) throw new NotFoundError("User not found");
+    if (user.blockedAt) await user.update({ blockedAt: null, updatedAt: now }, { transaction });
+    return { blockedAt: null };
   });
 }

@@ -6,7 +6,7 @@ import { ForbiddenError, InvalidConfirmationTokenError, NotFoundError, Validatio
 import type { Viewer } from "../viewer";
 import { confirmEmail } from "../auth/sign-up";
 import { hashToken } from "../auth/token-hash";
-import { confirmUserEmail, getUserDetail, listUsers } from "./users";
+import { blockUser, confirmUserEmail, getUserDetail, listUsers, unblockUser } from "./users";
 
 beforeEach(async () => {
   await truncateAllTables();
@@ -285,5 +285,98 @@ describe("confirmUserEmail", () => {
     const a = await admin();
     await expect(confirmUserEmail(a, "nope")).rejects.toBeInstanceOf(NotFoundError);
     await expect(confirmUserEmail(a, "33333333-3333-4333-8333-333333333333")).rejects.toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe("blockUser and unblockUser", () => {
+  const T1 = new Date("2026-10-02T10:00:00Z");
+  const T2 = new Date("2026-10-03T10:00:00Z");
+
+  async function tokens(userId: string, count: number) {
+    for (let i = 0; i < count; i++) {
+      await getDb().RefreshToken.create({
+        userId,
+        tokenHash: hashToken(`${userId}-${i}`.padEnd(43, "x")),
+        familyId: `00000000-0000-4000-8000-00000000000${i}`,
+        expiresAt: new Date(T0 + 30 * DAY),
+      });
+    }
+  }
+
+  it("sets the time and revokes every live refresh token of that user only", async () => {
+    const a = await admin();
+    const user = await make("u@example.com");
+    const other = await make("o@example.com");
+    await tokens(user.id, 3);
+    await tokens(other.id, 1);
+    const result = await blockUser(a, user.id, T1);
+    expect(result).toEqual({ blockedAt: T1.toISOString() });
+    expect((await getDb().User.findByPk(user.id))!.blockedAt).toEqual(T1);
+    const mine = await getDb().RefreshToken.findAll({ where: { userId: user.id } });
+    expect(mine.every((t) => t.revokedAt?.getTime() === T1.getTime())).toBe(true);
+    const theirs = await getDb().RefreshToken.findAll({ where: { userId: other.id } });
+    expect(theirs.every((t) => t.revokedAt === null)).toBe(true);
+  });
+
+  it("keeps the first time when blocked again, and still revokes live tokens", async () => {
+    const a = await admin();
+    const user = await make("u@example.com");
+    await blockUser(a, user.id, T1);
+    await tokens(user.id, 1);
+    const again = await blockUser(a, user.id, T2);
+    expect(again).toEqual({ blockedAt: T1.toISOString() });
+    expect((await getDb().RefreshToken.findAll({ where: { userId: user.id } }))[0].revokedAt).toEqual(T2);
+  });
+
+  it("refuses to block an admin and changes nothing", async () => {
+    const a = await admin();
+    const other = await make("a2@example.com", { role: "admin" });
+    await tokens(other.id, 1);
+    for (const id of [other.id, a.id]) {
+      await expect(blockUser(a, id, T1)).rejects.toBeInstanceOf(ForbiddenError);
+    }
+    expect((await getDb().User.findByPk(other.id))!.blockedAt).toBeNull();
+    expect((await getDb().RefreshToken.findAll())[0].revokedAt).toBeNull();
+  });
+
+  it("is for the admin only", async () => {
+    const student = await make("s@example.com");
+    const user = await make("u@example.com");
+    for (const fn of [blockUser, unblockUser]) {
+      await expect(fn({ id: student.id, role: "student" }, user.id)).rejects.toBeInstanceOf(ForbiddenError);
+      await expect(fn(null, user.id)).rejects.toBeInstanceOf(ForbiddenError);
+    }
+    expect((await getDb().User.findByPk(user.id))!.blockedAt).toBeNull();
+  });
+
+  it("treats a malformed or unknown id as not found", async () => {
+    const a = await admin();
+    for (const fn of [blockUser, unblockUser]) {
+      await expect(fn(a, "nope")).rejects.toBeInstanceOf(NotFoundError);
+      await expect(fn(a, "33333333-3333-4333-8333-333333333333")).rejects.toBeInstanceOf(NotFoundError);
+    }
+  });
+
+  it("unblocks, and unblocking twice is harmless", async () => {
+    const a = await admin();
+    const user = await make("u@example.com");
+    await blockUser(a, user.id, T1);
+    expect(await unblockUser(a, user.id, T2)).toEqual({ blockedAt: null });
+    expect((await getDb().User.findByPk(user.id))!.blockedAt).toBeNull();
+    expect(await unblockUser(a, user.id, T2)).toEqual({ blockedAt: null });
+  });
+
+  it("shows blockedAt in the list and detail, and filters by it", async () => {
+    const a = await admin();
+    const user = await make("u@example.com");
+    await make("v@example.com");
+    await blockUser(a, user.id, T1);
+    const all = await listUsers(a);
+    expect(all.items.find((u) => u.id === user.id)!.blockedAt).toBe(T1.toISOString());
+    expect(all.items.filter((u) => u.blockedAt === null)).toHaveLength(2);
+    const only = await listUsers(a, { blocked: true });
+    expect(only.items.map((u) => u.email)).toEqual(["u@example.com"]);
+    expect(only.total).toBe(1);
+    expect((await getUserDetail(a, user.id)).blockedAt).toBe(T1.toISOString());
   });
 });
