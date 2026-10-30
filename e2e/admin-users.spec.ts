@@ -123,6 +123,43 @@ test("the admin opens a user from the list and goes back to the same list", asyn
   await expect(page.getByRole("listitem").filter({ hasText: email })).toBeVisible();
 });
 
+test("the admin confirms a user's email by hand and the user can then sign in", async ({ page, browser, request, baseURL }) => {
+  const stamp = randomBytes(5).toString("hex");
+  const email = `e2e.confirm.${stamp}@example.com`;
+  const password = "e2e-long-enough-password";
+  const signUp = await request.post("/api/v1/auth/sign-up", {
+    headers: { origin: baseURL!, "x-forwarded-for": ownIp() },
+    data: { email, password, name: "Confirm Spec" },
+  });
+  expect(signUp.status()).toBe(202);
+
+  const refused = await request.post("/api/v1/auth/sign-in", {
+    headers: { origin: baseURL!, "x-forwarded-for": ownIp() },
+    data: { email, password },
+  });
+  expect(refused.status()).toBe(403);
+
+  await signIn(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+  await page.goto(`/admin/users?q=${stamp}`);
+  await page.getByRole("link", { name: email }).click();
+  const account = page.getByRole("region", { name: "Account" });
+  await expect(account.getByText("Unconfirmed", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Confirm email" }).click();
+  await expect(page.getByText("Email confirmed.")).toBeVisible();
+  await expect(account).toContainText("Confirmed");
+  await expect(account.getByText("Unconfirmed", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Confirm email" })).toHaveCount(0);
+
+  const context = await browser.newContext({ baseURL });
+  try {
+    const userPage = await context.newPage();
+    await signIn(userPage, email, password);
+    expect(new URL(userPage.url()).pathname).toBe("/");
+  } finally {
+    await context.close();
+  }
+});
+
 test("an unknown or malformed user id is the 404 page", async ({ page }) => {
   await signIn(page, ADMIN_EMAIL, ADMIN_PASSWORD);
   for (const id of ["33333333-3333-4333-8333-333333333333", "not-a-uuid"]) {

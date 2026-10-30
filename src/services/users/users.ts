@@ -153,3 +153,20 @@ export async function getUserDetail(viewer: Viewer, id: string, now: Date = new 
     failedSignIns: { count: failedCount, latestAt: failedCount > 0 ? iso(failedLatest) : null },
   };
 }
+
+// Admin only. Confirms the address by hand: sets the confirmed time (kept if already set, so a second call
+// changes nothing) and removes the unused confirmation links so they can no longer be used. `now` is for tests.
+export async function confirmUserEmail(viewer: Viewer, id: string, now: Date = new Date()): Promise<{ emailConfirmedAt: string }> {
+  requireAdmin(viewer);
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) throw new NotFoundError("User not found");
+  const { sequelize, User, EmailConfirmation } = getDb();
+
+  return sequelize.transaction(async (transaction) => {
+    const user = await User.findByPk(parsed.data, { lock: transaction.LOCK.UPDATE, transaction });
+    if (!user) throw new NotFoundError("User not found");
+    if (!user.emailConfirmedAt) await user.update({ emailConfirmedAt: now, updatedAt: now }, { transaction });
+    await EmailConfirmation.destroy({ where: { userId: user.id, usedAt: null }, transaction });
+    return { emailConfirmedAt: (user.emailConfirmedAt ?? now).toISOString() };
+  });
+}

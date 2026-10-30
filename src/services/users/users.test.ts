@@ -2,9 +2,11 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import type { UserRole } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
-import { ForbiddenError, NotFoundError, ValidationError } from "../errors";
+import { ForbiddenError, InvalidConfirmationTokenError, NotFoundError, ValidationError } from "../errors";
 import type { Viewer } from "../viewer";
-import { getUserDetail, listUsers } from "./users";
+import { confirmEmail } from "../auth/sign-up";
+import { hashToken } from "../auth/token-hash";
+import { confirmUserEmail, getUserDetail, listUsers } from "./users";
 
 beforeEach(async () => {
   await truncateAllTables();
@@ -236,5 +238,52 @@ describe("getUserDetail", () => {
 
     const quiet = await make("quiet@example.com");
     expect((await getUserDetail(a, quiet.id, NOW)).failedSignIns).toEqual({ count: 0, latestAt: null });
+  });
+});
+
+describe("confirmUserEmail", () => {
+  const NOW = new Date("2026-10-30T09:00:00Z");
+
+  it("is for the admin only", async () => {
+    const u = await make("u@example.com", { confirmed: false });
+    const student = await make("s@example.com");
+    await expect(confirmUserEmail({ id: student.id, role: "student" }, u.id)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(confirmUserEmail(null, u.id)).rejects.toBeInstanceOf(ForbiddenError);
+    expect((await getDb().User.findByPk(u.id))!.emailConfirmedAt).toBeNull();
+  });
+
+  it("confirms an unconfirmed user", async () => {
+    const a = await admin();
+    const u = await make("u@example.com", { confirmed: false });
+    const result = await confirmUserEmail(a, u.id, NOW);
+    expect(result).toEqual({ emailConfirmedAt: NOW.toISOString() });
+    expect((await getDb().User.findByPk(u.id))!.emailConfirmedAt?.toISOString()).toBe(NOW.toISOString());
+  });
+
+  it("stops the outstanding confirmation links", async () => {
+    const a = await admin();
+    const u = await make("u@example.com", { confirmed: false });
+    await getDb().EmailConfirmation.create({
+      userId: u.id,
+      tokenHash: hashToken("a".repeat(43)),
+      expiresAt: new Date(NOW.getTime() + DAY),
+    });
+    await confirmUserEmail(a, u.id, NOW);
+    await expect(confirmEmail("a".repeat(43), NOW)).rejects.toBeInstanceOf(InvalidConfirmationTokenError);
+    expect(await getDb().EmailConfirmation.count({ where: { userId: u.id } })).toBe(0);
+  });
+
+  it("is harmless twice and keeps the first time", async () => {
+    const a = await admin();
+    const u = await make("u@example.com", { confirmed: false });
+    await confirmUserEmail(a, u.id, NOW);
+    const later = new Date(NOW.getTime() + DAY);
+    expect(await confirmUserEmail(a, u.id, later)).toEqual({ emailConfirmedAt: NOW.toISOString() });
+  });
+
+  it("answers NotFoundError for a malformed or unknown id", async () => {
+    const a = await admin();
+    await expect(confirmUserEmail(a, "nope")).rejects.toBeInstanceOf(NotFoundError);
+    await expect(confirmUserEmail(a, "33333333-3333-4333-8333-333333333333")).rejects.toBeInstanceOf(NotFoundError);
   });
 });
