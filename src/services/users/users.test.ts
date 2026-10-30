@@ -6,7 +6,8 @@ import { ForbiddenError, InvalidConfirmationTokenError, NotFoundError, Validatio
 import type { Viewer } from "../viewer";
 import { confirmEmail } from "../auth/sign-up";
 import { hashToken } from "../auth/token-hash";
-import { blockUser, confirmUserEmail, getUserDetail, listUsers, unblockUser } from "./users";
+import { signUp } from "../auth/sign-up";
+import { blockUser, confirmUserEmail, deleteUser, getUserDetail, listUsers, unblockUser } from "./users";
 
 beforeEach(async () => {
   await truncateAllTables();
@@ -378,5 +379,114 @@ describe("blockUser and unblockUser", () => {
     expect(only.items.map((u) => u.email)).toEqual(["u@example.com"]);
     expect(only.total).toBe(1);
     expect((await getUserDetail(a, user.id)).blockedAt).toBe(T1.toISOString());
+  });
+});
+
+describe("deleteUser", () => {
+  const UNKNOWN = "33333333-3333-4333-8333-333333333333";
+
+  async function fill(userId: string, n: number) {
+    const { Course, Resource, Bookmark, Completion, Todo, Milestone, StudyDay, RefreshToken, EmailConfirmation } = getDb();
+    const course = await Course.create({ code: `TEST30${n}`, title: "Course", semester: 3 });
+    const file = await Resource.create({ courseId: course.id, type: "lecture", title: "A", fileKey: "k", isPublished: true });
+    await Bookmark.create({ userId, resourceId: file.id });
+    await Completion.create({ userId, resourceId: file.id });
+    await Todo.create({ userId, status: "todo", position: 0, title: "c" });
+    await Milestone.create({ userId, key: "first_file" });
+    await StudyDay.create({ userId, day: "2026-10-29" });
+    await RefreshToken.create({
+      userId,
+      tokenHash: hashToken(`${userId}`.padEnd(43, "x")),
+      familyId: `00000000-0000-4000-8000-00000000000${n}`,
+      expiresAt: new Date(T0 + 30 * DAY),
+    });
+    await EmailConfirmation.create({ userId, tokenHash: hashToken(`c${userId}`.padEnd(43, "y")), expiresAt: new Date(T0 + DAY) });
+    return file.id;
+  }
+
+  const counts = async (userId: string) => {
+    const db = getDb();
+    const where = { userId };
+    return [
+      await db.Bookmark.count({ where }),
+      await db.Completion.count({ where }),
+      await db.Todo.count({ where }),
+      await db.Milestone.count({ where }),
+      await db.StudyDay.count({ where }),
+      await db.RefreshToken.count({ where }),
+      await db.EmailConfirmation.count({ where }),
+    ];
+  };
+
+  it("removes the user and every row that belongs to them, and only theirs", async () => {
+    const a = await admin();
+    const user = await make("u@example.com");
+    const other = await make("o@example.com");
+    await fill(user.id, 1);
+    await fill(other.id, 2);
+    expect(await counts(user.id)).toEqual([1, 1, 1, 1, 1, 1, 1]);
+
+    await deleteUser(a, user.id);
+
+    expect(await getDb().User.findByPk(user.id)).toBeNull();
+    expect(await counts(user.id)).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    expect(await counts(other.id)).toEqual([1, 1, 1, 1, 1, 1, 1]);
+    expect(await getDb().User.findByPk(other.id)).not.toBeNull();
+    expect(await getDb().Resource.count()).toBe(2);
+  });
+
+  it("removes pending email jobs to that address only", async () => {
+    const a = await admin();
+    const user = await make("u@example.com");
+    const { EmailJob } = getDb();
+    await EmailJob.create({ kind: "confirm-email", toEmail: "u@example.com" });
+    await EmailJob.create({ kind: "already-registered", toEmail: "u@example.com" });
+    await EmailJob.create({ kind: "confirm-email", toEmail: "u@example.com", status: "sent", sentAt: new Date(T0) });
+    await EmailJob.create({ kind: "confirm-email", toEmail: "o@example.com" });
+
+    await deleteUser(a, user.id);
+
+    const left = await EmailJob.findAll({ order: [["toEmail", "ASC"]] });
+    expect(left.map((j) => [j.toEmail, j.status])).toEqual([
+      ["o@example.com", "pending"],
+      ["u@example.com", "sent"],
+    ]);
+  });
+
+  it("refuses an admin account and deletes nothing", async () => {
+    const a = await admin();
+    const other = await make("a2@example.com", { role: "admin" });
+    for (const id of [other.id, a.id]) {
+      await expect(deleteUser(a, id)).rejects.toBeInstanceOf(ForbiddenError);
+    }
+    expect(await getDb().User.count()).toBe(2);
+  });
+
+  it("is for the admin only", async () => {
+    const student = await make("s@example.com");
+    const user = await make("u@example.com");
+    await expect(deleteUser({ id: student.id, role: "student" }, user.id)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(deleteUser(null, user.id)).rejects.toBeInstanceOf(ForbiddenError);
+    expect(await getDb().User.count()).toBe(2);
+  });
+
+  it("treats a malformed or unknown id, or a second delete, as not found", async () => {
+    const a = await admin();
+    const user = await make("u@example.com");
+    await expect(deleteUser(a, "nope")).rejects.toBeInstanceOf(NotFoundError);
+    await expect(deleteUser(a, UNKNOWN)).rejects.toBeInstanceOf(NotFoundError);
+    await deleteUser(a, user.id);
+    await expect(deleteUser(a, user.id)).rejects.toBeInstanceOf(NotFoundError);
+  });
+
+  it("lets the same address sign up again afterwards", async () => {
+    const a = await admin();
+    const user = await make("u@example.com");
+    await deleteUser(a, user.id);
+    await signUp({ email: "u@example.com", password: "a-long-enough-password", ip: "203.0.113.1" });
+    const again = await getDb().User.findOne({ where: { email: "u@example.com" } });
+    expect(again).not.toBeNull();
+    expect(again!.id).not.toBe(user.id);
+    expect(again!.emailConfirmedAt).toBeNull();
   });
 });

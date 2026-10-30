@@ -241,12 +241,75 @@ test("the admin blocks a user, who cannot sign in, then unblocks them", async ({
   }
 });
 
+test("the admin deletes a user, who disappears and can sign up again", async ({ page, browser, request, baseURL }) => {
+  const stamp = randomBytes(5).toString("hex");
+  const email = `e2e.delete.${stamp}@example.com`;
+  const password = "e2e-long-enough-password";
+  const signUpBody = { headers: { origin: baseURL!, "x-forwarded-for": ownIp() }, data: { email, password, name: "Delete Spec" } };
+  expect((await request.post("/api/v1/auth/sign-up", signUpBody)).status()).toBe(202);
+
+  await signIn(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+  await page.goto(`/admin/users?q=${stamp}`);
+  await page.getByRole("link", { name: email }).click();
+  await page.getByRole("button", { name: "Confirm email" }).click();
+  await expect(page.getByText("Email confirmed.")).toBeVisible();
+
+  // The user signs in once, in their own browser.
+  const context = await browser.newContext({ baseURL });
+  try {
+    const userPage = await context.newPage();
+    await signIn(userPage, email, password);
+    expect(new URL(userPage.url()).pathname).toBe("/");
+  } finally {
+    await context.close();
+  }
+
+  await page.getByRole("button", { name: "Delete account" }).click();
+  const dialog = page.getByRole("alertdialog");
+  await expect(dialog).toContainText(`Delete ${email}?`);
+  const confirm = dialog.getByRole("button", { name: "Delete account" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Type the email to confirm").fill("someone.else@example.com");
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Type the email to confirm").fill(email);
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+
+  await expect(page.getByText("Account deleted.")).toBeVisible();
+  await expect(page).toHaveURL(/\/admin\/users(\?|$)/);
+  await page.goto(`/admin/users?q=${stamp}`);
+  await expect(page.getByText("No users match.")).toBeVisible();
+
+  // The deleted user can no longer sign in.
+  const other = await browser.newContext({ baseURL });
+  try {
+    const attempt = await other.newPage();
+    await ownAddress(attempt);
+    await attempt.goto("/sign-in");
+    await attempt.getByLabel("Email").fill(email);
+    await attempt.getByLabel("Password", { exact: true }).fill(password);
+    await attempt.getByRole("button", { name: "Sign in" }).click();
+    await expect(attempt.getByText("Invalid email or password.")).toBeVisible();
+  } finally {
+    await other.close();
+  }
+
+  // The address is free again.
+  signUpBody.headers["x-forwarded-for"] = ownIp();
+  expect((await request.post("/api/v1/auth/sign-up", signUpBody)).status()).toBe(202);
+  await page.goto(`/admin/users?q=${stamp}`);
+  const row = page.getByRole("listitem").filter({ hasText: email });
+  await expect(row).toBeVisible();
+  await expect(row.getByText("Unconfirmed", { exact: true })).toBeVisible();
+});
+
 test("an admin's own page has no block button", async ({ page }) => {
   await signIn(page, ADMIN_EMAIL, ADMIN_PASSWORD);
   await page.goto(`/admin/users?q=${encodeURIComponent(ADMIN_EMAIL.toLowerCase())}`);
   await page.getByRole("link", { name: ADMIN_EMAIL.toLowerCase() }).click();
   await expect(page.getByRole("heading", { name: ADMIN_EMAIL.toLowerCase(), level: 1 })).toBeVisible();
   await expect(page.getByRole("button", { name: /block user/i })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Delete account" })).toHaveCount(0);
 });
 
 test("an unknown or malformed user id is the 404 page", async ({ page }) => {

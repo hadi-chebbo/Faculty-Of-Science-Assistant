@@ -12,6 +12,7 @@ import { formatDate, formatDateTime } from "../format";
 import { parseUsersParams, usersHref } from "../params";
 import { BlockButton } from "./block-button";
 import { ConfirmEmailButton } from "./confirm-email-button";
+import { DeleteAccountButton } from "./delete-account-button";
 
 export const metadata: Metadata = { title: "User", robots: { index: false, follow: false } };
 
@@ -55,13 +56,14 @@ async function UserContent({ id, raw }: { id: string; raw: Record<string, string
         <Actions user={user} />
         <Activity user={user} />
         <Security user={user} />
+        {user.role === "student" && <DeleteAccount user={user} backHref={back} />}
       </div>
     </>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  const id = `user-${title.toLowerCase()}`;
+  const id = `user-${title.toLowerCase().replaceAll(" ", "-")}`;
   return (
     <section aria-labelledby={id} className="space-y-3">
       <h2 id={id} className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -115,7 +117,7 @@ function Account({ user }: { user: UserDetail }) {
   );
 }
 
-// Delete will join here. Nothing is shown when no action applies. An admin account cannot be blocked.
+// Nothing is shown when no action applies. An admin account cannot be blocked.
 function Actions({ user }: { user: UserDetail }) {
   const canBlock = user.role === "student";
   if (user.emailConfirmedAt && !canBlock) return null;
@@ -161,6 +163,21 @@ function Security({ user }: { user: UserDetail }) {
           ],
         ]}
       />
+    </Section>
+  );
+}
+
+// Students only: an admin account cannot be deleted.
+function DeleteAccount({ user, backHref }: { user: UserDetail; backHref: string }) {
+  return (
+    <Section title="Danger zone">
+      <div className="space-y-3 rounded-lg border border-destructive/40 bg-card p-4">
+        <p className="text-sm text-muted-foreground">
+          Deletes the account and everything that belongs to it: saved files, to-do cards, progress and sessions. This
+          can&apos;t be undone.
+        </p>
+        <DeleteAccountButton userId={user.id} email={user.email} backHref={backHref} />
+      </div>
     </Section>
   );
 }
