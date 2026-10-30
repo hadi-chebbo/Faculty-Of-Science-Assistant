@@ -212,3 +212,22 @@ export async function unblockUser(viewer: Viewer, id: string, now: Date = new Da
     return { blockedAt: null };
   });
 }
+
+// Admin only. Deletes the account and, through the database's cascades, everything that belongs to the user
+// (saved resources, cards, completions, active days, milestones, sessions, confirmation links). Pending email
+// jobs to the address are removed too (an "already registered" one has no user id), so nothing is sent to a
+// stranger later. The address can sign up again. An admin account cannot be deleted (ForbiddenError).
+export async function deleteUser(viewer: Viewer, id: string): Promise<void> {
+  requireAdmin(viewer);
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) throw new NotFoundError("User not found");
+  const { sequelize, User, EmailJob } = getDb();
+
+  await sequelize.transaction(async (transaction) => {
+    const user = await User.findByPk(parsed.data, { lock: transaction.LOCK.UPDATE, transaction });
+    if (!user) throw new NotFoundError("User not found");
+    if (user.role === "admin") throw new ForbiddenError("An admin account cannot be deleted");
+    await EmailJob.destroy({ where: { toEmail: user.email.toLowerCase(), status: "pending" }, transaction });
+    await user.destroy({ transaction });
+  });
+}
