@@ -10,6 +10,7 @@ import { getUserDetail, type UserDetail } from "@/services/users/users";
 import { requireAdminPage } from "../../guard";
 import { formatDate, formatDateTime } from "../format";
 import { parseUsersParams, usersHref } from "../params";
+import { ConfirmEmailButton } from "./confirm-email-button";
 
 export const metadata: Metadata = { title: "User", robots: { index: false, follow: false } };
 
@@ -50,7 +51,7 @@ async function UserContent({ id, raw }: { id: string; raw: Record<string, string
 
       <div className="max-w-xl space-y-8">
         <Account user={user} />
-        {/* Actions (confirm email, block, delete) go here, under Account. */}
+        <Actions user={user} />
         <Activity user={user} />
         <Security user={user} />
       </div>
@@ -98,6 +99,18 @@ function Account({ user }: { user: UserDetail }) {
           ["Last active", user.lastActiveAt ? formatDate(user.lastActiveAt) : "Never"],
         ]}
       />
+    </Section>
+  );
+}
+
+// Block and delete will join here. Nothing is shown when no action applies.
+function Actions({ user }: { user: UserDetail }) {
+  if (user.emailConfirmedAt) return null;
+  return (
+    <Section title="Actions">
+      <div className="flex flex-wrap gap-2">
+        <ConfirmEmailButton userId={user.id} />
+      </div>
     </Section>
   );
 }
