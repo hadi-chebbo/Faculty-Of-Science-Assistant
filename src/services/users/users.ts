@@ -227,7 +227,7 @@ export async function deleteUser(viewer: Viewer, id: string): Promise<void> {
     const user = await User.findByPk(parsed.data, { lock: transaction.LOCK.UPDATE, transaction });
     if (!user) throw new NotFoundError("User not found");
     if (user.role === "admin") throw new ForbiddenError("An admin account cannot be deleted");
-    await EmailJob.destroy({ where: { toEmail: user.email.toLowerCase(), status: "pending" }, transaction });
+    await EmailJob.destroy({ where: { toEmail: user.email, status: "pending" }, transaction });
     await user.destroy({ transaction });
   });
 }

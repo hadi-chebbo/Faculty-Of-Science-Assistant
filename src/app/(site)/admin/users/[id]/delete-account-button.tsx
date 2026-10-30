@@ -27,7 +27,7 @@ export function DeleteAccountButton({ userId, email, backHref }: { userId: strin
   // Emails are stored lowercase, so the comparison ignores case.
   const matches = typed.trim().toLowerCase() === email.toLowerCase();
 
-  function change(next: boolean) {
+  function onOpenChange(next: boolean) {
     if (pending) return;
     setOpen(next);
     if (!next) setTyped("");
@@ -44,6 +44,13 @@ export function DeleteAccountButton({ userId, email, backHref }: { userId: strin
       );
       if (response.ok) {
         toast.success("Account deleted.");
+        router.replace(backHref);
+        router.refresh();
+        return;
+      }
+      if (response.status === 404) {
+        // Deleted meanwhile (another tab): nothing to retry.
+        toast.error("This account no longer exists.");
         router.replace(backHref);
         router.refresh();
         return;
@@ -67,7 +74,7 @@ export function DeleteAccountButton({ userId, email, backHref }: { userId: strin
       <Button type="button" variant="destructive" onClick={() => setOpen(true)} className="min-h-11 md:min-h-0">
         Delete account
       </Button>
-      <AlertDialog open={open} onOpenChange={change}>
+      <AlertDialog open={open} onOpenChange={onOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="break-all">Delete {email}?</AlertDialogTitle>
