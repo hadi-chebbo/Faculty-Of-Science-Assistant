@@ -300,6 +300,7 @@ describe("blockUser and unblockUser", () => {
         tokenHash: hashToken(`${userId}-${i}`.padEnd(43, "x")),
         familyId: `00000000-0000-4000-8000-00000000000${i}`,
         expiresAt: new Date(T0 + 30 * DAY),
+        createdAt: new Date(T0),
       });
     }
   }
@@ -399,6 +400,7 @@ describe("deleteUser", () => {
       tokenHash: hashToken(`${userId}`.padEnd(43, "x")),
       familyId: `00000000-0000-4000-8000-00000000000${n}`,
       expiresAt: new Date(T0 + 30 * DAY),
+      createdAt: new Date(T0),
     });
     await EmailConfirmation.create({ userId, tokenHash: hashToken(`c${userId}`.padEnd(43, "y")), expiresAt: new Date(T0 + DAY) });
     return file.id;
