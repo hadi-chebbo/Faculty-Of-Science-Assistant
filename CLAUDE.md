@@ -202,6 +202,7 @@ mock exam generation, personalization.
   also shows a "Sign in" link or, when signed in, a round avatar with the user's initials (a person icon
   without a name), labelled with the name (never the email). Its menu holds the account only: the name,
   Admin (admins only) and Sign out; pages never go in it.
+- Page width: every site page, the header and the footer use the `page-container` utility (`globals.css`): content up to 1280px (`max-w-7xl`), centred, side padding 16px on a phone, 24px from sm, 32px from lg, so the edges never move between pages; the reader follows it too. The account pages keep their full-screen split.
 - Home is a landing page: a hero (headline, description, "Browse courses" and "Previous exams"
   buttons, three facts, and a decorative course preview), a numbers strip (only from 5 courses), the
   semester cards (an empty semester is a muted card, not a link), how it works, what you will find,

@@ -40,8 +40,8 @@ export function ChipRow({ chips }: { chips: ChipLink[] }) {
   }, [activeKey]);
 
   return (
-    <nav aria-label="Result types" className="-mx-4">
-      <ul ref={list} className="flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+    <nav aria-label="Result types" className="-mx-4 sm:-mx-6 lg:-mx-8">
+      <ul ref={list} className="flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:px-6 lg:px-8">
         {chips.map((chip) => (
           <li key={chip.key} className="shrink-0">
             <Link

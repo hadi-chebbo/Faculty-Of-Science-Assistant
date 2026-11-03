@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Resource unavailable", robots: { ind
 // from the request, so the redirect cannot be used to put text on our site.
 export default function ResourceUnavailablePage() {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
+    <main className="page-container py-8 md:py-12">
       <StateBlock
         icon={FileX}
         title="Resource unavailable"

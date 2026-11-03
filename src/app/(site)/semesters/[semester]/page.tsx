@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: PageProps<"/semesters/[semest
 // fallback covers the breadcrumb and title too, since they depend on it.
 export default function SemesterPage({ params }: PageProps<"/semesters/[semester]">) {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
+    <main className="page-container py-6 md:py-8">
       <Suspense fallback={<SemesterSkeleton />}>
         {params.then(({ semester }) => (
           <SemesterContent semester={semester} />

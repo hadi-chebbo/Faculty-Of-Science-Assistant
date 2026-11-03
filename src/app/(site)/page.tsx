@@ -9,7 +9,7 @@ import { StatsAndSemesters } from "./home/stats-and-semesters";
 // inside one Suspense boundary (one service call feeds both).
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-12 px-4 py-6 md:gap-14 md:py-8">
+    <main className="page-container flex flex-col gap-12 py-6 md:gap-14 md:py-8">
       <Hero />
       <ProgressBand />
       <Suspense fallback={<StatsAndSemestersSkeleton />}>

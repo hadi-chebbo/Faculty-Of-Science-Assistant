@@ -21,7 +21,7 @@ const ROLE_LABELS = { admin: "Admin", student: "Student" } as const;
 // Admin only, checked on the server before anything renders. Uncached (see next.config.ts).
 export default function AdminUserPage({ params, searchParams }: PageProps<"/admin/users/[id]">) {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
+    <main className="page-container py-6 md:py-8">
       <Suspense fallback={<div className="space-y-4" aria-hidden>
           <Skeleton className="h-6 w-24" />
           <Skeleton className="h-8 w-72" />

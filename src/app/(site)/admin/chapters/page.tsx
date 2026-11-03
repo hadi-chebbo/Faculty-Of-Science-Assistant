@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: "Chapters - Admin", robots: { index: 
 // Admin page for one course's chapters. Same guard as /admin: nothing renders before the admin check.
 export default function AdminChaptersPage({ searchParams }: PageProps<"/admin/chapters">) {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
+    <main className="page-container py-6 md:py-8">
       <Suspense fallback={<div className="space-y-4" aria-hidden>
           <Skeleton className="h-11 w-full max-w-sm md:h-9" />
           <Skeleton className="h-8 w-48" />

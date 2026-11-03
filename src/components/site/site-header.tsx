@@ -10,7 +10,7 @@ export function SiteHeader() {
   return (
     <>
       <header className="sticky top-0 z-40 border-b bg-card">
-        <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-4 px-4 lg:gap-6">
+        <div className="page-container flex h-14 items-center gap-4 lg:gap-6">
           <BrandLink />
           <nav aria-label="Main" className="ml-auto hidden items-center md:flex">
             <Suspense fallback={null}>

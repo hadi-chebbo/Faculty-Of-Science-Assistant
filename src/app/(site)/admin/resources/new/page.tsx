@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "New resource", robots: { index: fals
 
 export default function NewResourcePage() {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
+    <main className="page-container py-6 md:py-8">
       <Suspense fallback={<div className="space-y-4" aria-hidden>
           <Skeleton className="h-11 w-full max-w-sm md:h-9" />
           <Skeleton className="h-5 w-48" />
