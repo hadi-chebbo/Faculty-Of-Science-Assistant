@@ -33,8 +33,8 @@ export function BoardFilterBar({
           className="h-11 bg-card pl-9 md:h-9"
         />
       </div>
-      <div role="group" aria-label="Filter by course" className="-mx-4 min-w-0 md:mx-0">
-        <ul className="flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:px-0">
+      <div role="group" aria-label="Filter by course" className="-mx-4 min-w-0 sm:-mx-6 md:mx-0">
+        <ul className="flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:px-6 md:px-0">
           {chips.map((chip) => {
             const active = filter.chip === chip.key;
             return (

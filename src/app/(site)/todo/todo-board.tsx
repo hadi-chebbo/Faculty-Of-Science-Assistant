@@ -518,7 +518,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
           })}
         </TabsList>
         {TODO_STATUSES.map((status) => (
-          <TabsContent key={status} value={status} className={`-mx-4 min-h-80 px-4 py-4 ${STATUS_LOOK[status].tint}`}>
+          <TabsContent key={status} value={status} className={`-mx-4 min-h-80 px-4 py-4 sm:-mx-6 sm:px-6 ${STATUS_LOOK[status].tint}`}>
             {adding === status && (
               <div className="mb-3">
                 <CardComposer status={status} onAdd={add} onClose={closeComposer} />
