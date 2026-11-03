@@ -28,7 +28,7 @@ const NO_SCRIPT_CSS = `
 // Everything depends on the address, so it all streams in behind a skeleton.
 export default function SearchPage({ searchParams }: PageProps<"/search">) {
   return (
-    <main className="mx-auto w-full max-w-[55rem] px-4 py-6 md:py-8">
+    <main className="page-container py-6 md:py-8">
       <noscript>
         <style>{NO_SCRIPT_CSS}</style>
       </noscript>

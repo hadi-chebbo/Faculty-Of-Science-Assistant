@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Your progress", robots: { index: fal
 // sign-in.
 export default function ProgressPage() {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
+    <main className="page-container py-6 md:py-8">
       <Crumbs items={[{ label: "Home", href: "/" }, { label: "Progress" }]} />
       <PageTitle description="Based only on the files you marked as done.">Your progress</PageTitle>
       <Suspense fallback={<ProgressSkeleton />}>

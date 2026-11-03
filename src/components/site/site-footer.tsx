@@ -3,7 +3,7 @@ export const DISCLAIMER = "Independent student project. Not an official Lebanese
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t">
-      <div className="mx-auto w-full max-w-5xl px-4 py-8 text-sm text-muted-foreground">{DISCLAIMER}</div>
+      <div className="page-container py-8 text-sm text-muted-foreground">{DISCLAIMER}</div>
     </footer>
   );
 }

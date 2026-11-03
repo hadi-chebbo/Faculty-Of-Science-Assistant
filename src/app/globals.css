@@ -299,3 +299,8 @@
     opacity: 1;
   }
 }
+
+/* The one shared content width for site pages, the header and the footer. */
+@utility page-container {
+  @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+}

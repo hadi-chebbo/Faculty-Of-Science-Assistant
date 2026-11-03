@@ -13,7 +13,7 @@ export default function ErrorPage({ error, retry }: { error: Error & { digest?: 
   }, [error]);
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-8 md:py-12">
+    <main className="page-container py-8 md:py-12">
       <StateBlock
         icon={TriangleAlert}
         title="Something went wrong"

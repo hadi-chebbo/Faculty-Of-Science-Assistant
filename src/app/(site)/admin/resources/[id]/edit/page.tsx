@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Edit resource", robots: { index: fal
 
 export default function EditResourcePage({ params }: PageProps<"/admin/resources/[id]/edit">) {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
+    <main className="page-container py-6 md:py-8">
       <Suspense fallback={<div className="space-y-4" aria-hidden>
           <Skeleton className="h-11 w-full max-w-sm md:h-9" />
           <Skeleton className="h-5 w-48" />

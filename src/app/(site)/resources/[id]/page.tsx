@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: PageProps<"/resources/[id]">)
 // Resource ids are runtime data: reading one happens inside Suspense, behind a skeleton.
 export default function ReaderPage({ params }: PageProps<"/resources/[id]">) {
   return (
-    <main className="mx-auto w-full max-w-[100rem] px-4 pt-4 pb-6 md:px-8 md:pt-4 md:pb-5">
+    <main className="page-container pt-4 pb-6 md:pt-4 md:pb-5">
       <Suspense fallback={<ReaderSkeleton />}>
         {params.then(({ id }) => (
           <ReaderContent id={id} />

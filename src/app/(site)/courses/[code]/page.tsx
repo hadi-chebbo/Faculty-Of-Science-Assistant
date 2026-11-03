@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Course" };
 // data: reading it and the course happens inside Suspense, behind a skeleton.
 export default function CoursePage({ params, searchParams }: PageProps<"/courses/[code]">) {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
+    <main className="page-container py-6 md:py-8">
       <Suspense fallback={<CourseSkeleton />}>
         {Promise.all([params, searchParams]).then(([{ code }, query]) => (
           <CourseContent code={code} tab={query.tab} />

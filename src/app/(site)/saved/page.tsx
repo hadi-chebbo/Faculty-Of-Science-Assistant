@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Saved", robots: { index: false, foll
 // before the guard: without a valid session the visitor goes through the restore route to sign-in.
 export default function SavedPage() {
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 md:py-8">
+    <main className="page-container py-6 md:py-8">
       <Crumbs items={[{ label: "Home", href: "/" }, { label: "Saved" }]} />
       <PageTitle>Saved</PageTitle>
       <Suspense fallback={<SavedSkeleton />}>
