@@ -29,17 +29,16 @@ export function EditCourseButton({ course }: { course: AdminCourse }) {
 
 function EditFields({ course, onSaved }: { course: AdminCourse; onSaved: () => void }) {
   return (
-    <div className="[&_form]:md:grid-cols-1 [&_form>div:last-child]:md:mt-0">
-      <CourseForm
-        idPrefix={`edit-${course.id}`}
-        initial={{ code: course.code, title: course.title, semester: String(course.semester) }}
-        url={`/api/v1/courses/${course.id}`}
-        method="PATCH"
-        submitLabel="Save"
-        savedMessage="Course saved."
-        onSaved={onSaved}
-        codeHint="Changing the code changes the course's address (/courses/CODE)."
-      />
-    </div>
+    <CourseForm
+      idPrefix={`edit-${course.id}`}
+      initial={{ code: course.code, title: course.title, semester: String(course.semester) }}
+      url={`/api/v1/courses/${course.id}`}
+      method="PATCH"
+      submitLabel="Save"
+      savedMessage="Course saved."
+      onSaved={onSaved}
+      codeHint="Changing the code changes the course's address (/courses/CODE)."
+      stacked
+    />
   );
 }

@@ -40,6 +40,7 @@ export function CourseForm({
   onSaved,
   codeRef,
   codeHint,
+  stacked,
 }: {
   idPrefix: string;
   initial: CourseValues;
@@ -51,6 +52,8 @@ export function CourseForm({
   onSaved?: () => void;
   codeRef?: Ref<HTMLInputElement>;
   codeHint: string;
+  // One field per line at every width (the edit dialog); otherwise one row from md up.
+  stacked?: boolean;
 }) {
   const router = useRouter();
   const hydrated = useHydrated();
@@ -111,7 +114,11 @@ export function CourseForm({
     ) : null;
 
   return (
-    <form method="post" onSubmit={onSubmit} className="grid gap-4 md:grid-cols-[1fr_2fr_1fr_auto] md:items-start">
+    <form
+      method="post"
+      onSubmit={onSubmit}
+      className={stacked ? "grid gap-4" : "grid gap-4 md:grid-cols-[1fr_2fr_1fr_auto] md:items-start"}
+    >
       <div>
         <Label htmlFor={`${idPrefix}-code`} className="mb-1.5">Code</Label>
         <Input
@@ -155,7 +162,7 @@ export function CourseForm({
         </NativeSelect>
         {error("semester")}
       </div>
-      <Button type="submit" disabled={pending || !hydrated} className="h-11 px-4 md:mt-[1.625rem] md:h-9 md:px-3">
+      <Button type="submit" disabled={pending || !hydrated} className={stacked ? "h-11 px-4 md:h-9 md:px-3" : "h-11 px-4 md:mt-[1.625rem] md:h-9 md:px-3"}>
         {submitLabel}
       </Button>
     </form>
