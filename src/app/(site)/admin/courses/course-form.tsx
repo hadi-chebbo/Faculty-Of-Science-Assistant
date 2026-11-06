@@ -25,6 +25,14 @@ const FIELD_MESSAGES: Record<string, string> = {
 };
 const TAKEN_MESSAGE = "A course with this code already exists.";
 
+// The course as the server stored it (code normalised).
+export interface SavedCourseValues {
+  id: string;
+  code: string;
+  title: string;
+  semester: number;
+}
+
 type Errors = Partial<Record<keyof CourseValues, string>>;
 
 // The three course fields with their save request. Used for a new course (POST) and for the edit
@@ -49,7 +57,7 @@ export function CourseForm({
   submitLabel: string;
   savedMessage: string;
   clearOnSuccess?: boolean;
-  onSaved?: () => void;
+  onSaved?: (course: SavedCourseValues) => void;
   codeRef?: Ref<HTMLInputElement>;
   codeHint: string;
   // One field per line at every width (the edit dialog); otherwise one row from md up.
@@ -78,10 +86,11 @@ export function CourseForm({
         () => router.replace("/sign-in"),
       );
       if (response.ok) {
+        const { course }: { course: SavedCourseValues } = await response.json();
         toast.success(savedMessage);
         if (clearOnSuccess) setValues(initial);
         router.refresh();
-        onSaved?.();
+        onSaved?.(course);
         return;
       }
       if (response.status === 401) {
@@ -126,6 +135,7 @@ export function CourseForm({
           ref={codeRef}
           value={values.code}
           onChange={(e) => set("code")(e.target.value)}
+          // Room for spaces the server removes ("I3 301").
           maxLength={COURSE_CODE_MAX_LENGTH + 10}
           autoComplete="off"
           aria-invalid={errors.code ? true : undefined}

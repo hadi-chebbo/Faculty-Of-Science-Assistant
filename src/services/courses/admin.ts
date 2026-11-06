@@ -1,6 +1,6 @@
 import { col, fn, UniqueConstraintError } from "sequelize";
 import { z } from "zod";
-import { COURSE_TITLE_MAX_LENGTH } from "@/db/constants";
+import { COURSE_CODE_MAX_LENGTH, COURSE_TITLE_MAX_LENGTH } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { requireCurrentAdmin } from "../auth/require-admin";
 import { CourseCodeTakenError, NotFoundError } from "../errors";
@@ -18,7 +18,7 @@ export function normaliseCourseCode(code: string): string {
 const normalisedCodeSchema = z
   .string()
   .transform(normaliseCourseCode)
-  .pipe(z.string().regex(/^[A-Z0-9]{2,20}$/));
+  .pipe(z.string().min(2).max(COURSE_CODE_MAX_LENGTH).regex(/^[A-Z0-9]+$/));
 
 export const courseInputSchema = z.object({
   code: normalisedCodeSchema,
@@ -62,16 +62,21 @@ async function codeTaken(code: string, exceptId?: string): Promise<boolean> {
   return rows.some((row) => row.id !== exceptId);
 }
 
-export async function createCourse(viewer: Viewer, input: CourseInput): Promise<SavedCourse> {
-  await requireCurrentAdmin(viewer);
-  const data = parseInput(courseInputSchema, input);
-  if (await codeTaken(data.code)) throw new CourseCodeTakenError();
+// The check before a write is not enough when two saves race; the unique index then decides.
+async function refuseTakenCode<T>(write: () => Promise<T>): Promise<T> {
   try {
-    return toSaved(await getDb().Course.create(data));
+    return await write();
   } catch (error) {
     if (error instanceof UniqueConstraintError) throw new CourseCodeTakenError();
     throw error;
   }
+}
+
+export async function createCourse(viewer: Viewer, input: CourseInput): Promise<SavedCourse> {
+  await requireCurrentAdmin(viewer);
+  const data = parseInput(courseInputSchema, input);
+  if (await codeTaken(data.code)) throw new CourseCodeTakenError();
+  return toSaved(await refuseTakenCode(() => getDb().Course.create(data)));
 }
 
 export async function updateCourse(viewer: Viewer, id: string, input: CourseChanges): Promise<SavedCourse> {
@@ -80,10 +85,5 @@ export async function updateCourse(viewer: Viewer, id: string, input: CourseChan
   const course = idSchema.safeParse(id).success ? await getDb().Course.findByPk(id) : null;
   if (!course) throw new NotFoundError("Course not found");
   if (changes.code !== undefined && (await codeTaken(changes.code, course.id))) throw new CourseCodeTakenError();
-  try {
-    return toSaved(await course.update(changes));
-  } catch (error) {
-    if (error instanceof UniqueConstraintError) throw new CourseCodeTakenError();
-    throw error;
-  }
+  return toSaved(await refuseTakenCode(() => course.update(changes)));
 }

@@ -94,7 +94,8 @@ test("the admin adds, refuses a duplicate, and edits a course", async ({ page },
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Course saved.")).toBeVisible();
     await expect(dialog).toBeHidden();
-    await expect(page.getByRole("button", { name: `Edit ${newCode}` })).toBeVisible();
+    // The row moved to Semester 6; the focus follows it.
+    await expect(page.getByRole("button", { name: `Edit ${newCode}` })).toBeFocused();
     await expect(page.getByRole("listitem").filter({ hasText: newCode })).toContainText("E2E Renamed");
 
     await page.goto(`/courses/${newCode}`);
