@@ -63,3 +63,13 @@ export interface CourseDetail {
   groups: ResourceGroup[];
   outline: CourseOutline;
 }
+
+// A course in the admin list: resources include drafts.
+export interface AdminCourse {
+  id: string;
+  code: string;
+  title: string;
+  semester: number;
+  resourceCount: number;
+  chapterCount: number;
+}
