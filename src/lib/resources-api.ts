@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { isSameOrigin, NO_STORE } from "@/lib/auth/request";
-import { ForbiddenError, NotFoundError, ValidationError } from "@/services/errors";
+import { CourseCodeTakenError, ForbiddenError, NotFoundError, ValidationError } from "@/services/errors";
 import type { Viewer } from "@/services/viewer";
 
 export const reply = (body: object | null, status: number) =>
@@ -32,6 +32,7 @@ export async function adminWrite(request: Request, action: (viewer: Viewer) => P
       return viewer ? reply({ error: "Forbidden" }, 403) : reply({ error: "Not signed in" }, 401);
     }
     if (error instanceof ValidationError) return reply({ error: "Invalid input", fields: error.fields }, 400);
+    if (error instanceof CourseCodeTakenError) return reply({ error: "code_taken" }, 409);
     if (error instanceof NotFoundError) return reply({ error: error.message }, 404);
     console.error("admin write failed", error);
     return reply({ error: "Internal error" }, 500);

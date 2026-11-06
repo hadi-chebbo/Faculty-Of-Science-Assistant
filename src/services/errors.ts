@@ -92,3 +92,11 @@ export class AccountBlockedError extends Error {
     this.name = "AccountBlockedError";
   }
 }
+
+// Another course already has this code (compared ignoring letter case).
+export class CourseCodeTakenError extends Error {
+  constructor() {
+    super("Course code taken");
+    this.name = "CourseCodeTakenError";
+  }
+}
