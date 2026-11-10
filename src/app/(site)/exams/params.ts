@@ -8,6 +8,7 @@ import {
   SEMESTER_MIN,
 } from "@/db/constants";
 import type { ExamSession } from "@/db/constants";
+import { lecturerSlugSchema } from "@/services/lecturers/schemas";
 
 export const EXAMS_PAGE_SIZE = 20;
 const PAGE_MAX = 10_000;
@@ -18,6 +19,7 @@ export interface ExamParams {
   course?: string;
   year?: number;
   session?: ExamSession;
+  lecturer?: string;
   page: number;
 }
 
@@ -29,6 +31,7 @@ const fieldSchemas = {
   course: z.string().trim().min(1).max(COURSE_CODE_MAX_LENGTH),
   year: digits.transform(Number).pipe(z.number().int().min(ACADEMIC_YEAR_MIN).max(ACADEMIC_YEAR_MAX)),
   session: z.enum(EXAM_SESSIONS),
+  lecturer: lecturerSlugSchema,
   page: digits.transform(Number).pipe(z.number().int().min(1).max(PAGE_MAX)),
 };
 
@@ -46,6 +49,7 @@ export function parseExamParams(raw: RawParams): ExamParams {
     course: field(raw, "course", fieldSchemas.course),
     year: field(raw, "year", fieldSchemas.year),
     session: field(raw, "session", fieldSchemas.session),
+    lecturer: field(raw, "lecturer", fieldSchemas.lecturer),
     page: field(raw, "page", fieldSchemas.page) ?? 1,
   };
 }
@@ -62,12 +66,19 @@ export function reconcileCourse(params: ExamParams, courses: { code: string; sem
   return { ...params, course: known.code };
 }
 
+// A lecturer no visible exam has is dropped like any other unusable value.
+export function reconcileLecturer(params: ExamParams, lecturers: { slug: string }[]): ExamParams {
+  if (params.lecturer === undefined || lecturers.some((l) => l.slug === params.lecturer)) return params;
+  return { ...params, lecturer: undefined };
+}
+
 export function hasActiveFilters(params: ExamParams): boolean {
   return (
     params.semester !== undefined ||
     params.course !== undefined ||
     params.year !== undefined ||
-    params.session !== undefined
+    params.session !== undefined ||
+    params.lecturer !== undefined
   );
 }
 
@@ -79,6 +90,7 @@ export function examsHref(params: ExamParams): string {
   if (params.course !== undefined) query.set("course", params.course);
   if (params.year !== undefined) query.set("year", String(params.year));
   if (params.session !== undefined) query.set("session", params.session);
+  if (params.lecturer !== undefined) query.set("lecturer", params.lecturer);
   if (params.page > 1) query.set("page", String(params.page));
   const text = query.toString();
   return text ? `/exams?${text}` : "/exams";

@@ -456,3 +456,39 @@ describe("paging a section", () => {
     await expect(searchCatalog("zeta", { page: 0 })).rejects.toBeInstanceOf(ValidationError);
   });
 });
+
+describe("lecturer names", () => {
+  async function seedLecturers() {
+    const { c301, c302 } = await seed();
+    const { Lecturer, Resource } = getDb();
+    const ghorayeb = await Lecturer.create({ name: "Dr. Éli Ghorayeb", slug: "eli-ghorayeb" });
+    const other = await Lecturer.create({ name: "Pr. Sam Other", slug: "sam-other" });
+    await Resource.create({ courseId: c301.id, type: "exam", title: "Quiz paper", examSession: "final", academicYearStart: 2024, isPublished: true, fileKey: KEY, lecturerId: ghorayeb.id });
+    await Resource.create({ courseId: c302.id, type: "lecture", title: "Hidden draft", isPublished: false, lecturerId: ghorayeb.id });
+    await Resource.create({ courseId: c302.id, type: "lecture", title: "Another talk", isPublished: true, fileKey: KEY, lecturerId: other.id });
+  }
+
+  it("finds a lecturer's published files by name, ignoring case and accents, with prefixes", async () => {
+    await seedLecturers();
+    for (const q of ["ghorayeb", "GHORAYEB", "eli", "éli ghor", "ghora"]) {
+      expect(titles(await searchCatalog(q))).toEqual(["Quiz paper"]);
+    }
+  });
+
+  it("keeps drafts out and adds no course or chapter results", async () => {
+    await seedLecturers();
+    const outcome = await searchCatalog("ghorayeb");
+    expect(titles(outcome)).not.toContain("Hidden draft");
+    expect(outcome.courses?.total).toBe(0);
+    expect(outcome.chapters?.total).toBe(0);
+  });
+
+  it("combines a name with filter words and with title words", async () => {
+    await seedLecturers();
+    expect(titles(await searchCatalog("exam ghorayeb"))).toEqual(["Quiz paper"]);
+    expect(titles(await searchCatalog("final 2024 ghorayeb"))).toEqual(["Quiz paper"]);
+    expect(titles(await searchCatalog("lecture ghorayeb"))).toEqual([]);
+    expect(titles(await searchCatalog("quiz ghorayeb"))).toEqual(["Quiz paper"]);
+    expect(titles(await searchCatalog("sam other"))).toEqual(["Another talk"]);
+  });
+});

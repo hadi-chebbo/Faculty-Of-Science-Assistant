@@ -193,18 +193,28 @@ export async function getResourceLink(
 }
 
 // What the exam filters may offer: only values that at least one exam visible to the viewer has.
-// Two queries however many exams there are: the distinct (course, year, session) combinations,
-// then the courses they belong to.
+// Three queries however many exams there are: the distinct (course, year, session, lecturer)
+// combinations, then the courses and the lecturers they belong to.
 export async function listExamFilterOptions(viewer: Viewer): Promise<ExamFilterOptions> {
-  const { Resource, Course } = getDb();
+  const { Resource, Course, Lecturer } = getDb();
 
   const combos = (await Resource.findAll({
-    attributes: ["courseId", "academicYearStart", "examSession"],
+    attributes: ["courseId", "academicYearStart", "examSession", "lecturerId"],
     where: { type: "exam", ...visibleResources(viewer) },
-    group: ["courseId", "academicYearStart", "examSession"],
+    group: ["courseId", "academicYearStart", "examSession", "lecturerId"],
     raw: true,
-  })) as unknown as { courseId: string; academicYearStart: number | null; examSession: ExamSession | null }[];
-  if (combos.length === 0) return { semesters: [], courses: [], years: [], sessions: [] };
+  })) as unknown as {
+    courseId: string;
+    academicYearStart: number | null;
+    examSession: ExamSession | null;
+    lecturerId: string | null;
+  }[];
+  if (combos.length === 0) return { semesters: [], courses: [], years: [], sessions: [], lecturers: [] };
+
+  const lecturerIds = [...new Set(combos.flatMap((c) => (c.lecturerId ? [c.lecturerId] : [])))];
+  const lecturers = lecturerIds.length
+    ? await Lecturer.findAll({ where: { id: lecturerIds }, attributes: ["slug", "name"], order: [["name", "ASC"]] })
+    : [];
 
   const courses = await Course.findAll({
     where: { id: [...new Set(combos.map((c) => c.courseId))] },
@@ -223,5 +233,6 @@ export async function listExamFilterOptions(viewer: Viewer): Promise<ExamFilterO
     courses: courses.map((c) => ({ code: c.code, title: c.title, semester: c.semester })),
     years: [...years].sort((a, b) => b - a),
     sessions: EXAM_SESSIONS.filter((session) => sessions.has(session)),
+    lecturers: lecturers.map((l) => ({ slug: l.slug, name: l.name })),
   };
 }

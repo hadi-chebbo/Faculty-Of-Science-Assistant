@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { EXAMS_PAGE_SIZE, examsHref, hasActiveFilters, pagerLinks, parseExamParams, reconcileCourse, totalPages } from "./params";
+import { EXAMS_PAGE_SIZE, examsHref, hasActiveFilters, pagerLinks, parseExamParams, reconcileCourse, reconcileLecturer, totalPages } from "./params";
 
 describe("parseExamParams", () => {
   it("reads valid values", () => {
-    expect(parseExamParams({ semester: "3", course: "DEMO301", year: "2024", session: "final", page: "2" })).toEqual({
+    expect(parseExamParams({ semester: "3", course: "DEMO301", year: "2024", session: "final", lecturer: "ada-example", page: "2" })).toEqual({
       semester: 3,
       course: "DEMO301",
       year: 2024,
       session: "final",
+      lecturer: "ada-example",
       page: 2,
     });
   });
@@ -18,13 +19,16 @@ describe("parseExamParams", () => {
       course: undefined,
       year: undefined,
       session: undefined,
+      lecturer: undefined,
       page: 1,
     });
   });
 
   it("drops each bad value on its own and keeps the good ones", () => {
     const parsed = parseExamParams({ year: "abc", session: "bogus", semester: "9", page: "0", course: "DEMO301" });
-    expect(parsed).toEqual({ semester: undefined, course: "DEMO301", year: undefined, session: undefined, page: 1 });
+    expect(parsed).toEqual({ semester: undefined, course: "DEMO301", year: undefined, session: undefined, lecturer: undefined, page: 1 });
+    expect(parseExamParams({ lecturer: "Dr. Ada!" }).lecturer).toBeUndefined();
+    expect(parseExamParams({ lecturer: "ada--x" }).lecturer).toBeUndefined();
     expect(parseExamParams({ semester: "2", year: "1989", page: "-1" })).toMatchObject({ page: 1, semester: undefined, year: undefined });
     expect(parseExamParams({ year: "2024.5", semester: "4e0", page: "1.5" })).toMatchObject({ year: undefined, semester: undefined, page: 1 });
     expect(parseExamParams({ page: "10001" }).page).toBe(1);
@@ -32,7 +36,7 @@ describe("parseExamParams", () => {
   });
 
   it("treats blank values as absent", () => {
-    expect(parseExamParams({ semester: "", course: "  ", year: "", session: "", page: "" })).toEqual(parseExamParams({}));
+    expect(parseExamParams({ semester: "", course: "  ", year: "", session: "", lecturer: "", page: "" })).toEqual(parseExamParams({}));
   });
 
   it("takes the first of a repeated parameter", () => {
@@ -87,7 +91,7 @@ describe("examsHref", () => {
   });
 
   it("round-trips through parseExamParams", () => {
-    const params = { semester: 5, course: "DEMO501", year: 2025, session: "final" as const, page: 4 };
+    const params = { semester: 5, course: "DEMO501", year: 2025, session: "final" as const, lecturer: "ada-example", page: 4 };
     const query = Object.fromEntries(new URL(examsHref(params), "http://x").searchParams);
     expect(parseExamParams(query)).toEqual(params);
   });
@@ -96,6 +100,15 @@ describe("examsHref", () => {
     const current = parseExamParams({ session: "final", page: "3" });
     expect(examsHref({ ...current, page: current.page + 1 })).toBe("/exams?session=final&page=4");
     expect(examsHref({ ...current, year: 2024, page: 1 })).toBe("/exams?year=2024&session=final");
+  });
+});
+
+describe("reconcileLecturer", () => {
+  const lecturers = [{ slug: "ada-example" }];
+  it("keeps a lecturer that has a visible exam and drops any other", () => {
+    expect(reconcileLecturer({ lecturer: "ada-example", page: 1 }, lecturers).lecturer).toBe("ada-example");
+    expect(reconcileLecturer({ lecturer: "nobody", page: 2 }, lecturers)).toEqual({ lecturer: undefined, page: 2 });
+    expect(reconcileLecturer({ page: 1 }, lecturers)).toEqual({ page: 1 });
   });
 });
 
@@ -113,6 +126,7 @@ describe("hasActiveFilters", () => {
   it("ignores the page", () => {
     expect(hasActiveFilters(parseExamParams({ page: "2" }))).toBe(false);
     expect(hasActiveFilters(parseExamParams({ year: "2024" }))).toBe(true);
+    expect(hasActiveFilters(parseExamParams({ lecturer: "ada-example" }))).toBe(true);
   });
 });
 

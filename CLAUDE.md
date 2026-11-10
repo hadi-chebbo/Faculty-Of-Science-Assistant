@@ -250,14 +250,15 @@ mock exam generation, personalization.
   Chapter Previous / Next skip chapters with none of the chosen lecturer's files. The initials use the shadcn `Avatar` and
   `lecturerInitials` (`src/lib/lecturer-name.ts`, which also holds the title rule the slug uses). Progress (block, rings,
   chapter text and bars, `/api/v1/progress`) ignores the filter. The page still never reads the session.
-- Exams page (`/exams`): filters (semester, course, academic year, session) live in the URL, so
+- Exams page (`/exams`): filters (semester, course, academic year, session, lecturer: a fifth dropdown, `?lecturer=SLUG`, "All" first, then lecturers with a visible exam by name; an unknown slug is ignored) live in the URL, so
   views are shareable and Back works. A plain GET form with an Apply button works without
   JavaScript; with JavaScript a dropdown change submits automatically. Unusable URL values are
   ignored, not errors. Results are one flat list (newest year first), 20 per page, reusing the
   course-page resource row. Dropdowns only offer values that have a visible exam.
 - Search page (`/search?q=…&type=…`, public, never reads the session; opened by the Search nav
   item; there is no other search box). It searches course codes and titles, chapter titles and
-  the title and description of published files, not the text inside PDFs. Matching ignores case
+  the title, description and lecturer name of published files (the name is matched like the title
+  but not highlighted, and adds no section), not the text inside PDFs. Matching ignores case
   and accents, treats every word as a prefix ("algo" finds "Algorithms") and finds a course code
   with or without a space ("demo 301"); there is no typo tolerance. The query and the chip live in
   the URL; results follow the typing after about 300 ms (`router.replace`, no history entry per
