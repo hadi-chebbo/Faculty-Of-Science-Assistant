@@ -821,3 +821,80 @@ test.describe("admin resource form: PDF upload", () => {
     await expect(page.getByRole("button", { name: "Choose PDF" })).toBeVisible();
   });
 });
+
+// Lecturers: set on the form, shown on the public row and in the reader, filterable in the admin list,
+// and a lecturer that a file uses cannot be deleted.
+test.describe("admin resource form: lecturer", () => {
+  let origin: string;
+
+  test.beforeEach(({ baseURL }) => {
+    origin = new URL(baseURL!).origin;
+  });
+
+  test("the admin sets, then clears, a lecturer; students see the name; the lecturer cannot be deleted while used", async ({ page, browser, request }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "writing test, desktop only");
+    const title = uniqueTitle();
+    const stamp = randomBytes(3).toString("hex");
+    const name = `Dr. E2E Taught ${stamp}`;
+    const slug = `e2e-taught-${stamp}`;
+    const client = new Client({ connectionString: process.env.DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query("INSERT INTO lecturers (name, slug) VALUES ($1, $2)", [name, slug]);
+      await signInAsAdmin(page);
+      await page.goto("/admin/resources/new");
+      await fillBasics(page, title);
+      const select = page.getByLabel("Lecturer", { exact: true });
+      await expect(select).toHaveValue("");
+      await select.selectOption({ label: name });
+      await fileInput(page).setInputFiles(pdfFile());
+      await expect(page.getByText("Ready. It is saved with the resource.")).toBeVisible();
+      await setVisibility(page, "Published");
+      await save(page);
+      await page.waitForURL(/\/admin$/);
+
+      // Admin list: the filter is in the address.
+      await page.goto(`/admin?lecturer=${slug}`);
+      await expect(page.getByLabel("Lecturer", { exact: true })).toHaveValue(slug);
+      await expect(page.getByRole("listitem").filter({ hasText: title })).toContainText(name);
+      await page.goto("/admin?lecturer=not-a-known-one");
+      await expect(page.getByLabel("Lecturer", { exact: true })).toHaveValue("");
+
+      // Students see the name on the row and in the reader.
+      const anonymous = await browser.newContext();
+      try {
+        const visitor = await anonymous.newPage();
+        await visitor.goto(`/courses/${COURSE}`);
+        const row = visitor.getByRole("listitem").filter({ hasText: title });
+        await expect(row).toContainText(name);
+        await row.getByRole("link", { name: new RegExp(title) }).click();
+        await expect(visitor.getByRole("complementary", { name: "About this file" })).toContainText(name);
+        await expect(visitor.getByRole("heading", { name: "Lecturer", level: 2 })).toBeVisible();
+      } finally {
+        await anonymous.close();
+      }
+
+      // The lecturer is in use.
+      await page.goto("/admin/lecturers");
+      await page.getByRole("button", { name: `Delete ${name}` }).click();
+      const alert = page.getByRole("alertdialog");
+      await alert.getByRole("button", { name: "Delete", exact: true }).click();
+      await expect(alert.getByText(`${name} is used by 1 file.`)).toBeVisible();
+      await alert.getByRole("button", { name: "Cancel" }).click();
+
+      // Clear it in the edit form.
+      const [{ id }] = (await client.query("SELECT id FROM resources WHERE title = $1", [title])).rows;
+      await page.goto(`/admin/resources/${id}/edit`);
+      await expect(page.getByLabel("Lecturer", { exact: true })).toHaveValue(/.+/);
+      await page.getByLabel("Lecturer", { exact: true }).selectOption({ label: "None" });
+      await save(page);
+      await page.waitForURL(/\/admin$/);
+      const after = await client.query("SELECT lecturer_id FROM resources WHERE title = $1", [title]);
+      expect(after.rows[0].lecturer_id).toBeNull();
+    } finally {
+      await cleanup(request, origin, title);
+      await client.query("DELETE FROM lecturers WHERE slug = $1", [slug]);
+      await client.end();
+    }
+  });
+});
