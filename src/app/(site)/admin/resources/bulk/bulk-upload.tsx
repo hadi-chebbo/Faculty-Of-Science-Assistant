@@ -34,7 +34,7 @@ const FILE_REJECTED = "The server did not accept this file. Try again, or remove
 
 let nextKey = 0;
 
-function newRow(file: File): BulkRow {
+function newRow(file: File, lecturerId: string): BulkRow {
   const guess = guessFromFileName(file.name);
   const problem = checkPdfFile(file);
   return {
@@ -44,6 +44,8 @@ function newRow(file: File): BulkRow {
     title: guess.title,
     type: guess.type ?? "lecture",
     chapterId: "",
+    lecturerId,
+    lecturerTouched: false,
     yearStart: guess.academicYearStart === undefined ? "" : String(guess.academicYearStart),
     examSession: guess.examSession ?? "",
     language: "en",
@@ -63,10 +65,12 @@ function newRow(file: File): BulkRow {
 export function BulkUpload({
   courses,
   chapters,
+  lecturers,
   initialCourseId,
 }: {
   courses: CourseOption[];
   chapters: ChapterOption[];
+  lecturers: { id: string; name: string }[];
   initialCourseId: string;
 }) {
   const router = useRouter();
@@ -78,6 +82,7 @@ export function BulkUpload({
   const [pendingCourseId, setPendingCourseId] = useState<string | null>(null);
   const [rows, setRows] = useState<BulkRow[]>([]);
   const [isPublished, setIsPublished] = useState(false);
+  const [batchLecturerId, setBatchLecturerId] = useState("");
   const [saving, setSaving] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -158,7 +163,7 @@ export function BulkUpload({
         : null,
     );
     const added = taken.map((file) => {
-      const row = newRow(file);
+      const row = newRow(file, batchLecturerId);
       files.current.set(row.key, file);
       return row;
     });
@@ -191,6 +196,12 @@ export function BulkUpload({
     setRows((current) => current.map((r) => ({ ...r, chapterId: "", errors: {}, error: null })));
   }
 
+  // Rows the admin has not changed by hand follow the batch choice.
+  function changeBatchLecturer(id: string) {
+    setBatchLecturerId(id);
+    setRows((current) => current.map((r) => (r.lecturerTouched ? r : { ...r, lecturerId: id, errors: {}, error: null })));
+  }
+
   async function saveRow(row: BulkRow, code: string) {
     const body = {
       courseId,
@@ -200,6 +211,7 @@ export function BulkUpload({
       examSession: row.type === "exam" ? row.examSession : null,
       language: row.language,
       chapterId: row.type !== "exam" && row.chapterId ? row.chapterId : null,
+      lecturerId: row.lecturerId || null,
       isPublished,
       fileTicket: row.ticket,
       ...(row.textCheck ? { textCheck: row.textCheck } : {}),
@@ -296,6 +308,25 @@ export function BulkUpload({
           <p className="text-sm text-muted-foreground">Every file in this batch goes into this course.</p>
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="bulk-lecturer">Lecturer for the whole batch</Label>
+          <NativeSelect
+            id="bulk-lecturer"
+            value={batchLecturerId}
+            disabled={saving}
+            onChange={(e) => changeBatchLecturer(e.target.value)}
+            className="w-full [&_select]:h-11 md:[&_select]:h-9"
+          >
+            <NativeSelectOption value="">None</NativeSelectOption>
+            {lecturers.map((l) => (
+              <NativeSelectOption key={l.id} value={l.id}>
+                {l.name}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          <p className="text-sm text-muted-foreground">Each file starts with this lecturer; change a row to override it.</p>
+        </div>
+
         <fieldset className="min-w-0 space-y-2">
           <legend className="mb-2 text-sm font-medium text-heading">Visibility of the whole batch</legend>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -380,6 +411,7 @@ export function BulkUpload({
             <span>Title</span>
             <span>Type</span>
             <span>Chapter</span>
+            <span>Lecturer</span>
             <span>Year</span>
             <span>Session</span>
             <span>Language</span>
@@ -391,6 +423,7 @@ export function BulkUpload({
                 key={row.key}
                 row={row}
                 chapters={courseChapters}
+                lecturers={lecturers}
                 years={academicYearOptions(currentYear, row.yearStart ? Number(row.yearStart) : null)}
                 disabled={saving}
                 onEdit={(patch) => editRow(row.key, patch)}

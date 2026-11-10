@@ -38,6 +38,7 @@ const FIELD_MESSAGES: Record<string, string> = {
   isPublished: "Add a file before publishing.",
   examSession: "Choose a session for an exam.",
   chapterId: "Choose a chapter of this course.",
+  lecturerId: "Choose a lecturer from the list.",
   solutionOfId: "Choose an exercise or exam of this course.",
 };
 
@@ -55,11 +56,13 @@ function targetLabel(t: SolutionTarget): string {
 export function ResourceForm({
   courses,
   chapters,
+  lecturers,
   solutionTargets,
   resource,
 }: {
   courses: CourseOption[];
   chapters: ChapterOption[];
+  lecturers: { id: string; name: string }[];
   solutionTargets: SolutionTarget[];
   resource?: ResourceForEdit;
 }) {
@@ -68,6 +71,7 @@ export function ResourceForm({
   const [title, setTitle] = useState(resource?.title ?? "");
   const [courseId, setCourseId] = useState(resource?.courseId ?? "");
   const [chapterId, setChapterId] = useState(resource?.chapterId ?? "");
+  const [lecturerId, setLecturerId] = useState(resource?.lecturerId ?? "");
   const [solutionOfId, setSolutionOfId] = useState(resource?.solutionOf?.id ?? "");
   const [yearStart, setYearStart] = useState(resource?.academicYearStart == null ? "" : String(resource.academicYearStart));
   const [examSession, setExamSession] = useState<ExamSession | "">(resource?.examSession ?? "");
@@ -106,6 +110,7 @@ export function ResourceForm({
       externalUrl: text("externalUrl"),
       solutionOfId: type === "solution" && solutionOfId ? solutionOfId : null,
       chapterId: type !== "exam" && chapterId ? chapterId : null,
+      lecturerId: lecturerId || null,
       isPublished,
       ...(fileTicket ? { fileTicket, ...(textCheck ? { textCheck } : {}) } : {}),
     };
@@ -250,6 +255,24 @@ export function ResourceForm({
                 </NativeSelect>
               </Field>
             )}
+
+            <Field id="lecturerId" label="Lecturer" optional hint="Shown to students beside the file." error={errors.lecturerId}>
+              <NativeSelect
+                id="lecturerId"
+                name="lecturerId"
+                value={lecturerId}
+                onChange={(e) => setLecturerId(e.target.value)}
+                aria-invalid={invalid("lecturerId")}
+                className={selectClass}
+              >
+                <NativeSelectOption value="">None</NativeSelectOption>
+                {lecturers.map((l) => (
+                  <NativeSelectOption key={l.id} value={l.id}>
+                    {l.name}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </Field>
           </div>
 
           {type === "solution" && (

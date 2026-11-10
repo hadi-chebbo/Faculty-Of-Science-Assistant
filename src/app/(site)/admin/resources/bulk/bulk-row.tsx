@@ -23,6 +23,10 @@ export interface BulkRow {
   title: string;
   type: ResourceType;
   chapterId: string;
+  // "" means no lecturer. `lecturerTouched` is set when the admin chose it by hand on this row; the
+  // rows that were not touched follow the batch choice.
+  lecturerId: string;
+  lecturerTouched: boolean;
   yearStart: string;
   examSession: ExamSession | "";
   language: Language;
@@ -47,7 +51,7 @@ export function rowProblems(row: BulkRow): Record<string, string> {
   return problems;
 }
 
-export const BULK_COLUMNS = "md:grid-cols-[minmax(0,2.4fr)_8rem_minmax(0,1.6fr)_8.5rem_9rem_7rem_5.5rem]";
+export const BULK_COLUMNS = "md:grid-cols-[minmax(0,2.4fr)_8rem_minmax(0,1.6fr)_minmax(0,1.4fr)_8.5rem_9rem_7rem_5.5rem]";
 
 const SELECT = "w-full [&_select]:h-11 md:[&_select]:h-9";
 
@@ -65,6 +69,7 @@ function Cell({ label, children, hiddenOnPhone }: { label: string; children: Rea
 export function BulkRowView({
   row,
   chapters,
+  lecturers,
   years,
   disabled,
   onEdit,
@@ -73,6 +78,7 @@ export function BulkRowView({
 }: {
   row: BulkRow;
   chapters: ChapterOption[];
+  lecturers: { id: string; name: string }[];
   years: YearOption[];
   disabled: boolean;
   onEdit: (patch: Partial<BulkRow>) => void;
@@ -154,6 +160,24 @@ export function BulkRowView({
             Choose a chapter of this course.
           </p>
         )}
+      </Cell>
+
+      <Cell label="Lecturer">
+        <NativeSelect
+          aria-label={`Lecturer for ${f}`}
+          value={row.lecturerId}
+          disabled={locked}
+          onChange={(e) => onEdit({ lecturerId: e.target.value, lecturerTouched: true })}
+          aria-invalid={problems.lecturerId ? true : undefined}
+          className={SELECT}
+        >
+          <NativeSelectOption value="">None</NativeSelectOption>
+          {lecturers.map((l) => (
+            <NativeSelectOption key={l.id} value={l.id}>
+              {l.name}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
       </Cell>
 
       <Cell label="Academic year">

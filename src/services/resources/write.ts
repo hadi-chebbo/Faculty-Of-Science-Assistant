@@ -68,7 +68,7 @@ async function checkAgainstDatabase(
   newFileKey: string | null,
   transaction: Transaction,
 ): Promise<void> {
-  const { Chapter, Course, Resource } = getDb();
+  const { Chapter, Course, Lecturer, Resource } = getDb();
   const fields: string[] = [];
 
   if (!(await Course.findByPk(input.courseId, { attributes: ["id"], transaction }))) fields.push("courseId");
@@ -83,6 +83,10 @@ async function checkAgainstDatabase(
   if (input.chapterId) {
     const chapter = await Chapter.findByPk(input.chapterId, { attributes: ["id", "courseId"], transaction });
     if (!chapter || chapter.courseId !== input.courseId) fields.push("chapterId");
+  }
+
+  if (input.lecturerId && !(await Lecturer.findByPk(input.lecturerId, { attributes: ["id"], transaction }))) {
+    fields.push("lecturerId");
   }
 
   // An uploaded file belongs to one resource only.
@@ -134,6 +138,7 @@ export async function getResourceForEdit(viewer: Viewer, id: string): Promise<Re
     hasFile: row.fileKey != null,
     textCheck: toTextCheck(row),
     chapterId: row.chapterId ?? null,
+    lecturerId: row.lecturerId ?? null,
     solutionOf: target ? { id: target.id, title: target.title } : null,
     solutionCount,
     updatedAt: row.updatedAt.toISOString(),

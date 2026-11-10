@@ -54,6 +54,13 @@ export function ReaderDetails({ resource }: { resource: ReaderResource }) {
         ))}
       </section>
 
+      {resource.lecturer && (
+        <section className="space-y-1.5">
+          <h2 className={HEADING}>Lecturer</h2>
+          <p className="text-heading">{resource.lecturer.name}</p>
+        </section>
+      )}
+
       {related.length > 0 && (
         <section>
           <h2 className={HEADING}>{!resource.solutionOf ? "Solutions" : resource.solutions.length === 0 ? "Solution of" : "Related"}</h2>

@@ -56,7 +56,7 @@ export interface SavedCourseGroup {
 // then code; within a course the most recent save first (the bookmark id only breaks ties).
 // Solutions are the ones anyone may see, exactly as on the public course lists.
 export async function listSavedResources(viewer: NonNullable<Viewer>): Promise<SavedCourseGroup[]> {
-  const { Bookmark, Resource, Course } = getDb();
+  const { Bookmark, Resource, Course, Lecturer } = getDb();
   const bookmarks = await Bookmark.findAll({
     where: { userId: viewer.id },
     include: [
@@ -65,7 +65,10 @@ export async function listSavedResources(viewer: NonNullable<Viewer>): Promise<S
         as: "resource",
         where: { isPublished: true },
         required: true,
-        include: [{ model: Course, as: "course", required: true }],
+        include: [
+          { model: Course, as: "course", required: true },
+          { model: Lecturer, as: "lecturer", attributes: ["slug", "name"], required: false },
+        ],
       },
     ],
     order: [["createdAt", "DESC"], ["id", "ASC"]],

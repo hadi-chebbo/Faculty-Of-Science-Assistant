@@ -116,3 +116,11 @@ export async function deleteLecturer(viewer: Viewer, id: string): Promise<void> 
     throw error;
   }
 }
+
+// Every lecturer by name, for selects (resource forms, the admin list filter). Admin only.
+export async function listLecturerOptions(viewer: Viewer): Promise<{ id: string; name: string; slug: string }[]> {
+  await requireCurrentAdmin(viewer);
+  const { Lecturer } = getDb();
+  const rows = await Lecturer.findAll({ attributes: ["id", "name", "slug"], order: [[fn("lower", col("name")), "ASC"], ["name", "ASC"]] });
+  return rows.map((l) => ({ id: l.id, name: l.name, slug: l.slug }));
+}

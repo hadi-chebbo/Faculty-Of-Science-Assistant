@@ -272,13 +272,14 @@ async function listFiles(plan: Plan, limit: number, offset: number): Promise<Fil
   );
   const ids = rows.map((row) => row.id);
 
-  const { Resource, Course, Chapter } = getDb();
+  const { Resource, Course, Chapter, Lecturer } = getDb();
   const [resources, solutions] = await Promise.all([
     Resource.findAll({
       where: { id: ids },
       include: [
         { model: Course, as: "course", attributes: ["id", "code"], required: true },
         { model: Chapter, as: "chapter", attributes: ["position"], required: false },
+        { model: Lecturer, as: "lecturer", attributes: ["slug", "name"], required: false },
       ],
     }),
     visibleSolutionsOf(null, ids),

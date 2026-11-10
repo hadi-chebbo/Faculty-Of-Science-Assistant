@@ -40,6 +40,7 @@ export function toResourceListItem(resource: Resource, courseCode: string, solut
     language: resource.language,
     isPublished: resource.isPublished,
     hasSource: Boolean(resource.externalUrl || resource.fileKey),
+    lecturer: resource.lecturer ? { slug: resource.lecturer.slug, name: resource.lecturer.name } : null,
     solutions,
   };
 }
@@ -75,17 +76,18 @@ export async function visibleSolutionsOf(viewer: Viewer, ids: string[]): Promise
 }
 
 export async function listResources(viewer: Viewer, filters: ResourceFilters = {}): Promise<Page<ResourceListItem>> {
-  const { courseCode, semester, type, academicYearStart, examSession, language, text, page, pageSize } = parseInput(
+  const { courseCode, lecturer, semester, type, academicYearStart, examSession, language, text, page, pageSize } = parseInput(
     resourceFiltersSchema,
     filters,
   );
-  const { Resource, Course, sequelize } = getDb();
+  const { Resource, Course, Lecturer, sequelize } = getDb();
 
   const where: WhereOptions[] = [visibleResources(viewer)];
   if (type) where.push({ type });
   if (academicYearStart !== undefined) where.push({ academicYearStart });
   if (examSession) where.push({ examSession });
   if (language) where.push({ language });
+  if (lecturer) where.push({ "$lecturer.slug$": lecturer });
   // Admin only. The columns are unqualified because the count query aliases the table differently. Both columns are null when not checked, and a comparison with null is never true.
   if (text === "scanned" && isAdmin(viewer)) where.push(Sequelize.literal("text_page_count < page_count"));
 
@@ -106,6 +108,7 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
         required: true,
         where: courseWhere.length > 0 ? { [Op.and]: courseWhere } : undefined,
       },
+      { model: Lecturer, as: "lecturer", attributes: ["slug", "name"], required: false },
     ],
     order: resourceOrder(),
     limit: pageSize,
@@ -129,11 +132,12 @@ export async function getResource(viewer: Viewer, id: string): Promise<ResourceD
   // A malformed id can never match a row; answer the same as for a missing one.
   if (!idSchema.safeParse(id).success) throw new NotFoundError("Resource not found");
 
-  const { Resource, Course } = getDb();
+  const { Resource, Course, Lecturer } = getDb();
   const row = await Resource.findOne({
     where: { id, ...visibleResources(viewer) },
     include: [
       { model: Course, as: "course", attributes: ["code", "title"], required: true },
+      { model: Lecturer, as: "lecturer", attributes: ["slug", "name"], required: false },
       { model: Resource, as: "solutionOf" },
       { model: Resource, as: "solutions" },
     ],
