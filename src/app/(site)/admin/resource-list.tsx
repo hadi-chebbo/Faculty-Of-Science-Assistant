@@ -8,6 +8,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationNext, Paginati
 import { EXAM_SESSION_LABELS, formatAcademicYear, RESOURCE_TYPE_LABELS } from "@/lib/labels";
 import { readForPage } from "@/lib/page-errors";
 import { listCourses } from "@/services/courses/courses";
+import { listLecturerOptions } from "@/services/lecturers/admin";
 import { listResources } from "@/services/resources/resources";
 import type { Viewer } from "@/services/viewer";
 import { adminHref, parseAdminParams, type AdminParams } from "./params";
@@ -20,14 +21,15 @@ const BADGE_PLACE = "justify-self-end md:col-start-3 md:row-start-1 md:justify-s
 
 // Read-only list of every resource, drafts included. Rendered only after the admin check.
 export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Record<string, string | string[] | undefined> }) {
-  const courses = await readForPage(() => listCourses(viewer));
+  const [courses, lecturers] = await Promise.all([readForPage(() => listCourses(viewer)), readForPage(() => listLecturerOptions(viewer))]);
   const parsed = parseAdminParams(raw);
   // A code that matches no course is ignored; a known one is written with its real letter case.
   const known = courses.find((c) => c.code.toLowerCase() === parsed.course?.toLowerCase());
-  const params: AdminParams = { course: known?.code, text: parsed.text, page: parsed.page };
+  const knownLecturer = lecturers.find((l) => l.slug === parsed.lecturer);
+  const params: AdminParams = { course: known?.code, lecturer: knownLecturer?.slug, text: parsed.text, page: parsed.page };
 
   const result = await readForPage(() =>
-    listResources(viewer, { courseCode: params.course, text: params.text, page: params.page, pageSize: PAGE_SIZE }),
+    listResources(viewer, { courseCode: params.course, lecturer: params.lecturer, text: params.text, page: params.page, pageSize: PAGE_SIZE }),
   );
   const pages = Math.max(1, Math.ceil(result.total / result.pageSize));
   const previous = params.page > 1 ? adminHref({ ...params, page: params.page - 1 }) : null;
@@ -66,6 +68,17 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
             {courses.map((c) => (
               <NativeSelectOption key={c.code} value={c.code}>
                 {c.code} - {c.title}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </div>
+        <div className="sm:w-64">
+          <label htmlFor="admin-lecturer" className="mb-1.5 block text-sm font-medium text-heading">Lecturer</label>
+          <NativeSelect id="admin-lecturer" name="lecturer" defaultValue={params.lecturer ?? ""} className="w-full [&_select]:h-11 md:[&_select]:h-9">
+            <NativeSelectOption value="">All lecturers</NativeSelectOption>
+            {lecturers.map((l) => (
+              <NativeSelectOption key={l.slug} value={l.slug}>
+                {l.name}
               </NativeSelectOption>
             ))}
           </NativeSelect>
@@ -109,6 +122,7 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
                   </Badge>
                   <p className="col-span-2 text-sm md:col-span-1 md:col-start-2 md:row-start-1">
                     {r.courseCode} - {RESOURCE_TYPE_LABELS[r.type]}
+                    {r.lecturer && ` - ${r.lecturer.name}`}
                     {r.academicYearStart !== null && ` - ${formatAcademicYear(r.academicYearStart)}`}
                     {r.examSession !== null && ` - ${EXAM_SESSION_LABELS[r.examSession]}`}
                     {r.textCheck && (

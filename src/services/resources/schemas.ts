@@ -12,6 +12,7 @@ import {
 } from "@/db/constants";
 import type { ExamSession, Language, ResourceType } from "@/db/constants";
 import { blankToUndefined } from "../validation";
+import { lecturerSlugSchema } from "../lecturers/schemas";
 
 export const RESOURCE_PAGE_SIZE_DEFAULT = 50;
 export const RESOURCE_PAGE_SIZE_MAX = 100;
@@ -29,6 +30,8 @@ export const resourceFiltersSchema = z.object({
   academicYearStart: optional(z.coerce.number().int().min(ACADEMIC_YEAR_MIN).max(ACADEMIC_YEAR_MAX)),
   examSession: optional(z.enum(EXAM_SESSIONS)),
   language: optional(z.enum(LANGUAGES)),
+  // Lecturer slug. Unknown slugs simply match nothing.
+  lecturer: optional(lecturerSlugSchema),
   // Admin only: "scanned" lists resources whose file has no text on some or all pages. Ignored for students.
   text: optional(z.enum(["scanned"])),
   page: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(10_000).default(1)),
@@ -47,6 +50,8 @@ export interface ResourceFilters {
   academicYearStart?: number;
   examSession?: ExamSession;
   language?: Language;
+  // Slug of the lecturer.
+  lecturer?: string;
   text?: "scanned";
   page?: number;
   pageSize?: number;
@@ -87,6 +92,7 @@ export const resourceInputSchema = z
     externalUrl: given(httpsUrl).transform((value) => value ?? null),
     solutionOfId: given(idSchema).transform((value) => value ?? null),
     chapterId: given(idSchema).transform((value) => value ?? null),
+    lecturerId: given(idSchema).transform((value) => value ?? null),
     isPublished: z.boolean().default(false),
     // Proof of a file uploaded through createResourceUpload; blank, null or absent means no new file.
     fileTicket: given(z.string().trim()).transform((value) => value ?? null),
@@ -122,6 +128,7 @@ export interface ResourceInput {
   externalUrl?: string | null;
   solutionOfId?: string | null;
   chapterId?: string | null;
+  lecturerId?: string | null;
   isPublished?: boolean;
   fileTicket?: string | null;
   textCheck?: { pageCount: number; textPageCount: number } | null;

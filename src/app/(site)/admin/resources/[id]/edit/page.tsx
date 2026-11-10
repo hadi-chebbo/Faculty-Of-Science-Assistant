@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { readForPage } from "@/lib/page-errors";
 import { listChapterOptions } from "@/services/chapters/options";
 import { listCourses } from "@/services/courses/courses";
+import { listLecturerOptions } from "@/services/lecturers/admin";
 import { listSolutionTargets } from "@/services/resources/solution-targets";
 import { getResourceForEdit } from "@/services/resources/write";
 import { requireAdminPage } from "../../../guard";
@@ -34,10 +35,11 @@ export default function EditResourcePage({ params }: PageProps<"/admin/resources
 
 async function EditResourceContent({ id }: { id: string }) {
   const { admin } = await requireAdminPage(`/admin/resources/${encodeURIComponent(id)}/edit`);
-  const [courses, chapters, solutionTargets, resource] = await Promise.all([
+  const [courses, chapters, solutionTargets, lecturers, resource] = await Promise.all([
     readForPage(() => listCourses(admin)),
     readForPage(() => listChapterOptions(admin)),
     readForPage(() => listSolutionTargets(admin)),
+    readForPage(() => listLecturerOptions(admin)),
     readForPage(() => getResourceForEdit(admin, id)),
   ]);
   return (
@@ -59,7 +61,7 @@ async function EditResourceContent({ id }: { id: string }) {
           Last saved {formatSavedDate(resource.updatedAt)}
         </p>
       </div>
-      <ResourceForm courses={courses} chapters={chapters} solutionTargets={solutionTargets} resource={resource} />
+      <ResourceForm courses={courses} chapters={chapters} lecturers={lecturers} solutionTargets={solutionTargets} resource={resource} />
     </>
   );
 }

@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { readForPage } from "@/lib/page-errors";
 import { listChapterOptions } from "@/services/chapters/options";
 import { listCourses } from "@/services/courses/courses";
+import { listLecturerOptions } from "@/services/lecturers/admin";
 import { requireAdminPage } from "../../guard";
 import { parseAdminParams } from "../../params";
 import { BulkUpload } from "./bulk-upload";
@@ -32,9 +33,10 @@ export default function BulkUploadPage({ searchParams }: PageProps<"/admin/resou
 
 async function BulkUploadContent({ raw }: { raw: Record<string, string | string[] | undefined> }) {
   const { admin } = await requireAdminPage("/admin/resources/bulk");
-  const [courses, chapters] = await Promise.all([
+  const [courses, chapters, lecturers] = await Promise.all([
     readForPage(() => listCourses(admin)),
     readForPage(() => listChapterOptions(admin)),
+    readForPage(() => listLecturerOptions(admin)),
   ]);
   // ?course=CODE preselects a course; an unknown code is ignored.
   const wanted = parseAdminParams(raw).course?.toLowerCase();
@@ -44,7 +46,7 @@ async function BulkUploadContent({ raw }: { raw: Record<string, string | string[
       <AdminBar current="resources" />
       <FormBreadcrumb current="Bulk upload" />
       <PageTitle>Bulk upload</PageTitle>
-      <BulkUpload courses={courses} chapters={chapters} initialCourseId={initial?.id ?? ""} />
+      <BulkUpload courses={courses} chapters={chapters} lecturers={lecturers} initialCourseId={initial?.id ?? ""} />
     </>
   );
 }

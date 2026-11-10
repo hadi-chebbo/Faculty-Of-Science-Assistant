@@ -1,3 +1,4 @@
+import type { LecturerRef } from "../lecturers/types";
 import type { ExamSession, Language, ResourceType } from "@/db/constants";
 
 export interface ResourceListItem {
@@ -12,6 +13,8 @@ export interface ResourceListItem {
   isPublished: boolean;
   // Whether opening it can lead anywhere (a link or a stored file). Neither value is exposed.
   hasSource: boolean;
+  // The lecturer of the file, or null when it has none.
+  lecturer: LecturerRef | null;
   // The upload-time text check of the stored file, set by `listResources` for an admin viewer only
   // (null: not checked). Students never get this field.
   textCheck?: { pageCount: number; textPageCount: number } | null;
@@ -72,6 +75,7 @@ export interface ResourceForEdit {
   hasFile: boolean;
   textCheck: { pageCount: number; textPageCount: number } | null;
   chapterId: string | null;
+  lecturerId: string | null;
   solutionOf: { id: string; title: string } | null;
   // How many resources, drafts included, are a solution of this one.
   solutionCount: number;

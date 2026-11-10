@@ -11,3 +11,6 @@ export const lecturerInputSchema = z.object({
 });
 
 export type LecturerInput = z.input<typeof lecturerInputSchema>;
+
+// A lecturer's slug as it may appear in an address (`?lecturer=`): what `lecturerSlug` makes.
+export const lecturerSlugSchema = z.string().trim().max(120).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);

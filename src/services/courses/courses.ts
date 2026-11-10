@@ -2,7 +2,7 @@ import { fn, col } from "sequelize";
 import { RESOURCE_TYPES } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { NotFoundError } from "../errors";
-import { resourceOrder, toResourceListItem, visibleSolutionsOf } from "../resources/resources";
+import { lecturerInclude, resourceOrder, toResourceListItem, visibleSolutionsOf } from "../resources/resources";
 import { parseInput } from "../validation";
 import { visibleResources } from "../visibility";
 import type { Viewer } from "../viewer";
@@ -58,6 +58,7 @@ export async function getCourseByCode(viewer: Viewer, code: string): Promise<Cou
 
   const resources = await Resource.findAll({
     where: { courseId: course.id, ...visibleResources(viewer) },
+    include: [lecturerInclude()],
     order: resourceOrder(),
   });
 

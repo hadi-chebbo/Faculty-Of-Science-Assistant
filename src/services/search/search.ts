@@ -1,6 +1,6 @@
 import { QueryTypes } from "sequelize";
 import { getDb } from "@/db/models";
-import { toResourceListItem, visibleSolutionsOf } from "../resources/resources";
+import { lecturerInclude, toResourceListItem, visibleSolutionsOf } from "../resources/resources";
 import { parseInput } from "../validation";
 import {
   CHIP_SECTIONS,
@@ -279,6 +279,7 @@ async function listFiles(plan: Plan, limit: number, offset: number): Promise<Fil
       include: [
         { model: Course, as: "course", attributes: ["id", "code"], required: true },
         { model: Chapter, as: "chapter", attributes: ["position"], required: false },
+        lecturerInclude(),
       ],
     }),
     visibleSolutionsOf(null, ids),

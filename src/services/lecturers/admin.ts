@@ -6,7 +6,7 @@ import { LecturerInUseError, LecturerNameTakenError, NotFoundError } from "../er
 import { parseInput } from "../validation";
 import type { Viewer } from "../viewer";
 import { lecturerInputSchema, type LecturerInput } from "./schemas";
-import type { AdminLecturer, SavedLecturer } from "./types";
+import type { AdminLecturer, LecturerOption, SavedLecturer } from "./types";
 
 export { normaliseLecturerName } from "./schemas";
 
@@ -115,4 +115,12 @@ export async function deleteLecturer(viewer: Viewer, id: string): Promise<void> 
     if (error instanceof ForeignKeyConstraintError) throw new LecturerInUseError(Math.max(await inUse(), 1));
     throw error;
   }
+}
+
+// Every lecturer by name, for selects (resource forms, the admin list filter). Admin only.
+export async function listLecturerOptions(viewer: Viewer): Promise<LecturerOption[]> {
+  await requireCurrentAdmin(viewer);
+  const { Lecturer } = getDb();
+  const rows = await Lecturer.findAll({ attributes: ["id", "name", "slug"], order: [[fn("lower", col("name")), "ASC"], ["name", "ASC"]] });
+  return rows.map((l) => ({ id: l.id, name: l.name, slug: l.slug }));
 }

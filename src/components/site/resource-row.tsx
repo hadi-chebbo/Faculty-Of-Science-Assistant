@@ -75,6 +75,7 @@ export function ResourceRow({
           {lead ?? title ?? resource.title}
         </span>
         {lead !== undefined && <span className="mt-0.5 block text-xs text-muted-foreground">{resource.title}</span>}
+        {resource.lecturer && <span className="mt-0.5 block text-xs text-muted-foreground">{resource.lecturer.name}</span>}
         {meta && <span className="mt-0.5 block text-xs text-muted-foreground">{meta}</span>}
         {snippet && <span className="mt-0.5 block text-xs text-muted-foreground">{snippet}</span>}
         <span className="mt-1.5 flex flex-wrap gap-1.5">

@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { readForPage } from "@/lib/page-errors";
 import { listChapterOptions } from "@/services/chapters/options";
 import { listCourses } from "@/services/courses/courses";
+import { listLecturerOptions } from "@/services/lecturers/admin";
 import { listSolutionTargets } from "@/services/resources/solution-targets";
 import { requireAdminPage } from "../../guard";
 import { ResourceForm } from "../resource-form";
@@ -30,17 +31,18 @@ export default function NewResourcePage() {
 
 async function NewResourceContent() {
   const { admin } = await requireAdminPage("/admin/resources/new");
-  const [courses, chapters, solutionTargets] = await Promise.all([
+  const [courses, chapters, solutionTargets, lecturers] = await Promise.all([
     readForPage(() => listCourses(admin)),
     readForPage(() => listChapterOptions(admin)),
     readForPage(() => listSolutionTargets(admin)),
+    readForPage(() => listLecturerOptions(admin)),
   ]);
   return (
     <>
       <AdminBar current="resources" />
       <FormBreadcrumb current="New resource" />
       <PageTitle>New resource</PageTitle>
-      <ResourceForm courses={courses} chapters={chapters} solutionTargets={solutionTargets} />
+      <ResourceForm courses={courses} chapters={chapters} lecturers={lecturers} solutionTargets={solutionTargets} />
     </>
   );
 }

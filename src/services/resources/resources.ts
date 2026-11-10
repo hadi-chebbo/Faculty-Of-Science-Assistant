@@ -1,4 +1,4 @@
-import { Op, Sequelize, type Order, type WhereOptions } from "sequelize";
+import { Op, Sequelize, type IncludeOptions, type Order, type WhereOptions } from "sequelize";
 import { EXAM_SESSIONS } from "@/db/constants";
 import type { ExamSession } from "@/db/constants";
 import { getDb } from "@/db/models";
@@ -40,8 +40,15 @@ export function toResourceListItem(resource: Resource, courseCode: string, solut
     language: resource.language,
     isPublished: resource.isPublished,
     hasSource: Boolean(resource.externalUrl || resource.fileKey),
+    lecturer: resource.lecturer ? { slug: resource.lecturer.slug, name: resource.lecturer.name } : null,
     solutions,
   };
+}
+
+// Loads a resource's lecturer in the same query, as `toResourceListItem` needs it. Every query that
+// builds list items includes it.
+export function lecturerInclude(): IncludeOptions {
+  return { model: getDb().Lecturer, as: "lecturer", attributes: ["slug", "name"], required: false };
 }
 
 // The stored text check of a file, or null when it was not checked.
@@ -75,7 +82,7 @@ export async function visibleSolutionsOf(viewer: Viewer, ids: string[]): Promise
 }
 
 export async function listResources(viewer: Viewer, filters: ResourceFilters = {}): Promise<Page<ResourceListItem>> {
-  const { courseCode, semester, type, academicYearStart, examSession, language, text, page, pageSize } = parseInput(
+  const { courseCode, lecturer, semester, type, academicYearStart, examSession, language, text, page, pageSize } = parseInput(
     resourceFiltersSchema,
     filters,
   );
@@ -86,6 +93,7 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
   if (academicYearStart !== undefined) where.push({ academicYearStart });
   if (examSession) where.push({ examSession });
   if (language) where.push({ language });
+  if (lecturer) where.push({ "$lecturer.slug$": lecturer });
   // Admin only. The columns are unqualified because the count query aliases the table differently. Both columns are null when not checked, and a comparison with null is never true.
   if (text === "scanned" && isAdmin(viewer)) where.push(Sequelize.literal("text_page_count < page_count"));
 
@@ -106,6 +114,7 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
         required: true,
         where: courseWhere.length > 0 ? { [Op.and]: courseWhere } : undefined,
       },
+      lecturerInclude(),
     ],
     order: resourceOrder(),
     limit: pageSize,
@@ -134,6 +143,7 @@ export async function getResource(viewer: Viewer, id: string): Promise<ResourceD
     where: { id, ...visibleResources(viewer) },
     include: [
       { model: Course, as: "course", attributes: ["code", "title"], required: true },
+      lecturerInclude(),
       { model: Resource, as: "solutionOf" },
       { model: Resource, as: "solutions" },
     ],

@@ -241,4 +241,50 @@ test.describe("admin bulk upload", () => {
     await row.getByRole("button", { name: `Remove ${file}` }).click();
     await expect(row).toHaveCount(0);
   });
+  test("the batch lecturer applies to rows the admin has not changed by hand", async ({ page, request }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "writing test, desktop only");
+    const t = tag();
+    const stamp = tag();
+    const files = [`lecture_one_${t}.pdf`, `lecture_two_${t}.pdf`];
+    const titles = [`lecture one ${t}`, `lecture two ${t}`];
+    const names = [`Dr. E2E Batch A ${stamp}`, `Dr. E2E Batch B ${stamp}`];
+    const client = new Client({ connectionString: process.env.DATABASE_URL });
+    await client.connect();
+    try {
+      for (const [index, name] of names.entries()) {
+        await client.query("INSERT INTO lecturers (name, slug) VALUES ($1, $2)", [name, `e2e-batch-${index}-${stamp}`]);
+      }
+      await signInAsAdmin(page);
+      await openBulk(page, `?course=${COURSE}`);
+      const batch = page.getByLabel("Lecturer for the whole batch");
+      await batch.selectOption({ label: names[0] });
+      await filesInput(page).setInputFiles(files.map(pdf));
+      for (const file of files) {
+        await expect(rowOf(page, file).getByText("Uploaded.")).toBeVisible();
+        await expect(rowOf(page, file).getByLabel(`Lecturer for ${file}`).locator("option:checked")).toHaveText(names[0]);
+      }
+
+      // Row two is changed by hand; a later batch change moves only row one.
+      await rowOf(page, files[1]).getByLabel(`Lecturer for ${files[1]}`).selectOption({ label: names[1] });
+      await batch.selectOption({ label: "None" });
+      await expect(rowOf(page, files[0]).getByLabel(`Lecturer for ${files[0]}`).locator("option:checked")).toHaveText("None");
+      await expect(rowOf(page, files[1]).getByLabel(`Lecturer for ${files[1]}`).locator("option:checked")).toHaveText(names[1]);
+
+      await batch.selectOption({ label: names[0] });
+      await saveButton(page, /^Save as drafts \(2\)/).click();
+      await expect(page.getByText("2 saved.")).toBeVisible();
+      const saved = await client.query(
+        "SELECT r.title, l.name FROM resources r LEFT JOIN lecturers l ON l.id = r.lecturer_id WHERE r.title = ANY($1) ORDER BY r.title",
+        [titles],
+      );
+      expect(saved.rows).toEqual([
+        { title: titles[0], name: names[0] },
+        { title: titles[1], name: names[1] },
+      ]);
+    } finally {
+      await cleanup(request, origin, titles);
+      await client.query("DELETE FROM lecturers WHERE name LIKE $1", [`%E2E Batch%${stamp}`]);
+      await client.end();
+    }
+  });
 });

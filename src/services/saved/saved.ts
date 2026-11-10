@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getDb } from "@/db/models";
 import { NotFoundError } from "../errors";
-import { toResourceListItem, visibleSolutionsOf } from "../resources/resources";
+import { lecturerInclude, toResourceListItem, visibleSolutionsOf } from "../resources/resources";
 import type { ResourceListItem } from "../resources/types";
 import type { Viewer } from "../viewer";
 
@@ -65,7 +65,10 @@ export async function listSavedResources(viewer: NonNullable<Viewer>): Promise<S
         as: "resource",
         where: { isPublished: true },
         required: true,
-        include: [{ model: Course, as: "course", required: true }],
+        include: [
+          { model: Course, as: "course", required: true },
+          lecturerInclude(),
+        ],
       },
     ],
     order: [["createdAt", "DESC"], ["id", "ASC"]],
