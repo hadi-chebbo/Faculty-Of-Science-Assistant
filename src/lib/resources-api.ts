@@ -28,8 +28,7 @@ export async function readJsonObject(request: Request): Promise<Record<string, u
 // "Course not found", "Lecturer not found"). A missing viewer
 // (not signed in, or the token expired) is 401; a signed-in viewer without permission is 403.
 export async function adminWrite(request: Request, action: (viewer: Viewer) => Promise<Response>): Promise<Response> {
-  // Only writes need the same-origin check; a read (GET) changes nothing.
-  if (request.method !== "GET" && !isSameOrigin(request)) return reply({ error: "Forbidden" }, 403);
+  if (!isSameOrigin(request)) return reply({ error: "Forbidden" }, 403);
 
   let viewer: Viewer = null;
   try {

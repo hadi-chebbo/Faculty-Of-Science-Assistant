@@ -4,7 +4,7 @@ import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import type { Viewer } from "@/services/viewer";
 import { DELETE, PATCH } from "./[lecturerId]/route";
-import { GET, POST } from "./route";
+import { POST } from "./route";
 
 const session = vi.hoisted(() => ({ viewer: null as Viewer }));
 vi.mock("@/lib/auth/viewer", () => ({ getViewer: async () => session.viewer }));
@@ -12,7 +12,6 @@ vi.mock("@/lib/auth/viewer", () => ({ getViewer: async () => session.viewer }));
 const ORIGIN = "http://localhost:3210";
 const UNKNOWN = "33333333-3333-4333-8333-333333333333";
 
-const get = () => GET(new NextRequest(`${ORIGIN}/api/v1/lecturers`));
 const post = (body: unknown, headers: Record<string, string> = { origin: ORIGIN }) =>
   POST(new NextRequest(`${ORIGIN}/api/v1/lecturers`, { method: "POST", headers, body: JSON.stringify(body) }));
 const item = (method: "PATCH" | "DELETE", id: string, body?: unknown) =>
@@ -31,25 +30,6 @@ async function signInAs(role: "admin" | "student") {
   const user = await getDb().User.create({ email: `${role}@example.com`, passwordHash: "x", role, emailConfirmedAt: new Date() });
   session.viewer = { id: user.id, role };
 }
-
-describe("GET /api/v1/lecturers", () => {
-  it("lists lecturers with file counts (200), admin only", async () => {
-    await signInAs("admin");
-    await post({ name: "Dr. Ali Ghorayeb" });
-    const response = await get();
-    expect(response.status).toBe(200);
-    expect((await response.json()).lecturers).toEqual([
-      { id: expect.any(String), name: "Dr. Ali Ghorayeb", slug: "ali-ghorayeb", fileCount: 0 },
-    ]);
-  });
-
-  it("answers 403 for a student and 401 signed out", async () => {
-    await signInAs("student");
-    expect((await get()).status).toBe(403);
-    session.viewer = null;
-    expect((await get()).status).toBe(401);
-  });
-});
 
 describe("POST /api/v1/lecturers", () => {
   it("creates a lecturer with a slug (201)", async () => {

@@ -9,16 +9,10 @@ import { Label } from "@/components/ui/label";
 import { LECTURER_NAME_MAX_LENGTH } from "@/db/constants";
 import { adminFetch } from "@/lib/admin-fetch";
 import { useHydrated } from "@/lib/use-hydrated";
+import type { SavedLecturer } from "@/services/lecturers/types";
 
 const NAME_MESSAGE = `Enter a name of 1 to ${LECTURER_NAME_MAX_LENGTH} characters.`;
 const TAKEN_MESSAGE = "A lecturer with this name already exists.";
-
-// The lecturer as the server stored it.
-export interface SavedLecturerValues {
-  id: string;
-  name: string;
-  slug: string;
-}
 
 // The Name field with its save request. Used for a new lecturer (POST) and for the edit dialog
 // (PATCH). A field error from the server shows under the field; the typed value is kept.
@@ -42,7 +36,7 @@ export function LecturerForm({
   submitLabel: string;
   savedMessage: string;
   clearOnSuccess?: boolean;
-  onSaved?: (lecturer: SavedLecturerValues) => void;
+  onSaved?: (lecturer: SavedLecturer) => void;
   nameRef?: Ref<HTMLInputElement>;
   nameHint: string;
   // One field per line (the edit dialog); otherwise the button sits beside the field from md up.
@@ -65,7 +59,7 @@ export function LecturerForm({
         () => router.replace("/sign-in"),
       );
       if (response.ok) {
-        const { lecturer }: { lecturer: SavedLecturerValues } = await response.json();
+        const { lecturer }: { lecturer: SavedLecturer } = await response.json();
         toast.success(savedMessage);
         if (clearOnSuccess) setName(initialName);
         router.refresh();

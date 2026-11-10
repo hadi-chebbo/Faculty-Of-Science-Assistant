@@ -102,7 +102,7 @@ service):
   `NotFoundError` for a malformed or unknown id.
 - `deleteLecturer(viewer, id)`: refused with `LecturerInUseError { fileCount }` while any resource
   (draft or published) uses it.
-- API through `adminWrite`: `GET` / `POST /api/v1/lecturers` (`{ name }`, 201 `{ lecturer: { id,
+- API through `adminWrite`: `POST /api/v1/lecturers` (`{ name }`, 201 `{ lecturer: { id,
   name, slug } }`), `PATCH` / `DELETE /api/v1/lecturers/ID` (200 `{ lecturer }` / 204); 400
   `{ error: "Invalid input", fields }`, 409 `{ error: "name_taken" }` or `{ error: "lecturer_in_use",
   fileCount }`, 404 for an unknown or malformed id, 401/403 as the other admin writes.
