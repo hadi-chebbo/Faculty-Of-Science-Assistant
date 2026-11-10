@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 const SECTIONS = [
   { key: "resources", label: "Resources", href: "/admin" },
   { key: "courses", label: "Courses", href: "/admin/courses" },
+  { key: "lecturers", label: "Lecturers", href: "/admin/lecturers" },
   { key: "chapters", label: "Chapters", href: "/admin/chapters" },
   { key: "storage", label: "Storage", href: "/admin/storage" },
   { key: "users", label: "Users", href: "/admin/users" },
@@ -13,7 +14,7 @@ const SECTIONS = [
 
 // Plain row at the very top of every admin page: the admin sections on the left (the current one highlighted), sign out on the right.
 // Rendered by the page content only after `requireAdminPage` has passed; it never reads the session itself.
-export function AdminBar({ current }: { current: "resources" | "courses" | "chapters" | "storage" | "users" }) {
+export function AdminBar({ current }: { current: "resources" | "courses" | "lecturers" | "chapters" | "storage" | "users" }) {
   // Server-only variable: the link to the Sentry issues page, hidden when it is not set.
   const errorsUrl = process.env.SENTRY_ISSUES_URL;
   return (
