@@ -56,7 +56,7 @@ test("choosing a course and applying updates the URL and the list", async ({ pag
   await page.getByLabel("Course").selectOption("DEMO601");
   await page.getByRole("button", { name: "Apply" }).click();
 
-  await expect(page).toHaveURL(/\/admin\?course=DEMO601$/);
+  await expect(page).toHaveURL(/\/admin\?course=DEMO601(&lecturer=)?$/);
   await expect(page.getByText("Sample draft notes with no source")).toBeVisible();
   await expect(page.getByText("Sample draft lecture", { exact: true })).toHaveCount(0);
 });

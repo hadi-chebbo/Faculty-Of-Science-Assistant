@@ -844,7 +844,7 @@ test.describe("admin resource form: lecturer", () => {
       await signInAsAdmin(page);
       await page.goto("/admin/resources/new");
       await fillBasics(page, title);
-      const select = page.getByLabel("Lecturer", { exact: true });
+      const select = page.locator("#lecturerId");
       await expect(select).toHaveValue("");
       await select.selectOption({ label: name });
       await fileInput(page).setInputFiles(pdfFile());
@@ -855,10 +855,10 @@ test.describe("admin resource form: lecturer", () => {
 
       // Admin list: the filter is in the address.
       await page.goto(`/admin?lecturer=${slug}`);
-      await expect(page.getByLabel("Lecturer", { exact: true })).toHaveValue(slug);
+      await expect(page.locator("#admin-lecturer")).toHaveValue(slug);
       await expect(page.getByRole("listitem").filter({ hasText: title })).toContainText(name);
       await page.goto("/admin?lecturer=not-a-known-one");
-      await expect(page.getByLabel("Lecturer", { exact: true })).toHaveValue("");
+      await expect(page.locator("#admin-lecturer")).toHaveValue("");
 
       // Students see the name on the row and in the reader.
       const anonymous = await browser.newContext();
@@ -885,8 +885,8 @@ test.describe("admin resource form: lecturer", () => {
       // Clear it in the edit form.
       const [{ id }] = (await client.query("SELECT id FROM resources WHERE title = $1", [title])).rows;
       await page.goto(`/admin/resources/${id}/edit`);
-      await expect(page.getByLabel("Lecturer", { exact: true })).toHaveValue(/.+/);
-      await page.getByLabel("Lecturer", { exact: true }).selectOption({ label: "None" });
+      await expect(page.locator("#lecturerId")).toHaveValue(/.+/);
+      await page.locator("#lecturerId").selectOption({ label: "None" });
       await save(page);
       await page.waitForURL(/\/admin$/);
       const after = await client.query("SELECT lecturer_id FROM resources WHERE title = $1", [title]);
