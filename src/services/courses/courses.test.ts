@@ -323,3 +323,106 @@ describe("getChapterPage", () => {
     await expect(getChapterPage(null, "CHP302", "2")).rejects.toBeInstanceOf(NotFoundError);
   });
 });
+
+describe("lecturer scope and filter", () => {
+  async function seedLecturers() {
+    const { Course, Chapter, Resource, Lecturer } = getDb();
+    const course = await Course.create({ code: "LEC301", title: "Lecturer course", semester: 3 });
+    const ada = await Lecturer.create({ name: "Dr. Ada Example", slug: "ada-example" });
+    const alan = await Lecturer.create({ name: "Dr. Alan Sample", slug: "alan-sample" });
+    const draftOnly = await Lecturer.create({ name: "Dr. Draft Only", slug: "draft-only" });
+    const ch1 = await Chapter.create({ courseId: course.id, position: 1, title: "One" });
+    const ch2 = await Chapter.create({ courseId: course.id, position: 2, title: "Two" });
+    const ch3 = await Chapter.create({ courseId: course.id, position: 3, title: "Three" });
+    const make = (title: string, type: string, extra: Record<string, unknown> = {}) =>
+      Resource.create({ courseId: course.id, type, title, isPublished: true, fileKey: SAMPLE_KEY, externalUrl: SAMPLE_URL, ...extra } as never);
+    const lecA = await make("Ada lecture", "lecture", { chapterId: ch1.id, lecturerId: ada.id });
+    await make("Ada solution", "solution", { chapterId: ch1.id, lecturerId: ada.id, solutionOfId: lecA.id });
+    await make("Alan notes", "notes", { chapterId: ch1.id, lecturerId: alan.id });
+    await make("Nobody exercise", "exercise", { chapterId: ch1.id });
+    await make("Alan lecture", "lecture", { chapterId: ch2.id, lecturerId: alan.id });
+    await make("Ada exam", "exam", { lecturerId: ada.id, academicYearStart: 2024, examSession: "final" });
+    await make("Alan exam", "exam", { lecturerId: alan.id, academicYearStart: 2023, examSession: "final" });
+    await make("Ada general", "notes", { lecturerId: ada.id });
+    await make("Alan general", "other", { lecturerId: alan.id });
+    await make("Draft by draft-only", "lecture", { chapterId: ch3.id, lecturerId: draftOnly.id, isPublished: false });
+    return { course, ch1, ch2, ch3 };
+  }
+  const titles = (groups: { resources: { title: string }[] }[]) => groups.flatMap((g) => g.resources.map((r) => r.title));
+
+  it("lists lecturers with published files only, by name, counting solutions and no-lecturer files in the total", async () => {
+    await seedLecturers();
+    const course = await getCourseByCode(null, "LEC301");
+    expect(course.lecturers).toEqual([
+      { slug: "ada-example", name: "Dr. Ada Example", fileCount: 4 },
+      { slug: "alan-sample", name: "Dr. Alan Sample", fileCount: 4 },
+    ]);
+    expect(course.allFileCount).toBe(9);
+    expect(course.lecturer).toBeNull();
+    expect(JSON.stringify(course)).not.toContain("Draft Only");
+  });
+
+  it("filters chapters, exams, general and type groups, leaving out emptied chapters", async () => {
+    await seedLecturers();
+    const course = await getCourseByCode(null, "LEC301", { lecturer: "alan-sample" });
+    expect(course.lecturer).toEqual({ slug: "alan-sample", name: "Dr. Alan Sample" });
+    expect(course.outline.chapters.map((c) => [c.position, c.itemCount])).toEqual([[1, 1], [2, 1]]);
+    expect(titles(course.outline.chapters[0].groups)).toEqual(["Alan notes"]);
+    expect(course.outline.exams.map((e) => e.title)).toEqual(["Alan exam"]);
+    expect(titles(course.outline.general)).toEqual(["Alan general"]);
+    expect(titles(course.groups).sort()).toEqual(["Alan exam", "Alan general", "Alan lecture", "Alan notes"]);
+    // The whole-course strip and flags ignore the filter.
+    expect(course.allFileCount).toBe(9);
+    expect(course.lecturers).toHaveLength(2);
+    expect(course.hasChapters).toBe(true);
+    expect(course.hasOtherMaterial).toBe(true);
+  });
+
+  it("keeps solution links on a kept row", async () => {
+    await seedLecturers();
+    const course = await getCourseByCode(null, "LEC301", { lecturer: "ada-example" });
+    const lecture = course.outline.chapters[0].groups.flatMap((g) => g.resources).find((r) => r.title === "Ada lecture");
+    expect(lecture?.solutions.map((s) => s.title)).toEqual(["Ada solution"]);
+    expect(titles(course.outline.chapters[0].groups)).toEqual(["Ada lecture"]);
+  });
+
+  it("ignores an unknown, malformed or draft-only slug", async () => {
+    await seedLecturers();
+    for (const lecturer of ["nobody", "Not A Slug!", "", "draft-only"]) {
+      const course = await getCourseByCode(null, "LEC301", { lecturer });
+      expect(course.lecturer).toBeNull();
+      expect(course.outline.chapters).toHaveLength(3);
+    }
+  });
+
+  it("counts a chapter page's strip within the chapter only", async () => {
+    await seedLecturers();
+    const page = await getChapterPage(null, "LEC301", 1);
+    expect(page.lecturers).toEqual([
+      { slug: "ada-example", name: "Dr. Ada Example", fileCount: 2 },
+      { slug: "alan-sample", name: "Dr. Alan Sample", fileCount: 1 },
+    ]);
+    expect(page.allFileCount).toBe(4);
+    const filtered = await getChapterPage(null, "LEC301", 1, { lecturer: "ada-example" });
+    expect(filtered.lecturer?.slug).toBe("ada-example");
+    expect(titles(filtered.chapter.groups)).toEqual(["Ada lecture"]);
+    expect(filtered.allFileCount).toBe(4);
+  });
+
+  it("skips chapters without the lecturer's files for previous and next", async () => {
+    await seedLecturers();
+    const page = await getChapterPage(null, "LEC301", 1, { lecturer: "ada-example" });
+    expect(page.next).toBeNull();
+    const two = await getChapterPage(null, "LEC301", 2, { lecturer: "alan-sample" });
+    expect(two.previous?.position).toBe(1);
+  });
+
+  it("returns no groups when the applied lecturer has nothing in the chapter", async () => {
+    await seedLecturers();
+    const page = await getChapterPage(null, "LEC301", 2, { lecturer: "ada-example" });
+    expect(page.lecturer?.name).toBe("Dr. Ada Example");
+    expect(page.chapter.groups).toEqual([]);
+    expect(page.lecturers.map((l) => l.slug)).toEqual(["alan-sample"]);
+    expect(page.allFileCount).toBe(1);
+  });
+});

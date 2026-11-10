@@ -1,4 +1,5 @@
 import type { ResourceType } from "@/db/constants";
+import type { LecturerRef } from "../lecturers/types";
 import type { ResourceListItem } from "../resources/types";
 
 export interface CourseSummary {
@@ -41,13 +42,29 @@ export interface CourseOutline {
   exams: ResourceListItem[];
 }
 
+// One card of the "Taught by" strip: a lecturer with published files in scope.
+export interface LecturerCount extends LecturerRef {
+  // Their published files in scope, solutions included.
+  fileCount: number;
+}
+
+// What the "Taught by" strip needs, for the course or for one chapter.
+export interface LecturerScope {
+  // Lecturers with at least one published file in scope, by name.
+  lecturers: LecturerCount[];
+  // Every published file in scope, files with no lecturer included.
+  allFileCount: number;
+  // The lecturer applied through ?lecturer=, or null.
+  lecturer: LecturerRef | null;
+}
+
 export interface ChapterLink {
   position: number;
   title: string;
 }
 
 // One chapter as a page of its own.
-export interface ChapterPage {
+export interface ChapterPage extends LecturerScope {
   course: { code: string; title: string; semester: number };
   chapter: { position: number; title: string; groups: ResourceGroup[] };
   // The nearest chapters before and after that have at least one item (empty ones are skipped).
@@ -55,12 +72,16 @@ export interface ChapterPage {
   next: ChapterLink | null;
 }
 
-export interface CourseDetail {
+export interface CourseDetail extends LecturerScope {
   code: string;
   title: string;
   semester: number;
   // Only types that have at least one visible resource, in the order of RESOURCE_TYPES.
   groups: ResourceGroup[];
+  // With a lecturer applied, groups and outline hold only their files (outline.chapters only the
+  // chapters that have some). These two ignore the lecturer.
+  hasChapters: boolean;
+  hasOtherMaterial: boolean;
   outline: CourseOutline;
 }
 

@@ -11,6 +11,7 @@ import { RESOURCE_TYPE_LABELS } from "@/lib/labels";
 import { readForPage } from "@/lib/page-errors";
 import { getChapterPage } from "@/services/courses/courses";
 import type { ChapterLink } from "@/services/courses/types";
+import { ShowingOnly, TaughtBy, pageHref } from "../../taught-by";
 
 export const metadata: Metadata = { title: "Chapter" };
 
@@ -19,12 +20,12 @@ const BUTTON = `inline-flex min-h-11 items-center gap-2 rounded-lg border bg-car
 
 // Course codes and positions are runtime data: reading them and the chapter happens inside
 // Suspense, behind a skeleton.
-export default function ChapterPage({ params }: PageProps<"/courses/[code]/chapters/[position]">) {
+export default function ChapterPage({ params, searchParams }: PageProps<"/courses/[code]/chapters/[position]">) {
   return (
     <main className="page-container py-6 md:py-8">
       <Suspense fallback={<CourseSkeleton />}>
-        {params.then(({ code, position }) => (
-          <ChapterContent code={code} position={position} />
+        {Promise.all([params, searchParams]).then(([{ code, position }, query]) => (
+          <ChapterContent code={code} position={position} lecturer={query.lecturer} />
         ))}
       </Suspense>
     </main>
@@ -32,10 +33,25 @@ export default function ChapterPage({ params }: PageProps<"/courses/[code]/chapt
 }
 
 // Viewer is always null for now: browsing needs no account.
-async function ChapterContent({ code, position }: { code: string; position: string }) {
-  const { course, chapter, previous, next } = await readForPage(() => getChapterPage(null, code, position));
-  const courseHref = `/courses/${encodeURIComponent(course.code)}`;
-  const chapterHref = (c: ChapterLink) => `${courseHref}/chapters/${c.position}`;
+async function ChapterContent({
+  code,
+  position,
+  lecturer: rawLecturer,
+}: {
+  code: string;
+  position: string;
+  lecturer: string | string[] | undefined;
+}) {
+  const page = await readForPage(() =>
+    getChapterPage(null, code, position, { lecturer: Array.isArray(rawLecturer) ? rawLecturer[0] : rawLecturer }),
+  );
+  const { course, chapter, previous, next, lecturer } = page;
+  const slug = lecturer?.slug ?? null;
+  // The chosen lecturer travels with the course, chapter, Previous and Next links.
+  const courseHref = pageHref(`/courses/${encodeURIComponent(course.code)}`, { lecturer: slug });
+  const chapterPath = `/courses/${encodeURIComponent(course.code)}/chapters/${chapter.position}`;
+  const chapterHref = (c: ChapterLink) =>
+    pageHref(`/courses/${encodeURIComponent(course.code)}/chapters/${c.position}`, { lecturer: slug });
 
   return (
     <>
@@ -57,16 +73,25 @@ async function ChapterContent({ code, position }: { code: string; position: stri
         {chapter.title}
       </PageTitle>
 
+      <TaughtBy path={chapterPath} scope={page} />
+      <ShowingOnly path={chapterPath} lecturer={lecturer} />
+
       {chapter.groups.length === 0 ? (
         <StateBlock
           icon={FileQuestion}
           actions={
-            <Link href={courseHref} className={BUTTON}>
-              Back to the course
-            </Link>
+            lecturer ? (
+              <Link href={chapterPath} className={BUTTON}>
+                Show all files
+              </Link>
+            ) : (
+              <Link href={courseHref} className={BUTTON}>
+                Back to the course
+              </Link>
+            )
           }
         >
-          Nothing here yet.
+          {lecturer ? `No files by ${lecturer.name} in this chapter.` : "Nothing here yet."}
         </StateBlock>
       ) : (
         <div className="space-y-8">
