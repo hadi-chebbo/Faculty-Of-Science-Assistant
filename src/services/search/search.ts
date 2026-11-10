@@ -55,8 +55,10 @@ const COURSE_VECTOR = vector("c.code || ' ' || c.title");
 const COURSE_TITLE_VECTOR = vector("c.title");
 const CHAPTER_VECTOR = vector("ch.title");
 const FILE_TITLE_VECTOR = vector("r.title");
-// Title words outweigh description words in the relevance score.
-const FILE_VECTOR = `(setweight(${FILE_TITLE_VECTOR}, 'A') || setweight(${vector("coalesce(r.description, '')")}, 'B'))`;
+// The file's lecturer name is searchable text like the title, folded and prefix-matched the same way.
+const FILE_LECTURER_VECTOR = vector("coalesce((SELECT l.name FROM lecturers l WHERE l.id = r.lecturer_id), '')");
+// Title words outweigh description words, which outweigh the lecturer's name, in the relevance score.
+const FILE_VECTOR = `(setweight(${FILE_TITLE_VECTOR}, 'A') || setweight(${vector("coalesce(r.description, '')")}, 'B') || setweight(${FILE_LECTURER_VECTOR}, 'C'))`;
 
 // A code typed with its spaces removed, compared with the stored code in the same form.
 const CODE_FORM = "replace(unaccent(lower(c.code)), ' ', '')";
@@ -226,7 +228,7 @@ async function listChapters({ bind }: Plan, limit: number, offset: number): Prom
 
 // ----- files
 
-// Published files whose title or description holds every word, and which pass the filters taken
+// Published files whose title, description or lecturer name holds every word, and which pass the filters taken
 // from the words of the query and from the chip. The values are bound, never written into the SQL.
 function fileWhere({ hasText, fileTypes, parsed }: Plan, bind: Bind): string {
   const conditions = ["r.is_published"];
