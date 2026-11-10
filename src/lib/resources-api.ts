@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { getViewer } from "@/lib/auth/viewer";
 import { isSameOrigin, NO_STORE } from "@/lib/auth/request";
-import { CourseCodeTakenError, ForbiddenError, NotFoundError, ValidationError } from "@/services/errors";
+import {
+  CourseCodeTakenError,
+  ForbiddenError,
+  LecturerInUseError,
+  LecturerNameTakenError,
+  NotFoundError,
+  ValidationError,
+} from "@/services/errors";
 import type { Viewer } from "@/services/viewer";
 
 export const reply = (body: object | null, status: number) =>
@@ -18,10 +25,11 @@ export async function readJsonObject(request: Request): Promise<Record<string, u
 // Shared by the admin write routes (resources and chapters): the same-origin check, the viewer, and
 // the mapping of service errors to responses. The role check itself stays in the service. A
 // not-found error is answered with its own message ("Resource not found", "Chapter not found",
-// "Course not found"). A missing viewer
+// "Course not found", "Lecturer not found"). A missing viewer
 // (not signed in, or the token expired) is 401; a signed-in viewer without permission is 403.
 export async function adminWrite(request: Request, action: (viewer: Viewer) => Promise<Response>): Promise<Response> {
-  if (!isSameOrigin(request)) return reply({ error: "Forbidden" }, 403);
+  // Only writes need the same-origin check; a read (GET) changes nothing.
+  if (request.method !== "GET" && !isSameOrigin(request)) return reply({ error: "Forbidden" }, 403);
 
   let viewer: Viewer = null;
   try {
@@ -33,6 +41,8 @@ export async function adminWrite(request: Request, action: (viewer: Viewer) => P
     }
     if (error instanceof ValidationError) return reply({ error: "Invalid input", fields: error.fields }, 400);
     if (error instanceof CourseCodeTakenError) return reply({ error: "code_taken" }, 409);
+    if (error instanceof LecturerNameTakenError) return reply({ error: "name_taken" }, 409);
+    if (error instanceof LecturerInUseError) return reply({ error: "lecturer_in_use", fileCount: error.fileCount }, 409);
     if (error instanceof NotFoundError) return reply({ error: error.message }, 404);
     console.error("admin write failed", error);
     return reply({ error: "Internal error" }, 500);

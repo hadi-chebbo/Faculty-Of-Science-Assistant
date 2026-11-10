@@ -14,6 +14,7 @@ import type { Bookmark } from "./bookmark";
 import type { Chapter } from "./chapter";
 import type { Completion } from "./completion";
 import type { Course } from "./course";
+import type { Lecturer } from "./lecturer";
 
 export class Resource extends Model<InferAttributes<Resource>, InferCreationAttributes<Resource>> {
   declare id: CreationOptional<string>;
@@ -31,12 +32,14 @@ export class Resource extends Model<InferAttributes<Resource>, InferCreationAttr
   declare externalUrl: CreationOptional<string | null>;
   declare chapterId: CreationOptional<ForeignKey<Chapter["id"]> | null>;
   declare solutionOfId: CreationOptional<ForeignKey<Resource["id"]> | null>;
+  declare lecturerId: CreationOptional<ForeignKey<Lecturer["id"]> | null>;
   declare isPublished: CreationOptional<boolean>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 
   declare course?: NonAttribute<Course>;
   declare chapter?: NonAttribute<Chapter>;
+  declare lecturer?: NonAttribute<Lecturer>;
   declare solutionOf?: NonAttribute<Resource>;
   declare solutions?: NonAttribute<Resource[]>;
   declare bookmarks?: NonAttribute<Bookmark[]>;
@@ -65,6 +68,7 @@ export function initResource(sequelize: Sequelize): typeof Resource {
       externalUrl: { type: DataTypes.TEXT, allowNull: true },
       chapterId: { type: DataTypes.UUID, allowNull: true },
       solutionOfId: { type: DataTypes.UUID, allowNull: true },
+      lecturerId: { type: DataTypes.UUID, allowNull: true },
       isPublished: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
       createdAt: DataTypes.DATE,
       updatedAt: DataTypes.DATE,

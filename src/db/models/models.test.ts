@@ -79,6 +79,16 @@ describe("models: create and read back", () => {
     expect(found?.updatedAt).toBeInstanceOf(Date);
   });
 
+  it("Lecturer, and a resource that uses it", async () => {
+    const { Course, Lecturer, Resource } = getDb();
+    const lecturer = await Lecturer.create({ name: "Dr. Test Lecturer", slug: "test-lecturer" });
+    expect(lecturer.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+    const course = await Course.create({ code: "TEST101", title: "Test Course", semester: 3 });
+    const resource = await Resource.create({ courseId: course.id, type: "lecture", title: "L", lecturerId: lecturer.id });
+    expect((await Resource.findByPk(resource.id, { include: ["lecturer"] }))?.lecturer?.slug).toBe("test-lecturer");
+    await expect(lecturer.destroy()).rejects.toThrow();
+  });
+
   it("Resource", async () => {
     const { Course, Resource } = getDb();
     const course = await Course.create({ code: "TEST101", title: "Test Course", semester: 3 });

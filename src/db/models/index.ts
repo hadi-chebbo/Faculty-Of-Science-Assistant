@@ -7,6 +7,7 @@ import { Course, initCourse } from "./course";
 import { EmailConfirmation, initEmailConfirmation } from "./email-confirmation";
 import { EmailJob, initEmailJob } from "./email-job";
 import { FailedSignIn, initFailedSignIn } from "./failed-sign-in";
+import { Lecturer, initLecturer } from "./lecturer";
 import { RateLimitEvent, initRateLimitEvent } from "./rate-limit-event";
 import { RefreshToken, initRefreshToken } from "./refresh-token";
 import { Resource, initResource } from "./resource";
@@ -23,6 +24,7 @@ export {
   EmailConfirmation,
   EmailJob,
   FailedSignIn,
+  Lecturer,
   RateLimitEvent,
   RefreshToken,
   Resource,
@@ -35,6 +37,7 @@ export {
 export interface Db {
   sequelize: Sequelize;
   Course: typeof Course;
+  Lecturer: typeof Lecturer;
   Chapter: typeof Chapter;
   Resource: typeof Resource;
   User: typeof User;
@@ -59,6 +62,7 @@ export function getDb(): Db {
 
   const sequelize = getSequelize();
   initCourse(sequelize);
+  initLecturer(sequelize);
   initChapter(sequelize);
   initResource(sequelize);
   initUser(sequelize);
@@ -75,6 +79,9 @@ export function getDb(): Db {
 
   Course.hasMany(Resource, { foreignKey: "courseId", as: "resources" });
   Resource.belongsTo(Course, { foreignKey: "courseId", as: "course" });
+
+  Lecturer.hasMany(Resource, { foreignKey: "lecturerId", as: "resources" });
+  Resource.belongsTo(Lecturer, { foreignKey: "lecturerId", as: "lecturer" });
 
   Course.hasMany(Chapter, { foreignKey: "courseId", as: "chapters" });
   Chapter.belongsTo(Course, { foreignKey: "courseId", as: "course" });
@@ -106,6 +113,6 @@ export function getDb(): Db {
   User.hasMany(Milestone, { foreignKey: "userId", as: "milestones" });
   Milestone.belongsTo(User, { foreignKey: "userId", as: "user" });
 
-  globalForDb.__db = { sequelize, Course, Chapter, Resource, User, RefreshToken, Bookmark, Completion, FailedSignIn, EmailJob, EmailConfirmation, RateLimitEvent, Todo, StudyDay, Milestone };
+  globalForDb.__db = { sequelize, Course, Lecturer, Chapter, Resource, User, RefreshToken, Bookmark, Completion, FailedSignIn, EmailJob, EmailConfirmation, RateLimitEvent, Todo, StudyDay, Milestone };
   return globalForDb.__db;
 }
