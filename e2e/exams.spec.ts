@@ -187,3 +187,43 @@ test.describe("without JavaScript", () => {
     await expect(page.getByLabel("Course")).toHaveValue("DEMO301");
   });
 });
+
+// The demo data gives DEMO301 and DEMO510 exams to three fake lecturers in turn.
+test("choosing a lecturer narrows the list, updates the address and can be cleared", async ({ page }) => {
+  await page.goto("/exams");
+  await expect(page.getByLabel("Lecturer")).toHaveValue("");
+  await choose(page, "Lecturer", "ada-example", /\/exams\?lecturer=ada-example$/);
+  await expect(page.getByText(/^\d+ exams?$/)).toBeVisible();
+  const count = await rows(page).count();
+  expect(count).toBeGreaterThan(0);
+  expect(count).toBeLessThan(TOTAL_EXAMS);
+  for (let i = 0; i < count; i++) await expect(rows(page).nth(i)).toContainText("Dr. Ada Example");
+
+  // It combines with another filter, and the same address opened directly shows the same choice.
+  await choose(page, "Course", "DEMO301", /\/exams\?course=DEMO301&lecturer=ada-example$/);
+  await page.goto("/exams?lecturer=ada-example");
+  await expect(page.getByLabel("Lecturer")).toHaveValue("ada-example");
+
+  await page.getByRole("link", { name: "Clear filters" }).first().click();
+  await expect(page).toHaveURL(/\/exams$/);
+  await expect(page.getByLabel("Lecturer")).toHaveValue("");
+  await expect(page.getByText(`${TOTAL_EXAMS} exams`)).toBeVisible();
+});
+
+test("an unknown lecturer in the address is ignored", async ({ page }) => {
+  await page.goto("/exams?lecturer=nobody-here");
+  await expect(page.getByLabel("Lecturer")).toHaveValue("");
+  await expect(page.getByText(`${TOTAL_EXAMS} exams`)).toBeVisible();
+});
+
+test.describe("without JavaScript, the lecturer filter", () => {
+  test.use({ javaScriptEnabled: false });
+
+  test("works with Apply", async ({ page }) => {
+    await page.goto("/exams");
+    await page.getByLabel("Lecturer").selectOption("grace-placeholder");
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect(page).toHaveURL(/\/exams\?.*lecturer=grace-placeholder/);
+    await expect(rows(page).first()).toContainText("Pr. Grace Placeholder");
+  });
+});

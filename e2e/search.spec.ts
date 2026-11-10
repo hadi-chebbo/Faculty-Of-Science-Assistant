@@ -455,3 +455,15 @@ test.describe("without JavaScript", () => {
     await expect(page).toHaveURL(/q=demo401&type=course$/);
   });
 });
+
+test("a lecturer's name finds their published files", async ({ page }) => {
+  await page.goto("/search?q=grace+placeholder");
+  const count = await fileRows(page).count();
+  expect(count).toBeGreaterThan(0);
+  for (let i = 0; i < count; i++) await expect(fileRows(page).nth(i)).toContainText("Pr. Grace Placeholder");
+  // Prefix, case-insensitive; the name only adds files, never course or chapter results.
+  await page.goto("/search?q=PLACEHOL");
+  await expect(fileRows(page).first()).toContainText("Pr. Grace Placeholder");
+  await expect(page.getByRole("heading", { level: 2, name: /^Courses ·/ })).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 2, name: /^Chapters ·/ })).toHaveCount(0);
+});
