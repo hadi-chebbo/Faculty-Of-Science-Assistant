@@ -17,6 +17,7 @@ export async function ExamResults({ params }: { params: ExamParams }) {
       courseCode: params.course,
       academicYearStart: params.year,
       examSession: params.session,
+      lecturer: params.lecturer,
       page: params.page,
       pageSize: EXAMS_PAGE_SIZE,
     }),

@@ -207,9 +207,25 @@ describe("listResources by semester", () => {
   });
 });
 
+describe("listResources by lecturer on exams", () => {
+  it("filters exams by lecturer slug and combines with the other filters", async () => {
+    const { a } = await seed();
+    const { Lecturer, Resource } = getDb();
+    const ada = await Lecturer.create({ name: "Dr. Ada Test", slug: "ada-test" });
+    await Resource.update({ lecturerId: ada.id }, { where: { courseId: a.id, title: ["Final 2024", "Final 2022"] } });
+    const titles = async (filter: object) =>
+      (await listResources(null, { type: "exam", ...filter })).items.map((i) => i.title).sort();
+    expect(await titles({ lecturer: "ada-test" })).toEqual(["Final 2022", "Final 2024"]);
+    expect(await titles({ lecturer: "ada-test", academicYearStart: 2024 })).toEqual(["Final 2024"]);
+    expect(await titles({ lecturer: "ada-test", examSession: "partial" })).toEqual([]);
+    expect(await titles({ lecturer: "ada-test", semester: 3, courseCode: "TEST301" })).toEqual(["Final 2022", "Final 2024"]);
+    expect(await titles({ lecturer: "nobody" })).toEqual([]);
+  });
+});
+
 describe("listExamFilterOptions", () => {
   it("is empty when there are no exams", async () => {
-    expect(await listExamFilterOptions(null)).toEqual({ semesters: [], courses: [], years: [], sessions: [] });
+    expect(await listExamFilterOptions(null)).toEqual({ semesters: [], courses: [], years: [], sessions: [], lecturers: [] });
   });
 
   it("offers only values of visible exams, years newest first, courses by code", async () => {
@@ -234,9 +250,31 @@ describe("listExamFilterOptions", () => {
       ],
       years: [2024, 2023, 2022],
       sessions: ["partial", "final", "second"],
+      lecturers: [],
     };
     expect(await listExamFilterOptions(null)).toEqual(expected);
     expect(await listExamFilterOptions(student)).toEqual(expected);
+  });
+
+  it("offers only lecturers with a visible exam, by name", async () => {
+    const { a } = await seed();
+    const { Lecturer, Resource } = getDb();
+    const zed = await Lecturer.create({ name: "Dr. Zed Test", slug: "zed-test" });
+    const ada = await Lecturer.create({ name: "Dr. Ada Test", slug: "ada-test" });
+    const draftOnly = await Lecturer.create({ name: "Dr. Draft Test", slug: "draft-test" });
+    const lectureOnly = await Lecturer.create({ name: "Dr. Lecture Test", slug: "lecture-test" });
+    const exam = (title: string, lecturerId: string, isPublished: boolean) =>
+      Resource.create({ courseId: a.id, type: "exam", title, academicYearStart: 2024, examSession: "final", lecturerId, isPublished, fileKey: SAMPLE_KEY });
+    await exam("Z1", zed.id, true);
+    await exam("Z2", zed.id, true);
+    await exam("A1", ada.id, true);
+    await exam("D1", draftOnly.id, false);
+    await Resource.create({ courseId: a.id, type: "lecture", title: "L1", lecturerId: lectureOnly.id, isPublished: true, fileKey: SAMPLE_KEY });
+    expect((await listExamFilterOptions(null)).lecturers).toEqual([
+      { slug: "ada-test", name: "Dr. Ada Test" },
+      { slug: "zed-test", name: "Dr. Zed Test" },
+    ]);
+    expect((await listExamFilterOptions(admin)).lecturers.map((l) => l.slug)).toEqual(["ada-test", "draft-test", "zed-test"]);
   });
 
   it("includes values that only have drafts for an admin", async () => {

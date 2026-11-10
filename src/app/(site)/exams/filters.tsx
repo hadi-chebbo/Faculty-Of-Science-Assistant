@@ -18,6 +18,7 @@ export function ExamFilters({ options, params }: { options: ExamFilterOptions; p
     course: params.course ?? "",
     year: String(params.year ?? ""),
     session: params.session ?? "",
+    lecturer: params.lecturer ?? "",
   };
   const courses =
     params.semester === undefined
@@ -30,7 +31,7 @@ export function ExamFilters({ options, params }: { options: ExamFilterOptions; p
   return (
     <FilterForm values={values}>
       <div className="rounded-xl border bg-card p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <label htmlFor="exam-semester" className={LABEL}>Semester</label>
             <NativeSelect id="exam-semester" name="semester" defaultValue={values.semester} className={SELECT}>
@@ -83,6 +84,17 @@ export function ExamFilters({ options, params }: { options: ExamFilterOptions; p
               {options.sessions.map((session) => (
                 <NativeSelectOption key={session} value={session}>
                   {EXAM_SESSION_LABELS[session]}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          </div>
+          <div>
+            <label htmlFor="exam-lecturer" className={LABEL}>Lecturer</label>
+            <NativeSelect id="exam-lecturer" name="lecturer" defaultValue={values.lecturer} className={SELECT}>
+              <NativeSelectOption value="">All</NativeSelectOption>
+              {options.lecturers.map((lecturer) => (
+                <NativeSelectOption key={lecturer.slug} value={lecturer.slug}>
+                  {lecturer.name}
                 </NativeSelectOption>
               ))}
             </NativeSelect>

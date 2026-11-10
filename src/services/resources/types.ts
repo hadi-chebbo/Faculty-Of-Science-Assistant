@@ -58,6 +58,8 @@ export interface ExamFilterOptions {
   // Start years, newest first.
   years: number[];
   sessions: ExamSession[];
+  // Lecturers with at least one visible exam, by name.
+  lecturers: LecturerRef[];
 }
 
 // Everything the admin edit form needs. The stored file's key is never exposed, only whether one exists.

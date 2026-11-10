@@ -6,7 +6,7 @@ import { ExamsFiltersSkeleton, ExamsListSkeleton } from "@/components/site/skele
 import { readForPage } from "@/lib/page-errors";
 import { listExamFilterOptions } from "@/services/resources/resources";
 import { ExamFilters } from "./filters";
-import { parseExamParams, reconcileCourse } from "./params";
+import { parseExamParams, reconcileCourse, reconcileLecturer } from "./params";
 import { ExamResults } from "./results";
 
 export const metadata: Metadata = { title: "Previous exams" };
@@ -56,7 +56,7 @@ export default function ExamsPage({ searchParams }: PageProps<"/exams">) {
 // belongs to the chosen semester. The list streams after them, behind its own skeleton.
 async function ExamsContent({ raw }: { raw: Record<string, string | string[] | undefined> }) {
   const options = await readForPage(() => listExamFilterOptions(null));
-  const params = reconcileCourse(parseExamParams(raw), options.courses);
+  const params = reconcileLecturer(reconcileCourse(parseExamParams(raw), options.courses), options.lecturers);
 
   return (
     <>
