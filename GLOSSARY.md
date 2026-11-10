@@ -4,6 +4,13 @@ A study platform for Computer Science students at the Faculty of Science, Lebane
 (Hadath). Students find course material and previous exams, keep what they want to come back to,
 and plan their own study.
 
+## Course material
+
+**Lecturer**:
+The person who taught or wrote a resource, named as written (e.g. "Dr. Ali Ghorayeb"). A resource
+has at most one lecturer, or none when unknown; a course's lecturers are those of its resources.
+_Avoid_: Doctor, teacher, instructor, professor, author
+
 ## Study tools (signed-in students)
 
 **Saved resource**:

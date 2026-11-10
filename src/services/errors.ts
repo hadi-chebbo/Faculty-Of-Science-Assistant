@@ -100,3 +100,22 @@ export class CourseCodeTakenError extends Error {
     this.name = "CourseCodeTakenError";
   }
 }
+
+// Another lecturer already has this name (compared ignoring letter case).
+export class LecturerNameTakenError extends Error {
+  constructor() {
+    super("Lecturer name taken");
+    this.name = "LecturerNameTakenError";
+  }
+}
+
+// A lecturer that resources (drafts included) still use cannot be deleted.
+export class LecturerInUseError extends Error {
+  readonly fileCount: number;
+
+  constructor(fileCount: number) {
+    super("Lecturer in use");
+    this.name = "LecturerInUseError";
+    this.fileCount = fileCount;
+  }
+}
