@@ -13,6 +13,7 @@ import { describeTextCheck, textLayerStatus, type TextCheck } from "@/lib/pdf-te
 import { formatFileSize } from "@/lib/upload-file";
 import type { ChapterOption } from "@/services/chapters/options";
 import type { YearOption } from "../form-helpers";
+import type { LecturerOption } from "@/services/lecturers/types";
 
 export type RowStatus = "queued" | "uploading" | "ready" | "saving" | "failed";
 
@@ -78,7 +79,7 @@ export function BulkRowView({
 }: {
   row: BulkRow;
   chapters: ChapterOption[];
-  lecturers: { id: string; name: string }[];
+  lecturers: LecturerOption[];
   years: YearOption[];
   disabled: boolean;
   onEdit: (patch: Partial<BulkRow>) => void;

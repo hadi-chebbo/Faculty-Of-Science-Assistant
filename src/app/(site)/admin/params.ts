@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { COURSE_CODE_MAX_LENGTH } from "@/db/constants";
+import { lecturerSlugSchema } from "@/services/lecturers/schemas";
 
 export interface AdminParams {
   course?: string;
@@ -11,7 +12,7 @@ export interface AdminParams {
 }
 
 const course = z.string().trim().min(1).max(COURSE_CODE_MAX_LENGTH);
-const lecturer = z.string().trim().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(120);
+const lecturer = lecturerSlugSchema;
 const text = z.literal("scanned");
 const page = z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(1).max(10_000));
 

@@ -1,4 +1,4 @@
-import { Op, Sequelize, type Order, type WhereOptions } from "sequelize";
+import { Op, Sequelize, type IncludeOptions, type Order, type WhereOptions } from "sequelize";
 import { EXAM_SESSIONS } from "@/db/constants";
 import type { ExamSession } from "@/db/constants";
 import { getDb } from "@/db/models";
@@ -45,6 +45,12 @@ export function toResourceListItem(resource: Resource, courseCode: string, solut
   };
 }
 
+// Loads a resource's lecturer in the same query, as `toResourceListItem` needs it. Every query that
+// builds list items includes it.
+export function lecturerInclude(): IncludeOptions {
+  return { model: getDb().Lecturer, as: "lecturer", attributes: ["slug", "name"], required: false };
+}
+
 // The stored text check of a file, or null when it was not checked.
 export function toTextCheck(resource: Resource): { pageCount: number; textPageCount: number } | null {
   return resource.pageCount != null && resource.textPageCount != null
@@ -80,7 +86,7 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
     resourceFiltersSchema,
     filters,
   );
-  const { Resource, Course, Lecturer, sequelize } = getDb();
+  const { Resource, Course, sequelize } = getDb();
 
   const where: WhereOptions[] = [visibleResources(viewer)];
   if (type) where.push({ type });
@@ -108,7 +114,7 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
         required: true,
         where: courseWhere.length > 0 ? { [Op.and]: courseWhere } : undefined,
       },
-      { model: Lecturer, as: "lecturer", attributes: ["slug", "name"], required: false },
+      lecturerInclude(),
     ],
     order: resourceOrder(),
     limit: pageSize,
@@ -132,12 +138,12 @@ export async function getResource(viewer: Viewer, id: string): Promise<ResourceD
   // A malformed id can never match a row; answer the same as for a missing one.
   if (!idSchema.safeParse(id).success) throw new NotFoundError("Resource not found");
 
-  const { Resource, Course, Lecturer } = getDb();
+  const { Resource, Course } = getDb();
   const row = await Resource.findOne({
     where: { id, ...visibleResources(viewer) },
     include: [
       { model: Course, as: "course", attributes: ["code", "title"], required: true },
-      { model: Lecturer, as: "lecturer", attributes: ["slug", "name"], required: false },
+      lecturerInclude(),
       { model: Resource, as: "solutionOf" },
       { model: Resource, as: "solutions" },
     ],

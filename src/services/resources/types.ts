@@ -1,3 +1,4 @@
+import type { LecturerRef } from "../lecturers/types";
 import type { ExamSession, Language, ResourceType } from "@/db/constants";
 
 export interface ResourceListItem {
@@ -13,7 +14,7 @@ export interface ResourceListItem {
   // Whether opening it can lead anywhere (a link or a stored file). Neither value is exposed.
   hasSource: boolean;
   // The lecturer of the file, or null when it has none.
-  lecturer: { slug: string; name: string } | null;
+  lecturer: LecturerRef | null;
   // The upload-time text check of the stored file, set by `listResources` for an admin viewer only
   // (null: not checked). Students never get this field.
   textCheck?: { pageCount: number; textPageCount: number } | null;

@@ -32,6 +32,7 @@ import { Field, FormCard, RadioField, fieldClass, selectClass } from "./form-par
 import { FileField } from "./file-field";
 import { FormPreview } from "./form-preview";
 import { VisibilityCard } from "./visibility-card";
+import type { LecturerOption } from "@/services/lecturers/types";
 
 const FIELD_MESSAGES: Record<string, string> = {
   file: `The file could not be checked. Upload a PDF of at most ${MAX_SIZE_LABEL}.`,
@@ -62,7 +63,7 @@ export function ResourceForm({
 }: {
   courses: CourseOption[];
   chapters: ChapterOption[];
-  lecturers: { id: string; name: string }[];
+  lecturers: LecturerOption[];
   solutionTargets: SolutionTarget[];
   resource?: ResourceForEdit;
 }) {

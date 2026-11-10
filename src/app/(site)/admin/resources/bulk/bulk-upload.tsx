@@ -25,6 +25,7 @@ import type { CourseOption } from "@/services/courses/types";
 import { academicYearOptions } from "../form-helpers";
 import { BULK_COLUMNS, BulkRowView, rowProblems, type BulkRow } from "./bulk-row";
 import { guessFromFileName } from "./guess";
+import type { LecturerOption } from "@/services/lecturers/types";
 
 export const MAX_FILES = 50;
 const UPLOAD_CONCURRENCY = 3;
@@ -70,7 +71,7 @@ export function BulkUpload({
 }: {
   courses: CourseOption[];
   chapters: ChapterOption[];
-  lecturers: { id: string; name: string }[];
+  lecturers: LecturerOption[];
   initialCourseId: string;
 }) {
   const router = useRouter();

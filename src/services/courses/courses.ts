@@ -2,7 +2,7 @@ import { fn, col } from "sequelize";
 import { RESOURCE_TYPES } from "@/db/constants";
 import { getDb } from "@/db/models";
 import { NotFoundError } from "../errors";
-import { resourceOrder, toResourceListItem, visibleSolutionsOf } from "../resources/resources";
+import { lecturerInclude, resourceOrder, toResourceListItem, visibleSolutionsOf } from "../resources/resources";
 import { parseInput } from "../validation";
 import { visibleResources } from "../visibility";
 import type { Viewer } from "../viewer";
@@ -48,7 +48,7 @@ export async function getCourseByCode(viewer: Viewer, code: string): Promise<Cou
   const parsedCode = courseCodeSchema.safeParse(code);
   if (!parsedCode.success) throw new NotFoundError("Course not found");
 
-  const { Course, Chapter, Lecturer, Resource, sequelize } = getDb();
+  const { Course, Chapter, Resource, sequelize } = getDb();
 
   // Course codes are unique regardless of letter case.
   const course = await Course.findOne({
@@ -58,7 +58,7 @@ export async function getCourseByCode(viewer: Viewer, code: string): Promise<Cou
 
   const resources = await Resource.findAll({
     where: { courseId: course.id, ...visibleResources(viewer) },
-    include: [{ model: Lecturer, as: "lecturer", attributes: ["slug", "name"], required: false }],
+    include: [lecturerInclude()],
     order: resourceOrder(),
   });
 

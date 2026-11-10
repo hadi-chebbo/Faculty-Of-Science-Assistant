@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getDb } from "@/db/models";
 import { NotFoundError } from "../errors";
-import { toResourceListItem, visibleSolutionsOf } from "../resources/resources";
+import { lecturerInclude, toResourceListItem, visibleSolutionsOf } from "../resources/resources";
 import type { ResourceListItem } from "../resources/types";
 import type { Viewer } from "../viewer";
 
@@ -56,7 +56,7 @@ export interface SavedCourseGroup {
 // then code; within a course the most recent save first (the bookmark id only breaks ties).
 // Solutions are the ones anyone may see, exactly as on the public course lists.
 export async function listSavedResources(viewer: NonNullable<Viewer>): Promise<SavedCourseGroup[]> {
-  const { Bookmark, Resource, Course, Lecturer } = getDb();
+  const { Bookmark, Resource, Course } = getDb();
   const bookmarks = await Bookmark.findAll({
     where: { userId: viewer.id },
     include: [
@@ -67,7 +67,7 @@ export async function listSavedResources(viewer: NonNullable<Viewer>): Promise<S
         required: true,
         include: [
           { model: Course, as: "course", required: true },
-          { model: Lecturer, as: "lecturer", attributes: ["slug", "name"], required: false },
+          lecturerInclude(),
         ],
       },
     ],

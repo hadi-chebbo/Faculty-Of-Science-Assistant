@@ -12,6 +12,7 @@ import {
 } from "@/db/constants";
 import type { ExamSession, Language, ResourceType } from "@/db/constants";
 import { blankToUndefined } from "../validation";
+import { lecturerSlugSchema } from "../lecturers/schemas";
 
 export const RESOURCE_PAGE_SIZE_DEFAULT = 50;
 export const RESOURCE_PAGE_SIZE_MAX = 100;
@@ -30,7 +31,7 @@ export const resourceFiltersSchema = z.object({
   examSession: optional(z.enum(EXAM_SESSIONS)),
   language: optional(z.enum(LANGUAGES)),
   // Lecturer slug. Unknown slugs simply match nothing.
-  lecturer: optional(z.string().trim().max(120)),
+  lecturer: optional(lecturerSlugSchema),
   // Admin only: "scanned" lists resources whose file has no text on some or all pages. Ignored for students.
   text: optional(z.enum(["scanned"])),
   page: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(10_000).default(1)),
