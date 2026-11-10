@@ -7,10 +7,10 @@ import { parseInput } from "../validation";
 import type { Viewer } from "../viewer";
 import { lecturerInputSchema, type LecturerInput } from "./schemas";
 import type { AdminLecturer, LecturerOption, SavedLecturer } from "./types";
+import { withoutLecturerTitle } from "@/lib/lecturer-name";
 
 export { normaliseLecturerName } from "./schemas";
 
-const TITLE = /^(?:dr|pr|prof)\.?\s+/;
 
 // "Dr. Ali Ghorayeb" -> "ali-ghorayeb": accents removed, lowercase, a leading title dropped, every
 // run of other characters one hyphen. A name that is only a title keeps it; an empty result is "lecturer".
@@ -20,7 +20,7 @@ export function lecturerSlug(name: string): string {
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .trim();
-  const withoutTitle = folded.replace(TITLE, "");
+  const withoutTitle = withoutLecturerTitle(folded);
   const slugOf = (text: string) => text.replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   return slugOf(withoutTitle) || slugOf(folded) || "lecturer";
 }
