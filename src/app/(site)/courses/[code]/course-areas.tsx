@@ -4,6 +4,7 @@ import { ResourceRow } from "@/components/site/resource-row";
 import { StateBlock } from "@/components/site/state-block";
 import { groupExamsByYear } from "@/lib/group-exams";
 import { EXAM_SESSION_LABELS, RESOURCE_TYPE_LABELS, describeGroups, formatAcademicYear } from "@/lib/labels";
+import { lecturerHref } from "./taught-by";
 import { ChapterProgressBar, ChapterProgressText } from "./course-progress";
 import type { CourseOutline, ResourceGroup } from "@/services/courses/types";
 
@@ -19,11 +20,23 @@ export function parseArea(raw: string | string[] | undefined, hasOther: boolean)
   return "chapters";
 }
 
-export function AreaSwitch({ area, hasOther }: { area: CourseArea; hasOther: boolean }) {
+// The area links keep the chosen lecturer.
+export function AreaSwitch({
+  area,
+  hasOther,
+  path,
+  lecturer,
+}: {
+  area: CourseArea;
+  hasOther: boolean;
+  path: string;
+  lecturer: string | null;
+}) {
+  const href = (tab: string | null) => lecturerHref(path, { tab, lecturer });
   const items: { area: CourseArea; label: string; href: string }[] = [
-    { area: "chapters", label: "Chapters", href: "?" },
-    { area: "exams", label: "Previous exams", href: "?tab=exams" },
-    ...(hasOther ? [{ area: "other" as const, label: "Other material", href: "?tab=other" }] : []),
+    { area: "chapters", label: "Chapters", href: href(null) },
+    { area: "exams", label: "Previous exams", href: href("exams") },
+    ...(hasOther ? [{ area: "other" as const, label: "Other material", href: href("other") }] : []),
   ];
   return (
     <nav aria-label="Course areas" className="mb-5 inline-flex max-w-full rounded-lg border bg-muted p-1">
@@ -45,7 +58,18 @@ export function AreaSwitch({ area, hasOther }: { area: CourseArea; hasOther: boo
   );
 }
 
-export function ChapterCards({ code, chapters }: { code: string; chapters: CourseOutline["chapters"] }) {
+export function ChapterCards({
+  code,
+  chapters,
+  lecturer,
+}: {
+  code: string;
+  chapters: CourseOutline["chapters"];
+  lecturer: { slug: string; name: string } | null;
+}) {
+  if (chapters.length === 0 && lecturer) {
+    return <StateBlock icon={FileText}>No chapter has files by {lecturer.name}.</StateBlock>;
+  }
   return (
     <ul className="grid gap-3 sm:grid-cols-2">
       {chapters.map((chapter) => {
@@ -74,7 +98,7 @@ export function ChapterCards({ code, chapters }: { code: string; chapters: Cours
           <li key={chapter.id}>
             {hasItems ? (
               <Link
-                href={`/courses/${encodeURIComponent(code)}/chapters/${chapter.position}`}
+                href={lecturerHref(`/courses/${encodeURIComponent(code)}/chapters/${chapter.position}`, { lecturer: lecturer?.slug })}
                 className="group relative flex h-full min-h-20 items-center justify-between gap-3 overflow-hidden rounded-xl border bg-card p-4 transition-colors has-[[data-finished=true]]:border-success/40 hover:border-primary hover:bg-muted/60 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 {body}
@@ -92,9 +116,17 @@ export function ChapterCards({ code, chapters }: { code: string; chapters: Cours
   );
 }
 
-export function ExamsArea({ code, exams }: { code: string; exams: CourseOutline["exams"] }) {
+export function ExamsArea({
+  code,
+  exams,
+  lecturer,
+}: {
+  code: string;
+  exams: CourseOutline["exams"];
+  lecturer: { name: string } | null;
+}) {
   if (exams.length === 0) {
-    return <StateBlock icon={FileText}>No previous exams yet.</StateBlock>;
+    return <StateBlock icon={FileText}>{lecturer ? `No previous exams by ${lecturer.name}.` : "No previous exams yet."}</StateBlock>;
   }
   return (
     <div>
@@ -126,7 +158,10 @@ export function ExamsArea({ code, exams }: { code: string; exams: CourseOutline[
   );
 }
 
-export function OtherArea({ groups }: { groups: ResourceGroup[] }) {
+export function OtherArea({ groups, lecturer }: { groups: ResourceGroup[]; lecturer: { name: string } | null }) {
+  if (groups.length === 0) {
+    return <StateBlock icon={FileText}>{lecturer ? `No other material by ${lecturer.name}.` : "No other material yet."}</StateBlock>;
+  }
   return (
     <div className="space-y-4">
       {groups.map((group) => (

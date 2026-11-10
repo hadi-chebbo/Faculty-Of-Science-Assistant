@@ -234,6 +234,18 @@ mock exam generation, personalization.
   counted files show at the right of the "Chapter N" line "4 of 5 done", "Not started · 5 files" or a
   green "Finished", plus a 4px bar along the bottom edge (primary, success green when finished, which
   also tints the border); a chapter with no counted file shows neither, an empty card is unchanged.
+- Taught by (course page and chapter page `/courses/CODE/chapters/N`; `taught-by.tsx`): when two or more lecturers have published
+  files in scope (the course; the chapter on a chapter page), a "TAUGHT BY" strip (a list labelled "Lecturer") sits above the area tabs
+  (above the lists on a chapter page): "All lecturers" (every published file in scope, files with no lecturer included) then one card per
+  lecturer by name (40px initials circle, name, "N files", solutions counted). The chosen card has a primary border and tint, a filled
+  circle and `aria-current="true"`. From sm up a 4-column grid; on a phone a sideways scroll row of 160px cards. The key is
+  `?lecturer=SLUG` (`getCourseByCode` / `getChapterPage` take `{ lecturer }`; an unknown, malformed or draft-only slug is ignored). It
+  narrows chapter cards (chapters left with none are left out, and cards describe only the kept files), previous exams, other material
+  and the type tabs of a course without chapters; a kept row keeps its solution links; files with no lecturer show only with none chosen.
+  Cards keep `tab`; the area tabs, chapter card links, Previous / Next / All chapters and the breadcrumb keep `lecturer`; the reader's Back
+  link does not. A muted "Showing files by NAME only." with "Show all" appears while one is chosen. On a chapter page where the chosen
+  lecturer has nothing, a state "No files by NAME in this chapter." with "Show all files", and no card is current. Progress (block, rings,
+  chapter text and bars, `/api/v1/progress`) ignores the filter. The page still never reads the session.
 - Exams page (`/exams`): filters (semester, course, academic year, session) live in the URL, so
   views are shareable and Back works. A plain GET form with an Apply button works without
   JavaScript; with JavaScript a dropdown change submits automatically. Unusable URL values are
