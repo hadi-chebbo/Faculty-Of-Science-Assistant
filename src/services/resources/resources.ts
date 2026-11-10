@@ -196,7 +196,7 @@ export async function getResourceLink(
 // Three queries however many exams there are: the distinct (course, year, session, lecturer)
 // combinations, then the courses and the lecturers they belong to.
 export async function listExamFilterOptions(viewer: Viewer): Promise<ExamFilterOptions> {
-  const { Resource, Course } = getDb();
+  const { Resource, Course, Lecturer } = getDb();
 
   const combos = (await Resource.findAll({
     attributes: ["courseId", "academicYearStart", "examSession", "lecturerId"],
@@ -213,7 +213,7 @@ export async function listExamFilterOptions(viewer: Viewer): Promise<ExamFilterO
 
   const lecturerIds = [...new Set(combos.flatMap((c) => (c.lecturerId ? [c.lecturerId] : [])))];
   const lecturers = lecturerIds.length
-    ? await getDb().Lecturer.findAll({ where: { id: lecturerIds }, attributes: ["slug", "name"], order: [["name", "ASC"]] })
+    ? await Lecturer.findAll({ where: { id: lecturerIds }, attributes: ["slug", "name"], order: [["name", "ASC"]] })
     : [];
 
   const courses = await Course.findAll({

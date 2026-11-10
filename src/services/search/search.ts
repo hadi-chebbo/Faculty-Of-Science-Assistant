@@ -258,7 +258,7 @@ async function countFiles(plan: Plan): Promise<number> {
 async function listFiles(plan: Plan, limit: number, offset: number): Promise<FileHit[]> {
   const bind: Bind = { ...plan.bind, limit, offset };
   const where = fileWhere(plan, bind);
-  // Title matches come before description-only matches, then relevance, then newest exams first.
+  // Title matches come before the rest (description or lecturer name only), then relevance, then newest exams first.
   const relevance = plan.hasText
     ? `(${FILE_TITLE_VECTOR} @@ ${QUERY}) DESC, ts_rank(${FILE_VECTOR}, ${QUERY}) DESC,`
     : "";
