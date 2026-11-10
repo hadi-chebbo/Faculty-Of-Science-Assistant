@@ -5,8 +5,8 @@ import { expect, test } from "@playwright/test";
 test("a lecturer card narrows the course page and the choice survives areas and chapters", async ({ page }) => {
   await page.goto("/courses/DEMO510");
 
-  const strip = page.getByRole("region", { name: "Lecturer" });
-  await expect(strip.getByRole("heading", { name: "Taught by" })).toBeVisible();
+  const strip = page.getByRole("list", { name: "Lecturer" });
+  await expect(page.getByRole("heading", { name: "Taught by" })).toBeVisible();
   await expect(strip.getByRole("link")).toHaveCount(4);
   await expect(strip.getByRole("link", { name: /All lecturers/ })).toHaveAttribute("aria-current", "true");
   await expect(page.getByText(/Showing files by/)).toHaveCount(0);
@@ -48,7 +48,7 @@ test("a lecturer card narrows the course page and the choice survives areas and 
 test("the chapter page counts the strip for the chapter and keeps the lecturer on its links", async ({ page }) => {
   await page.goto("/courses/DEMO510/chapters/3?lecturer=alan-sample");
 
-  const strip = page.getByRole("region", { name: "Lecturer" });
+  const strip = page.getByRole("list", { name: "Lecturer" });
   await expect(strip.getByRole("link", { name: /Dr\. Alan Sample/ })).toHaveAttribute("aria-current", "true");
   await expect(strip.getByRole("link", { name: /All lecturers/ })).toContainText("5 files");
   await expect(page.getByText("Showing files by Dr. Alan Sample only.")).toBeVisible();
@@ -71,7 +71,7 @@ test("a lecturer with nothing in the chapter gets an empty state and no current 
   await page.goto("/courses/DEMO510/chapters/2?lecturer=ada-example");
 
   await expect(page.getByText("No files by Dr. Ada Example in this chapter.")).toBeVisible();
-  const strip = page.getByRole("region", { name: "Lecturer" });
+  const strip = page.getByRole("list", { name: "Lecturer" });
   await expect(strip.locator('[aria-current="true"]')).toHaveCount(0);
   await expect(page.getByText("Showing files by Dr. Ada Example only.")).toBeVisible();
   await page.getByRole("link", { name: "Show all files" }).click();
@@ -88,20 +88,20 @@ test("a link to the reader does not carry the lecturer", async ({ page }) => {
 test("a course with no lecturers shows no strip", async ({ page }) => {
   await page.goto("/courses/DEMO610");
   await expect(page.getByRole("link", { name: "Chapters" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Lecturer" })).toHaveCount(0);
+  await expect(page.getByRole("list", { name: "Lecturer" })).toHaveCount(0);
   await expect(page.getByText("Taught by")).toHaveCount(0);
   // An unknown lecturer is ignored.
   await page.goto("/courses/DEMO510?lecturer=nobody");
   await expect(page.getByText(/Showing files by/)).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "Lecturer" }).getByRole("link", { name: /All lecturers/ })).toHaveAttribute("aria-current", "true");
+  await expect(page.getByRole("list", { name: "Lecturer" }).getByRole("link", { name: /All lecturers/ })).toHaveAttribute("aria-current", "true");
 });
 
 test("on a phone the strip scrolls sideways without widening the page", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "phone layout");
   await page.goto("/courses/DEMO510");
-  const strip = page.getByRole("region", { name: "Lecturer" });
+  const strip = page.getByRole("list", { name: "Lecturer" });
   await expect(strip.getByRole("link")).toHaveCount(4);
-  const list = strip.locator("ul");
+  const list = strip;
   expect(await list.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   const box = await strip.getByRole("link").first().boundingBox();

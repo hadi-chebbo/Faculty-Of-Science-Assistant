@@ -244,7 +244,11 @@ mock exam generation, personalization.
   and the type tabs of a course without chapters; a kept row keeps its solution links; files with no lecturer show only with none chosen.
   Cards keep `tab`; the area tabs, chapter card links, Previous / Next / All chapters and the breadcrumb keep `lecturer`; the reader's Back
   link does not. A muted "Showing files by NAME only." with "Show all" appears while one is chosen. On a chapter page where the chosen
-  lecturer has nothing, a state "No files by NAME in this chapter." with "Show all files", and no card is current. Progress (block, rings,
+  lecturer has nothing, a state "No files by NAME in this chapter." with "Show all files", and no card is current. On the course page an
+  area left empty by the choice says "No chapter has files by NAME.", "No previous exams by NAME." or "No other material by NAME."; the
+  areas themselves (and the type tabs) do not change with the choice. A solution whose parent row is filtered out is listed on its own.
+  Chapter Previous / Next skip chapters with none of the chosen lecturer's files. The initials use the shadcn `Avatar` and
+  `lecturerInitials` (`src/lib/lecturer-name.ts`, which also holds the title rule the slug uses). Progress (block, rings,
   chapter text and bars, `/api/v1/progress`) ignores the filter. The page still never reads the session.
 - Exams page (`/exams`): filters (semester, course, academic year, session) live in the URL, so
   views are shareable and Back works. A plain GET form with an Apply button works without

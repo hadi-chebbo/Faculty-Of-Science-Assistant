@@ -11,7 +11,7 @@ import { RESOURCE_TYPE_LABELS } from "@/lib/labels";
 import { readForPage } from "@/lib/page-errors";
 import { getChapterPage } from "@/services/courses/courses";
 import type { ChapterLink } from "@/services/courses/types";
-import { ShowingOnly, TaughtBy, lecturerHref } from "../../taught-by";
+import { ShowingOnly, TaughtBy, pageHref } from "../../taught-by";
 
 export const metadata: Metadata = { title: "Chapter" };
 
@@ -48,10 +48,10 @@ async function ChapterContent({
   const { course, chapter, previous, next, lecturer } = page;
   const slug = lecturer?.slug ?? null;
   // The chosen lecturer travels with the course, chapter, Previous and Next links.
-  const courseHref = lecturerHref(`/courses/${encodeURIComponent(course.code)}`, { lecturer: slug });
+  const courseHref = pageHref(`/courses/${encodeURIComponent(course.code)}`, { lecturer: slug });
   const chapterPath = `/courses/${encodeURIComponent(course.code)}/chapters/${chapter.position}`;
   const chapterHref = (c: ChapterLink) =>
-    lecturerHref(`/courses/${encodeURIComponent(course.code)}/chapters/${c.position}`, { lecturer: slug });
+    pageHref(`/courses/${encodeURIComponent(course.code)}/chapters/${c.position}`, { lecturer: slug });
 
   return (
     <>

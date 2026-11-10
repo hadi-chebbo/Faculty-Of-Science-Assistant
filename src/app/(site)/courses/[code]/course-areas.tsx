@@ -4,7 +4,7 @@ import { ResourceRow } from "@/components/site/resource-row";
 import { StateBlock } from "@/components/site/state-block";
 import { groupExamsByYear } from "@/lib/group-exams";
 import { EXAM_SESSION_LABELS, RESOURCE_TYPE_LABELS, describeGroups, formatAcademicYear } from "@/lib/labels";
-import { lecturerHref } from "./taught-by";
+import { pageHref } from "./taught-by";
 import { ChapterProgressBar, ChapterProgressText } from "./course-progress";
 import type { CourseOutline, ResourceGroup } from "@/services/courses/types";
 
@@ -32,7 +32,7 @@ export function AreaSwitch({
   path: string;
   lecturer: string | null;
 }) {
-  const href = (tab: string | null) => lecturerHref(path, { tab, lecturer });
+  const href = (tab: string | null) => pageHref(path, { tab, lecturer });
   const items: { area: CourseArea; label: string; href: string }[] = [
     { area: "chapters", label: "Chapters", href: href(null) },
     { area: "exams", label: "Previous exams", href: href("exams") },
@@ -98,7 +98,7 @@ export function ChapterCards({
           <li key={chapter.id}>
             {hasItems ? (
               <Link
-                href={lecturerHref(`/courses/${encodeURIComponent(code)}/chapters/${chapter.position}`, { lecturer: lecturer?.slug })}
+                href={pageHref(`/courses/${encodeURIComponent(code)}/chapters/${chapter.position}`, { lecturer: lecturer?.slug })}
                 className="group relative flex h-full min-h-20 items-center justify-between gap-3 overflow-hidden rounded-xl border bg-card p-4 transition-colors has-[[data-finished=true]]:border-success/40 hover:border-primary hover:bg-muted/60 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 {body}
