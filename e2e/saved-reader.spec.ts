@@ -107,17 +107,30 @@ test("the More actions menu offers Save for later first in its download group, o
   await expect(page.getByRole(isMobile ? "link" : "menuitem", { name: "Download" })).toBeVisible();
 });
 
-test("a signed-out visitor goes to sign-in and back to the same reader page, and nothing is saved", async ({ page, isMobile }) => {
+test("a signed-out Save opens the sign-in dialog without leaving the reader; Esc saves nothing, signing in saves", async ({ page, isMobile }) => {
   await ownAddress(page);
   const id = await resourceId(courseFor(isMobile), "Sample lecture 1");
   await page.goto(`/resources/${id}`);
   // The state was asked for and the answer was "signed out"; the button looks the same.
-  await expect(details(page).getByRole("button", { name: "Save for later" })).toBeVisible();
-  await details(page).getByRole("button", { name: "Save for later" }).click();
-  await expect(page).toHaveURL(`/sign-in?next=${encodeURIComponent(`/resources/${id}`)}`);
+  const save = details(page).getByRole("button", { name: "Save for later" });
+  const dialog = page.getByRole("dialog", { name: "Sign in to save this file" });
+  await expect(save).toBeVisible();
+  await save.click();
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(`/resources/${id}`);
 
-  await signIn(page);
-  await expect(page).toHaveURL(new RegExp(`/resources/${id}$`));
-  await expect(details(page).getByRole("button", { name: "Save for later" })).toHaveAttribute("aria-pressed", "false");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(save).toBeFocused();
   expect(await savedCount(id)).toBe(0);
+
+  await save.click();
+  await dialog.getByLabel("Email").fill(STUDENT_EMAIL);
+  await dialog.getByLabel("Password", { exact: true }).fill(STUDENT_PASSWORD);
+  await dialog.getByRole("button", { name: "Sign in and save", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(`/resources/${id}`);
+  await expect(page.getByText("Saved. Find it any time under Saved.")).toBeVisible();
+  await expect(details(page).getByRole("button", { name: "Saved" })).toHaveAttribute("aria-pressed", "true");
+  expect(await savedCount(id)).toBe(1);
 });

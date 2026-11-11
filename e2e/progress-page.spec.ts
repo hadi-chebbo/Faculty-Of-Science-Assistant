@@ -88,9 +88,12 @@ test("a student with nothing marked sees the empty state", async ({ page, isMobi
   }
 });
 
-test("a visitor is sent to sign-in and back", async ({ page }) => {
+test("a visitor sees the in-page state, signs in from it and comes back", async ({ page }) => {
   await ownAddress(page);
   await page.goto("/progress");
+  await expect(page).toHaveURL("/progress");
+  await expect(page.getByRole("heading", { level: 2, name: "Sign in to see your progress" })).toBeVisible();
+  await page.getByRole("main").getByRole("link", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL("/sign-in?next=%2Fprogress");
   await page.getByLabel("Email").fill(DEMO_EMAIL);
   await page.getByLabel("Password", { exact: true }).fill(PASSWORD);

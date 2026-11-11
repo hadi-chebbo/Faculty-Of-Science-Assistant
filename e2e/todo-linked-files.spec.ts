@@ -115,9 +115,25 @@ test("add to to-do from the reader's details column, and again from More actions
   await expect(topCard(page).getByRole("heading", { level: 3 })).toHaveText("Sample notes");
 });
 
-test("signed out, Add to to-do goes to sign-in and back", async ({ page }) => {
+test("signed out, Add to to-do opens the sign-in dialog; signing in adds the card", async ({ page, isMobile }) => {
   const id = await resourceId("DEMO301", "Sample notes");
   await page.goto(`/resources/${id}`);
-  await page.getByRole("complementary", { name: "About this file" }).getByRole("button", { name: "Add to to-do" }).click();
-  await expect(page).toHaveURL(`/sign-in?next=${encodeURIComponent(`/resources/${id}`)}`);
+  const add = page.getByRole("complementary", { name: "About this file" }).getByRole("button", { name: "Add to to-do" });
+  const dialog = page.getByRole("dialog", { name: "Sign in to add this file to your to-do" });
+  await add.click();
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(`/resources/${id}`);
+  await dialog.getByRole("button", { name: "Not now" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(add).toBeFocused();
+  expect(await cardCount(isMobile)).toBe(0);
+
+  await add.click();
+  await dialog.getByLabel("Email").fill(emailFor(isMobile));
+  await dialog.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await dialog.getByRole("button", { name: "Sign in and add", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(`/resources/${id}`);
+  await expect(page.locator("[data-sonner-toast]", { hasText: "Added to To do" })).toBeVisible();
+  await expect.poll(() => cardCount(isMobile)).toBe(1);
 });

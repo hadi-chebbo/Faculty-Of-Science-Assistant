@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { celebrate, showMilestones } from "@/lib/celebrations";
 import { askMe, renew } from "@/lib/auth/client-session";
 import { SESSION_CHANGED_EVENT } from "@/lib/auth/session-events";
+import { requestSignIn } from "@/lib/sign-in-dialog";
 import { showUndoToast } from "@/lib/undo-toast";
 import type { Progress, Rewards } from "@/services/progress/types";
 
@@ -156,7 +157,8 @@ async function undo(resourceId: string, done: boolean): Promise<void> {
 }
 
 // The done state of one file, the progress its last mark answered with, and a toggle. Signed out,
-// the toggle goes to sign-in and back to this page; nothing is marked automatically afterwards.
+// the toggle opens the sign-in dialog over the page; after a successful sign-in the tapped mark is
+// done, and Not now does nothing.
 // `markable` false (a solution or other file): nothing is asked of the server.
 export function useDoneResource(
   resourceId: string,
@@ -173,10 +175,17 @@ export function useDoneResource(
     if (markable) ensureLoaded();
   }, [markable]);
 
-  const goToSignIn = useCallback(() => {
-    const here = window.location.pathname + window.location.search;
-    router.push(`/sign-in?next=${encodeURIComponent(here)}`);
-  }, [router]);
+  // Asks the visitor to sign in; when they do, the session event has already made the store ask
+  // again, so wait for that and mark the file (never un-mark: it was not done when they tapped).
+  const signInThenMark = useCallback(async () => {
+    if (!(await requestSignIn("mark-done"))) return;
+    await load();
+    if (store.status !== "ready") {
+      toast.error("Couldn't reach the server. Try again.");
+      return;
+    }
+    if (!store.ids.has(resourceId)) await change(resourceId, true, true, router.push);
+  }, [resourceId, router]);
 
   const toggle = useCallback(async () => {
     if (store.pending.has(resourceId)) return;
@@ -186,9 +195,9 @@ export function useDoneResource(
       toast.error("Couldn't reach the server. Try again.");
       return;
     }
-    if (store.status === "signed-out") return goToSignIn();
-    if ((await change(resourceId, !store.ids.has(resourceId), true, router.push)) === "signed-out") goToSignIn();
-  }, [resourceId, goToSignIn, router]);
+    if (store.status === "signed-out") return signInThenMark();
+    if ((await change(resourceId, !store.ids.has(resourceId), true, router.push)) === "signed-out") await signInThenMark();
+  }, [resourceId, signInThenMark, router]);
 
   const status: DoneStatus =
     snapshot.status === "ready"

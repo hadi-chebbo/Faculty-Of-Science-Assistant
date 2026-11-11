@@ -15,3 +15,15 @@ export async function requireSignedInPage(nextPath: string) {
   const signedIn: NonNullable<Viewer> = { id: account.id, role: account.role };
   return { account, viewer: signedIn };
 }
+
+// The check for pages that show an in-page sign-in state to a visitor instead of redirecting
+// (/saved, /todo, /progress). Returns null without a valid access token. A session that can still
+// be renewed is renewed by the browser (`SignedOutState`), because the refresh cookie is scoped to
+// /api/v1/auth and a server page never sees it.
+export async function getSignedInPageViewer() {
+  const viewer = await getViewer();
+  const account = await getAccount(viewer);
+  if (!account) return null;
+  const signedIn: NonNullable<Viewer> = { id: account.id, role: account.role };
+  return { account, viewer: signedIn };
+}

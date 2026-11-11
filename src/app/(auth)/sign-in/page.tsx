@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { BrandPanel } from "@/components/auth/brand-panel";
+import { SignInReasonLine } from "@/components/auth/sign-in-reason-line";
 import { RedirectIfSignedIn } from "@/components/auth/redirect-if-signed-in";
 import { PageTitle } from "@/components/site/page-title";
 import { SignInForm } from "./sign-in-form";
@@ -18,6 +19,9 @@ export default function SignInPage({ searchParams }: { searchParams: Promise<{ n
     <>
       <AuthShell panel={<BrandPanel />}>
         <PageTitle description="Sign in to continue.">Welcome back</PageTitle>
+        <Suspense fallback={null}>
+          <SignInReasonLine />
+        </Suspense>
         <SignInForm />
         <p className="mt-6 text-sm">
           New here?{" "}
