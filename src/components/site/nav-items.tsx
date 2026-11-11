@@ -43,12 +43,12 @@ export function NavItems() {
       {NAV_ITEMS.map(({ label, icon: Icon, href, isActive, startsOwnGroup }) => {
         const active = href !== undefined && (isActive?.(pathname) ?? false);
         const className = cn(
-          "relative flex h-14 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium outline-none lg:px-3",
+          "relative flex h-14 items-center gap-1.5 px-2.5 text-sm font-medium outline-none lg:px-3",
           active && "after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary",
           active ? "text-link" : "text-muted-foreground",
           !href && "cursor-not-allowed opacity-60",
           href && !active && "hover:text-heading",
-          href && "focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-inset",
+          href && "rounded-md focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:ring-inset",
         );
         const content = (
           <>

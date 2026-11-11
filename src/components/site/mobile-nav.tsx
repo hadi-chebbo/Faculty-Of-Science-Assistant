@@ -7,7 +7,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { BrandLink } from "./brand-link";
 import { NAV_ITEMS, type NavItem } from "./nav-items";
 
 const HEADING = "px-5 pb-1 pt-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase";
@@ -26,8 +25,10 @@ export function MobileNav() {
     setOpen(false);
   }
 
-  const study = NAV_ITEMS.slice(0, 3);
-  const own = NAV_ITEMS.slice(3);
+  // The groups follow the desktop divider: `startsOwnGroup` marks the first of "Your pages".
+  const splitAt = NAV_ITEMS.findIndex((item) => item.startsOwnGroup);
+  const study = NAV_ITEMS.slice(0, splitAt);
+  const yourPages = NAV_ITEMS.slice(splitAt);
 
   const row = ({ label, icon: Icon, href, isActive }: NavItem) => {
     const active = href !== undefined && (isActive?.(pathname) ?? false);
@@ -65,7 +66,11 @@ export function MobileNav() {
       >
         <div className="flex h-14 shrink-0 items-center justify-between border-b pr-2 pl-5">
           <SheetTitle className="text-base">
-            <BrandLink />
+            <SheetClose asChild>
+              <Link href="/" className="font-semibold tracking-tight text-heading">
+                University Assistant
+              </Link>
+            </SheetClose>
           </SheetTitle>
           <SheetDescription className="sr-only">Site navigation</SheetDescription>
           <SheetClose asChild>
@@ -78,7 +83,7 @@ export function MobileNav() {
           <p className={HEADING}>Study</p>
           <ul>{study.map(row)}</ul>
           <p className={cn(HEADING, "mt-2 border-t pt-4")}>Your pages</p>
-          <ul>{own.map(row)}</ul>
+          <ul>{yourPages.map(row)}</ul>
         </nav>
       </SheetContent>
     </Sheet>

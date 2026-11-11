@@ -14,7 +14,7 @@ export interface Crumb {
   href?: string;
 }
 
-// Desktop only: phones have the bottom bar and short pages.
+// Desktop only: phones have the sidebar and short pages.
 export function Crumbs({ items }: { items: Crumb[] }) {
   return (
     <Breadcrumb className="mb-3 hidden md:block">
