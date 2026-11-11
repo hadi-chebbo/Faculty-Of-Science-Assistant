@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { mainNav } from "./nav-helpers";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed
 test("a visitor browses from home to a semester to a course", async ({ page }) => {
@@ -48,8 +49,9 @@ test("an unknown course shows the not-found page", async ({ page }) => {
 
 test("Search and Exams are links, and no navigation item is disabled", async ({ page }) => {
   await page.goto("/");
-  // Both the top bar and the bottom bar render the items; only one is visible per device.
-  await expect(page.getByRole("link", { name: "Search", exact: true })).toHaveAttribute("href", "/search");
+  // Inline in the top bar on desktop, in the sidebar on a phone.
+  const nav = await mainNav(page);
+  await expect(nav.getByRole("link", { name: "Search", exact: true })).toHaveAttribute("href", "/search");
   await expect(page.locator(`[aria-disabled="true"]:visible`)).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Exams", exact: true })).toHaveAttribute("href", "/exams");
+  await expect(nav.getByRole("link", { name: "Exams", exact: true })).toHaveAttribute("href", "/exams");
 });

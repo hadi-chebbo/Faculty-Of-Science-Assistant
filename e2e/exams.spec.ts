@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { mainNav } from "./nav-helpers";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed
 // The demo data has 43 published exams (13, 13, 10 and 7 in semesters 3 to 6; 12, 12, 12 and 7 in
@@ -32,7 +33,7 @@ async function choose(page: import("@playwright/test").Page, label: string, valu
 
 test("the Exams nav item leads to the full list, newest year first", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "Exams", exact: true }).click();
+  await (await mainNav(page)).getByRole("link", { name: "Exams", exact: true }).click();
   await expect(page).toHaveURL(/\/exams$/);
   await expect(page.getByRole("heading", { name: "Previous exams" })).toBeVisible();
   await expect(page).toHaveTitle(/Previous exams/);
@@ -41,7 +42,10 @@ test("the Exams nav item leads to the full list, newest year first", async ({ pa
   await expect(rows(page).first()).toContainText("2025-2026");
   await expect(rows(page).first()).toContainText("Partial");
   // Exams is the current page in the navigation, and the full list has a pager.
-  await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Exams" })).toHaveAttribute("aria-current", "page");
+  await expect((await mainNav(page)).getByRole("link", { name: "Exams" })).toHaveAttribute("aria-current", "page");
+  // On a phone mainNav opened the sidebar, which hides the page behind it; close it first.
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Exam pages" })).toBeVisible();
   // Row: course code and badges for year, session and language (DEMO401 has no pager).
   await page.goto("/exams?course=DEMO401");

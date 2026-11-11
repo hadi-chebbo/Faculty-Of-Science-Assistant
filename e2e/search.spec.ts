@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
+import { mainNav } from "./nav-helpers";
 import pg from "pg";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed
@@ -48,11 +49,11 @@ function section(page: Page, name: string) {
 
 test("the Search nav item leads to /search and is the current page there", async ({ page }) => {
   await page.goto("/");
-  const nav = page.getByRole("navigation", { name: "Main" });
-  await nav.getByRole("link", { name: "Search", exact: true }).click();
+  await (await mainNav(page)).getByRole("link", { name: "Search", exact: true }).click();
   await expect(page).toHaveURL(/\/search$/);
   await expect(page).toHaveTitle(/^Search \| University Assistant$/);
   await expect(page.getByRole("heading", { name: "Search", level: 1 })).toBeVisible();
+  const nav = await mainNav(page);
   await expect(nav.getByRole("link", { name: "Search", exact: true })).toHaveAttribute("aria-current", "page");
   await expect(nav.getByRole("link", { name: "Exams", exact: true })).not.toHaveAttribute("aria-current", "page");
 });
@@ -161,7 +162,7 @@ test("the box is a search field with a keyboard that says Search", async ({ page
 
 test("typing updates the results and the address without adding history, and Back leaves the page", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Search", exact: true }).click();
+  await (await mainNav(page)).getByRole("link", { name: "Search", exact: true }).click();
   await expect(page).toHaveURL(/\/search$/);
   const box = page.getByRole("searchbox", { name: "Search courses, chapters and files" });
   await expect(async () => {

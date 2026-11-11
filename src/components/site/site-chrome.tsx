@@ -3,17 +3,16 @@ import { CelebrationDialogHost } from "./celebration-dialog-host";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
 
-// The full site frame: header with navigation, the phone tab bar, and the footer.
+// The full site frame: header with navigation (the phone sidebar lives in the header), and the footer.
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
       <SiteHeader />
-      {/* Bottom padding keeps content and footer clear of the fixed phone tab bar. */}
-      <div className="flex flex-1 flex-col pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pb-0">
+      <div className="flex flex-1 flex-col">
         <div className="flex-1">{children}</div>
         <SiteFooter />
       </div>
-      {/* At the top, so a message never covers the phone tab bar or the reader's floating bar. */}
+      {/* At the top, so a message never covers the to-do board's + button or the reader's floating bar. */}
       <Toaster position="top-center" />
       <CelebrationDialogHost />
     </>

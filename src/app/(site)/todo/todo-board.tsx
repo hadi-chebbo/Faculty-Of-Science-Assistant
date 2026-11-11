@@ -532,7 +532,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
         data-add-card={phoneTab}
         id="add-card-fab"
         aria-label="New card"
-        className="fixed right-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 size-14 rounded-full shadow-lg md:hidden"
+        className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-30 size-14 rounded-full shadow-lg md:hidden"
         onClick={() => openComposer(phoneTab)}
       >
         <Plus className="size-6" aria-hidden />

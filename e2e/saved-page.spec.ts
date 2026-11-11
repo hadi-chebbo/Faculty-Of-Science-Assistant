@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
+import { mainNav } from "./nav-helpers";
 import pg from "pg";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed (with STORAGE_DRIVER=local).
@@ -81,7 +82,7 @@ test("a student saves from the reader, finds it under Saved, removes it and sees
   await details.getByRole("button", { name: "Save for later" }).click();
   await expect(page.getByText("Saved. Find it any time under Saved.")).toBeVisible();
 
-  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Saved" }).filter({ visible: true }).click();
+  await (await mainNav(page)).getByRole("link", { name: "Saved" }).click();
   await expect(page).toHaveURL("/saved");
   await expect(page.getByRole("heading", { level: 1, name: "Saved" })).toBeVisible();
 
@@ -145,7 +146,7 @@ test("a signed-out visitor is sent to sign-in and returns to Saved after signing
 
 test("Saved and To-do are in the main navigation for everyone, and a visitor goes to sign-in", async ({ page }) => {
   await page.goto("/");
-  const nav = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
+  const nav = await mainNav(page);
   await expect(nav.getByRole("link")).toHaveText(["Browse", "Exams", "Search", "Saved", "To-do", "Progress"]);
   await nav.getByRole("link", { name: "Saved" }).click();
   await expect(page).toHaveURL("/sign-in?next=%2Fsaved");
