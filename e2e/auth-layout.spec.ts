@@ -34,7 +34,8 @@ for (const path of [
 
 test("a site page keeps the full navigation", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator('nav[aria-label="Main"]')).toHaveCount(2);
+  // One Main nav is exposed at a time: inline on desktop, in the sidebar (closed on load) on a phone.
+  await expect(page.locator('nav[aria-label="Main"]')).toHaveCount(1);
 });
 
 for (const { path, label } of [
@@ -47,7 +48,7 @@ for (const { path, label } of [
       page.getByRole("heading", { name: "Page not found" }),
     ).toBeVisible();
     await expect(page.getByRole("banner")).toHaveCount(1);
-    // Two Main navs are expected: the top one (desktop) and the bottom tab bar (phone); never four.
-    await expect(page.locator('nav[aria-label="Main"]')).toHaveCount(2);
+    // One Main nav: the desktop bar, or the phone sidebar which mounts only while open; never two.
+    await expect(page.locator('nav[aria-label="Main"]')).toHaveCount(1);
   });
 }

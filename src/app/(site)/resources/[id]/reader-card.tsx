@@ -42,9 +42,8 @@ const RESIZE_DEBOUNCE_MS = 150;
 const SAVE_DEBOUNCE_MS = 500;
 // Space around the pages inside the reading area (Tailwind p-4), on each side.
 const PADDING = 16;
-// On a phone the window scrolls: the site header, the document's top row and the tab bar take this much.
-const PHONE_CHROME = 56 + 52 + 56;
-const PHONE_TAB_BAR = 56;
+// On a phone the window scrolls: the site header and the document's top row take this much.
+const PHONE_CHROME = 56 + 52;
 // The search bar under the top row (a 40px box and its padding, and a border).
 const SEARCH_BAR_HEIGHT = 49;
 // Longer than a smooth scroll to any page takes.
@@ -166,7 +165,7 @@ export function ReaderCard({
       return { top: box.top, bottom: box.bottom };
     }
     const bar = topRowRef.current?.getBoundingClientRect();
-    return { top: Math.max(0, bar?.bottom ?? 0), bottom: window.innerHeight - PHONE_TAB_BAR };
+    return { top: Math.max(0, bar?.bottom ?? 0), bottom: window.innerHeight };
   }, [inner, scroller]);
 
   const pageElements = useCallback(
@@ -779,13 +778,13 @@ export function ReaderCard({
             </div>
           </div>
 
-          {/* On a phone this sits just above the fixed tab bar and follows the window; otherwise it
+          {/* On a phone this sits just above the screen bottom and follows the window; otherwise it
               floats at the bottom of the reading area. Not a live region: the page number changes on
               every scroll step, and each page canvas is already labelled. */}
           <div
             className={cn(
               "pointer-events-none z-10",
-              inner ? "absolute inset-x-0 bottom-0" : "sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom)+0.75rem)] h-0",
+              inner ? "absolute inset-x-0 bottom-0" : "sticky bottom-[calc(0.75rem+env(safe-area-inset-bottom))] h-0",
             )}
           >
             <div

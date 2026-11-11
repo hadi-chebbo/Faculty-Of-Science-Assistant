@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
+import { mainNav } from "./nav-helpers";
 import pg from "pg";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed (with STORAGE_DRIVER=local). The demo
@@ -99,12 +100,12 @@ test("a visitor is sent to sign-in and back", async ({ page }) => {
 
 test("Progress is in the main navigation on phone and desktop", async ({ page }) => {
   await signInTo(page, "/progress");
-  const main = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
-  const item = main.getByRole("link", { name: "Progress", exact: true });
+  const item = (await mainNav(page)).getByRole("link", { name: "Progress", exact: true });
   await expect(item).toBeVisible();
   await expect(item).toHaveAttribute("aria-current", "page");
   await page.goto("/");
-  await expect(item).not.toHaveAttribute("aria-current", "page");
+  const home = (await mainNav(page)).getByRole("link", { name: "Progress", exact: true });
+  await expect(home).not.toHaveAttribute("aria-current", "page");
 });
 
 test("on a phone the page fits the screen and the milestones row scrolls inside its panel", async ({ page, isMobile }) => {

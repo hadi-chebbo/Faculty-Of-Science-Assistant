@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
+import { mainNav } from "./nav-helpers";
 import pg from "pg";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed (with STORAGE_DRIVER=local).
@@ -84,7 +85,7 @@ test("To-do in the main navigation opens the board", async ({ page, isMobile }) 
   await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL("/saved");
-  await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "To-do" }).filter({ visible: true }).click();
+  await (await mainNav(page)).getByRole("link", { name: "To-do" }).click();
   await expect(page).toHaveURL("/todo");
   await expect(page.getByRole("heading", { level: 1, name: "To-do" })).toBeVisible();
 });
@@ -153,7 +154,7 @@ test("desktop: empty columns, adding cards at the top of their column, N key, an
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test("phone: tabs with counts, the round + adds to the shown tab and stays clear of the tab bar", async ({ page, isMobile }) => {
+test("phone: tabs with counts, the round + adds to the shown tab and stays inside the screen", async ({ page, isMobile }) => {
   test.skip(!isMobile, "phone layout");
   await signInOnBoard(page, isMobile);
 
@@ -164,13 +165,23 @@ test("phone: tabs with counts, the round + adds to the shown tab and stays clear
   await expect(page.getByRole("tabpanel").getByText("Nothing planned. Add the next thing you want to study.")).toBeVisible();
   await expect(page.getByRole("region", { name: "To do" })).toBeHidden();
 
-  // The + button sits above the fixed bottom tab bar, not over it.
+  // There is no bottom bar: the + button sits fully inside the viewport, near its bottom edge, and nothing covers it.
   const plus = page.getByRole("button", { name: "New card" });
-  const bar = page.getByRole("navigation").filter({ has: page.getByRole("link", { name: "Browse" }) }).last();
   const plusBox = (await plus.boundingBox())!;
-  const barBox = (await bar.boundingBox())!;
-  expect(plusBox.y + plusBox.height).toBeLessThanOrEqual(barBox.y);
+  const viewport = page.viewportSize()!;
   expect(plusBox.width).toBeGreaterThanOrEqual(44);
+  expect(plusBox.height).toBeGreaterThanOrEqual(44);
+  expect(plusBox.x).toBeGreaterThanOrEqual(0);
+  expect(plusBox.x + plusBox.width).toBeLessThanOrEqual(viewport.width);
+  expect(plusBox.y).toBeGreaterThanOrEqual(0);
+  expect(plusBox.y + plusBox.height).toBeLessThanOrEqual(viewport.height);
+  expect(viewport.height - (plusBox.y + plusBox.height)).toBeLessThanOrEqual(32);
+  const topmost = await plus.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    return hit !== null && (hit === el || el.contains(hit));
+  });
+  expect(topmost).toBe(true);
 
   await plus.click();
   await page.getByRole("textbox", { name: "New card in To do" }).fill("Phone card");
