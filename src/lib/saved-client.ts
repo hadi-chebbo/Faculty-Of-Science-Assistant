@@ -136,7 +136,11 @@ export function useSavedResource(resourceId: string): {
   const signInThenSave = useCallback(async () => {
     if (!(await requestSignIn("save"))) return;
     await load();
-    if (store.status === "ready" && !store.ids.has(resourceId)) await change(resourceId, true);
+    if (store.status !== "ready") {
+      toast.error("Couldn't reach the server. Try again.");
+      return;
+    }
+    if (!store.ids.has(resourceId)) await change(resourceId, true);
   }, [resourceId]);
 
   const toggle = useCallback(async () => {

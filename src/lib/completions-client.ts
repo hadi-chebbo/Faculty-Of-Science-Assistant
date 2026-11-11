@@ -180,7 +180,11 @@ export function useDoneResource(
   const signInThenMark = useCallback(async () => {
     if (!(await requestSignIn("mark-done"))) return;
     await load();
-    if (store.status === "ready" && !store.ids.has(resourceId)) await change(resourceId, true, true, router.push);
+    if (store.status !== "ready") {
+      toast.error("Couldn't reach the server. Try again.");
+      return;
+    }
+    if (!store.ids.has(resourceId)) await change(resourceId, true, true, router.push);
   }, [resourceId, router]);
 
   const toggle = useCallback(async () => {

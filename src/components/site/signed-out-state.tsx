@@ -22,11 +22,17 @@ export function SignedOutState({ page }: { page: PrivatePage }) {
 
   useEffect(() => {
     let cancelled = false;
+    let fallback: ReturnType<typeof setTimeout> | undefined;
     (async () => {
       try {
         if (await renew()) {
           announceSessionChange();
           router.refresh();
+          // The refreshed page replaces this component. If it still finds no session (the account
+          // was blocked or deleted meanwhile), show the prompt instead of a skeleton forever.
+          fallback = setTimeout(() => {
+            if (!cancelled) setChecking(false);
+          }, 4000);
           return;
         }
       } catch {
@@ -36,6 +42,7 @@ export function SignedOutState({ page }: { page: PrivatePage }) {
     })();
     return () => {
       cancelled = true;
+      clearTimeout(fallback);
     };
   }, [router]);
 
