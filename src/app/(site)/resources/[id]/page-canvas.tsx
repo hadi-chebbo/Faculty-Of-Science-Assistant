@@ -2,6 +2,7 @@
 
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask, TextLayer } from "pdfjs-dist";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { loadPdfjs } from "@/lib/pdfjs-client";
 import { applyHighlights } from "./reader-highlight";
 import type { PageMatch } from "./reader-search";
 import { MAX_CANVAS_PIXELS_SMALL, canvasPixelRatio } from "./reader-zoom";
@@ -122,7 +123,7 @@ export const PageCanvas = memo(function PageCanvas({
     let layer: TextLayer | undefined;
     (async () => {
       if (pdf.loadingTask.destroyed) return;
-      const [{ TextLayer: Layer }, page] = await Promise.all([import("pdfjs-dist"), pdf.getPage(number)]);
+      const [{ TextLayer: Layer }, page] = await Promise.all([loadPdfjs(), pdf.getPage(number)]);
       if (cancelled) return;
       container.style.setProperty("--scale-factor", String(scaleRef.current));
       layer = new Layer({ textContentSource: page.streamTextContent(), container, viewport: page.getViewport({ scale: scaleRef.current }) });
