@@ -67,9 +67,12 @@ const column = (page: Page, name: string) => page.getByRole("region", { name, ex
 const cardsIn = (page: Page, name: string) => column(page, name).getByRole("heading", { level: 3 });
 const added = (page: Page) => page.waitForResponse((r) => r.url().endsWith("/api/v1/todos") && r.request().method() === "POST");
 
-test("signed out, /todo goes to sign-in and signing in returns to the board", async ({ page, isMobile }) => {
+test("signed out, /todo shows the in-page state and signing in from it returns to the board", async ({ page, isMobile }) => {
   await ownAddress(page);
   await page.goto("/todo");
+  await expect(page).toHaveURL("/todo");
+  await expect(page.getByRole("heading", { level: 2, name: "Sign in to use your to-do board" })).toBeVisible();
+  await page.getByRole("main").getByRole("link", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL("/sign-in?next=%2Ftodo");
   await page.getByLabel("Email").fill(emailFor(isMobile));
   await page.getByLabel("Password", { exact: true }).fill(PASSWORD);

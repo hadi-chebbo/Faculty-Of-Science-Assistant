@@ -164,27 +164,42 @@ test("a page asks for the saved ids once however many rows it has, and a visitor
   expect(idRequests).toHaveLength(1);
 });
 
-test("a signed-out click goes to sign-in with the page and its filter, returns there and saves nothing", async ({
+test("a signed-out click opens the sign-in dialog over the page; Not now saves nothing, signing in saves the row", async ({
   page,
   isMobile,
 }) => {
   await ownAddress(page);
   const id = await resourceId("DEMO401", "Sample final exam 2024");
-  await page.goto("/exams?course=DEMO401&session=final");
-  await page
-    .getByRole("button", { name: "Save Sample final exam 2024" })
-    .click();
-  await expect(page).toHaveURL(
-    "/sign-in?next=" +
-      encodeURIComponent("/exams?course=DEMO401&session=final"),
-  );
+  const url = "/exams?course=DEMO401&session=final";
+  await page.goto(url);
+  const bookmark = page.getByRole("button", { name: /^(Save|Remove) Sample final exam 2024/ });
+  const dialog = page.getByRole("dialog", { name: "Sign in to save this file" });
 
-  await signIn(page, isMobile);
-  await expect(page).toHaveURL("/exams?course=DEMO401&session=final");
-  await expect(
-    page.getByRole("button", { name: "Save Sample final exam 2024" }),
-  ).toHaveAttribute("aria-pressed", "false");
+  await bookmark.click();
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(url);
+
+  // Not now: nothing happens and focus goes back to the tapped button.
+  await dialog.getByRole("button", { name: "Not now" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(bookmark).toBeFocused();
   expect(await savedCount(id)).toBe(0);
+
+  // Wrong password: the dialog stays open with the usual error.
+  await bookmark.click();
+  await dialog.getByLabel("Email").fill(emailFor(isMobile));
+  await dialog.getByLabel("Password", { exact: true }).fill("not-the-password");
+  await dialog.getByRole("button", { name: "Sign in and save", exact: true }).click();
+  await expect(dialog.getByText("Invalid email or password.")).toBeVisible();
+
+  // Right password: the dialog closes, the page stays, the row is saved.
+  await dialog.getByLabel("Password", { exact: true }).fill(PASSWORD);
+  await dialog.getByRole("button", { name: "Sign in and save", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(url);
+  await expect(page.getByText("Saved. Find it any time under Saved.")).toBeVisible();
+  await expect(bookmark).toHaveAttribute("aria-pressed", "true");
+  expect(await savedCount(id)).toBe(1);
 });
 
 test("the icon is on chapter pages and search results, outside the row link, and rows still open the reader", async ({

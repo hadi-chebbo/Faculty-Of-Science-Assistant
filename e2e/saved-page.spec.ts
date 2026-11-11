@@ -135,19 +135,24 @@ test("courses are listed by semester and code, not by the order of saving", asyn
   await expect(headings.nth(1)).toContainText("DEMO501");
 });
 
-test("a signed-out visitor is sent to sign-in and returns to Saved after signing in", async ({ page, isMobile }) => {
+test("a signed-out visitor sees the in-page state on Saved, signs in from it and returns to Saved", async ({ page, isMobile }) => {
   await ownAddress(page);
   await page.goto("/saved");
+  await expect(page).toHaveURL("/saved");
+  await expect(page.getByRole("heading", { level: 2, name: "Sign in to see your saved files" })).toBeVisible();
+  await page.getByRole("main").getByRole("link", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL("/sign-in?next=%2Fsaved");
+  await expect(page.getByTestId("sign-in-reason")).toHaveText("Sign in to see your saved files");
   await signIn(page, isMobile);
   await expect(page).toHaveURL("/saved");
   await expect(page.getByRole("heading", { level: 1, name: "Saved" })).toBeVisible();
 });
 
-test("Saved and To-do are in the main navigation for everyone, and a visitor goes to sign-in", async ({ page }) => {
+test("Saved and To-do are in the main navigation for everyone, and a visitor sees the in-page sign-in state", async ({ page }) => {
   await page.goto("/");
   const nav = await mainNav(page);
   await expect(nav.getByRole("link")).toHaveText(["Browse", "Exams", "Search", "Saved", "To-do", "Progress"]);
   await nav.getByRole("link", { name: "Saved" }).click();
-  await expect(page).toHaveURL("/sign-in?next=%2Fsaved");
+  await expect(page).toHaveURL("/saved");
+  await expect(page.getByRole("heading", { level: 2, name: "Sign in to see your saved files" })).toBeVisible();
 });

@@ -5,10 +5,11 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { BOARD_FULL_MESSAGE, boardRequest } from "@/lib/board-api";
 import { useSignedInCheck } from "@/lib/saved-client";
+import { requestSignIn } from "@/lib/sign-in-dialog";
 
 // "Add to to-do": a new card in To do linked to a file, from the reader and the Saved page. The same
-// file may be added again; each press makes a card. Signed out, it goes to sign-in and back to this
-// page (nothing is added afterwards).
+// file may be added again; each press makes a card. Signed out, it opens the sign-in dialog over
+// the page and, after a successful sign-in, adds the card.
 export function useAddToTodo(resourceId: string): { pending: boolean; add: () => Promise<void> } {
   const router = useRouter();
   const check = useSignedInCheck();
@@ -17,16 +18,22 @@ export function useAddToTodo(resourceId: string): { pending: boolean; add: () =>
   const add = useCallback(async () => {
     if (pending) return;
     setPending(true);
-    const goToSignIn = () => router.push(`/sign-in?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
     try {
-      const who = await check();
-      if (who === "signed-out") return goToSignIn();
-      if (who === "unknown") {
+      let who = await check();
+      if (who === "signed-out") {
+        if (!(await requestSignIn("add-to-todo"))) return;
+        who = await check();
+      }
+      if (who === "unknown" || who === "signed-out") {
         toast.error("Couldn't reach the server. Try again.");
         return;
       }
-      const response = await boardRequest("POST", "", { resourceId });
-      if (response.status === 401) return goToSignIn();
+      let response = await boardRequest("POST", "", { resourceId });
+      if (response.status === 401) {
+        // The session ended while the store believed in it: same as signed out.
+        if (!(await requestSignIn("add-to-todo"))) return;
+        response = await boardRequest("POST", "", { resourceId });
+      }
       if (response.ok) {
         toast.success("Added to To do", { action: { label: "View board", onClick: () => router.push("/todo") } });
       } else if (response.status === 409) {

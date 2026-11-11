@@ -124,17 +124,28 @@ test("Undo right after marking takes the mark back", async ({ page, isMobile }) 
   await expect(markButton(page)).toBeVisible();
 });
 
-test("a signed-out visitor goes to sign-in and back to the same reader page, and nothing is marked", async ({ page, isMobile }) => {
+test("a signed-out Mark as done opens the sign-in dialog without leaving the reader; Not now marks nothing, signing in marks", async ({ page, isMobile }) => {
   await ownAddress(page);
   const id = await resourceId(courseFor(isMobile), "Sample lecture 1");
   await page.goto(`/resources/${id}`);
+  const dialog = page.getByRole("dialog", { name: "Sign in to mark this file as done" });
   await markButton(page).click();
-  await expect(page).toHaveURL(`/sign-in?next=${encodeURIComponent(`/resources/${id}`)}`);
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(`/resources/${id}`);
 
-  await signIn(page);
-  await expect(page).toHaveURL(new RegExp(`/resources/${id}$`));
-  await expect(markButton(page)).toHaveAttribute("aria-pressed", "false");
+  await dialog.getByRole("button", { name: "Not now" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(markButton(page)).toBeFocused();
   expect(await doneCount(id)).toBe(0);
+
+  await markButton(page).click();
+  await dialog.getByLabel("Email").fill(STUDENT_EMAIL);
+  await dialog.getByLabel("Password", { exact: true }).fill(STUDENT_PASSWORD);
+  await dialog.getByRole("button", { name: "Sign in and mark as done", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(`/resources/${id}`);
+  await expect(doneButton(page)).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => doneCount(id)).toBe(1);
 });
 
 test("a solution cannot be marked: no button and no menu entry", async ({ page, isMobile }) => {

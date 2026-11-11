@@ -1,10 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { askMe, renew } from "@/lib/auth/client-session";
 import { SESSION_CHANGED_EVENT } from "@/lib/auth/session-events";
+import { requestSignIn } from "@/lib/sign-in-dialog";
 
 // The saved state of the signed-in user, in the browser. Public pages never read the session on
 // the server, so the browser asks once after load (`GET /api/v1/saved/ids`) and every save control
@@ -121,21 +121,23 @@ export function useSavedLookup(): { isRemoved: (resourceId: string) => boolean }
   return { isRemoved: (resourceId) => snapshot.status === "ready" && !snapshot.ids.has(resourceId) };
 }
 
-// The saved state of one resource, and a toggle. Signed out, the toggle goes to sign-in and back
-// to this page; nothing is saved automatically afterwards.
+// The saved state of one resource, and a toggle. Signed out, the toggle opens the sign-in dialog
+// over the page; after a successful sign-in the tapped save is done, and Not now does nothing.
 export function useSavedResource(resourceId: string): {
   status: SavedStatus;
   pending: boolean;
   toggle: () => Promise<void>;
 } {
-  const router = useRouter();
   const snapshot = useSyncExternalStore(subscribe, () => store, () => UNKNOWN);
   useEffect(ensureLoaded, []);
 
-  const goToSignIn = useCallback(() => {
-    const here = window.location.pathname + window.location.search;
-    router.push(`/sign-in?next=${encodeURIComponent(here)}`);
-  }, [router]);
+  // Asks the visitor to sign in; when they do, the session event has already made the store ask
+  // again, so wait for that and save.
+  const signInThenSave = useCallback(async () => {
+    if (!(await requestSignIn("save"))) return;
+    await load();
+    if (store.status === "ready" && !store.ids.has(resourceId)) await change(resourceId, true);
+  }, [resourceId]);
 
   const toggle = useCallback(async () => {
     if (store.pending.has(resourceId)) return;
@@ -145,9 +147,9 @@ export function useSavedResource(resourceId: string): {
       toast.error("Couldn't reach the server. Try again.");
       return;
     }
-    if (store.status === "signed-out") return goToSignIn();
-    if ((await change(resourceId, !store.ids.has(resourceId))) === "signed-out") goToSignIn();
-  }, [resourceId, goToSignIn]);
+    if (store.status === "signed-out") return signInThenSave();
+    if ((await change(resourceId, !store.ids.has(resourceId))) === "signed-out") await signInThenSave();
+  }, [resourceId, signInThenSave]);
 
   const status: SavedStatus =
     snapshot.status === "ready" ? (snapshot.ids.has(resourceId) ? "saved" : "not-saved") : snapshot.status;
