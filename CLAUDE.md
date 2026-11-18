@@ -15,8 +15,8 @@ fast, mobile-friendly place to find course material and previous exams.
 - Scope is one major in one faculty and branch. Do not add Major, Faculty,
   University or Branch entities or abstractions. Other majors may come later;
   add the entity then, by migration.
-- Semesters covered: S1–S6 (three years; first-year courses are allowed since #149). Launch content was S3 and
-  S5; S3–S5 are live and S1–S2 (first year) are being loaded; S6 follows in spring.
+- Semesters covered: S1–S6, the three years of the programme (owner, 2026-11-18). Students browse by year;
+  spec `docs/specs/browse-by-year.md`.
 - Built and operated by one developer, who is also the only admin and the only
   person who uploads content.
 - Target: usable MVP live before partial exams (around early December 2026).

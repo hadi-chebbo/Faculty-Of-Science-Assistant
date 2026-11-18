@@ -17,7 +17,7 @@ const COURSES = [
 ];
 const CODES = COURSES.map((c) => c.code);
 
-const url = (path) => `https://example.com/demo/${path}`;
+const url = (filePath) => `https://example.com/demo/${filePath}`;
 
 // Published demo files have a stored file and a backup link, like the other demo courses.
 const RESOURCES = COURSES.flatMap(({ code }) => {
