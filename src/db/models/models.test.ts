@@ -67,6 +67,23 @@ describe("models: uuid ids", () => {
   });
 });
 
+describe("courses: semester check", () => {
+  it("accepts semesters 1 and 6", async () => {
+    const { Course } = getDb();
+    for (const semester of [1, 6]) {
+      const c = await Course.create({ code: `SEM${semester}`, title: "T", semester });
+      expect(c.semester).toBe(semester);
+    }
+  });
+
+  it("the database refuses semesters 0 and 7", async () => {
+    const { Course } = getDb();
+    for (const semester of [0, 7]) {
+      await expect(Course.create({ code: `BAD${semester}`, title: "T", semester })).rejects.toThrow();
+    }
+  });
+});
+
 describe("models: create and read back", () => {
   it("Course", async () => {
     const { Course } = getDb();

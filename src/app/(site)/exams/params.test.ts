@@ -24,12 +24,20 @@ describe("parseExamParams", () => {
     });
   });
 
+  it("accepts the first-year semesters and refuses 0 and 7", () => {
+    expect(parseExamParams({ semester: "1" }).semester).toBe(1);
+    expect(parseExamParams({ semester: "2" }).semester).toBe(2);
+    expect(parseExamParams({ semester: "6" }).semester).toBe(6);
+    expect(parseExamParams({ semester: "0" }).semester).toBeUndefined();
+    expect(parseExamParams({ semester: "7" }).semester).toBeUndefined();
+  });
+
   it("drops each bad value on its own and keeps the good ones", () => {
     const parsed = parseExamParams({ year: "abc", session: "bogus", semester: "9", page: "0", course: "DEMO301" });
     expect(parsed).toEqual({ semester: undefined, course: "DEMO301", year: undefined, session: undefined, lecturer: undefined, page: 1 });
     expect(parseExamParams({ lecturer: "Dr. Ada!" }).lecturer).toBeUndefined();
     expect(parseExamParams({ lecturer: "ada--x" }).lecturer).toBeUndefined();
-    expect(parseExamParams({ semester: "2", year: "1989", page: "-1" })).toMatchObject({ page: 1, semester: undefined, year: undefined });
+    expect(parseExamParams({ semester: "0", year: "1989", page: "-1" })).toMatchObject({ page: 1, semester: undefined, year: undefined });
     expect(parseExamParams({ year: "2024.5", semester: "4e0", page: "1.5" })).toMatchObject({ year: undefined, semester: undefined, page: 1 });
     expect(parseExamParams({ page: "10001" }).page).toBe(1);
     expect(parseExamParams({ course: "x".repeat(21) }).course).toBeUndefined();

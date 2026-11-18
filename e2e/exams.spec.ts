@@ -2,11 +2,11 @@ import { expect, test } from "@playwright/test";
 import { mainNav } from "./nav-helpers";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed
-// The demo data has 43 published exams (13, 13, 10 and 7 in semesters 3 to 6; 12, 12, 12 and 7 in
-// academic years 2022 to 2025), newest academic year first, then partial, final, second. The page
+// The demo data has 45 published exams (1, 1, 13, 13, 10 and 7 in semesters 1 to 6, the two first-year
+// ones being partial exams of 2023, in academic years 2022 to 2025), newest academic year first, then partial, final, second. The page
 // size is 20, so the full list has three pages. The fixture courses DEMO301 to DEMO602 hold nine of
 // them; tests about exact rows narrow to those courses.
-const TOTAL_EXAMS = 43;
+const TOTAL_EXAMS = 45;
 const PAGE_SIZE = 20;
 
 // Rows are the list items that open a resource (on its reader page). (Pages visited earlier in the session can stay
@@ -114,7 +114,7 @@ test("filters by semester and academic year", async ({ page }) => {
 test("a semester narrows the course dropdown", async ({ page }) => {
   await page.goto("/exams");
   // Without a semester all courses with an exam are offered, grouped by semester.
-  await expect(page.getByLabel("Course").locator("optgroup")).toHaveCount(4);
+  await expect(page.getByLabel("Course").locator("optgroup")).toHaveCount(6);
   await choose(page, "Semester", "4", /\/exams\?semester=4$/);
   const options = page.getByLabel("Course").locator("option");
   await expect(options).toHaveText(["All", "DEMO401 - Sample Course C", "DEMO402 - Sample Course D", "DEMO410 - Sample Full Course B"]);
@@ -153,7 +153,7 @@ test("unusable parameters are ignored", async ({ page }) => {
   await expect(rows(page)).toHaveCount(12);
 });
 
-// 43 demo exams at 20 per page make three pages. The paging maths is covered in
+// 45 demo exams at 20 per page make three pages. The paging maths is covered in
 // src/app/(site)/exams/params.test.ts; this checks the pager on the real list and its edges.
 test("paging: the pager walks the pages, and a page past the end shows the empty state", async ({ page }) => {
   await page.goto("/exams");

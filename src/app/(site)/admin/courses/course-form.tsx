@@ -10,6 +10,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { COURSE_CODE_MAX_LENGTH, COURSE_TITLE_MAX_LENGTH, SEMESTER_MAX, SEMESTER_MIN } from "@/db/constants";
 import { adminFetch } from "@/lib/admin-fetch";
 import { useHydrated } from "@/lib/use-hydrated";
+import { yearLabel, yearOfSemester } from "@/lib/years";
 
 export interface CourseValues {
   code: string;
@@ -167,7 +168,7 @@ export function CourseForm({
           className="w-full [&_select]:h-11 md:[&_select]:h-9"
         >
           {SEMESTERS.map((n) => (
-            <NativeSelectOption key={n} value={String(n)}>Semester {n}</NativeSelectOption>
+            <NativeSelectOption key={n} value={String(n)}>Semester {n} ({yearLabel(yearOfSemester(n))})</NativeSelectOption>
           ))}
         </NativeSelect>
         {error("semester")}

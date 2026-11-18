@@ -70,8 +70,15 @@ describe("listCoursesBySemester", () => {
 });
 
 describe("listCoursesBySemester input", () => {
-  it("rejects a semester that is not 3 to 6 with a ValidationError", async () => {
-    for (const semester of [NaN, 2, 7, 3.5]) {
+  it("works for the first-year semesters", async () => {
+    const { Course } = getDb();
+    await Course.create({ code: "TEST101", title: "First year", semester: 1 });
+    await Course.create({ code: "TEST201", title: "First year, spring", semester: 2 });
+    expect((await listCoursesBySemester(null, 1)).map((c) => c.code)).toEqual(["TEST101"]);
+  });
+
+  it("rejects a semester that is not 1 to 6 with a ValidationError", async () => {
+    for (const semester of [NaN, 0, 7, 3.5]) {
       await expect(listCoursesBySemester(null, semester)).rejects.toBeInstanceOf(ValidationError);
     }
   });

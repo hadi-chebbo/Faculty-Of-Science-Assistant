@@ -61,7 +61,7 @@ test("the Search nav item leads to /search and is the current page there", async
 test("before typing it shows hints and a link to every semester", async ({ page }) => {
   await page.goto("/search");
   await expect(page.getByText("Try a course code (DEMO301), a topic (graphs), or an exam (final 2024). Accents don't matter.")).toBeVisible();
-  for (const semester of [3, 4, 5, 6]) {
+  for (const semester of [1, 2, 3, 4, 5, 6]) {
     await expect(page.getByRole("link", { name: `Semester ${semester}`, exact: true })).toHaveAttribute("href", `/semesters/${semester}`);
   }
   // One character is still too short: the same hints, no results.

@@ -77,8 +77,21 @@ describe("seeders", () => {
     const { sequelize } = getDb();
     const query = async (sql: string) => (await sequelize.query(sql))[0] as Record<string, unknown>[];
 
-    expect(await count("courses")).toBe(12);
+    expect(await count("courses")).toBe(14);
     expect(await query("SELECT 1 FROM resources r JOIN courses c ON c.id = r.course_id WHERE c.code = 'DEMO602'")).toHaveLength(0);
+    // The two first-year demo courses have four published files each and nothing of the demo student's.
+    const firstYear = await query(
+      "SELECT c.code, c.semester, count(r.id)::int AS files FROM courses c JOIN resources r ON r.course_id = c.id AND r.is_published WHERE c.code IN ('DEMO110', 'DEMO210') GROUP BY c.code, c.semester ORDER BY c.code",
+    );
+    expect(firstYear).toEqual([
+      { code: "DEMO110", semester: 1, files: 4 },
+      { code: "DEMO210", semester: 2, files: 4 },
+    ]);
+    expect(
+      await query(
+        "SELECT 1 FROM completions WHERE resource_id IN (SELECT r.id FROM resources r JOIN courses c ON c.id = r.course_id WHERE c.code IN ('DEMO110', 'DEMO210')) UNION ALL SELECT 1 FROM bookmarks WHERE resource_id IN (SELECT r.id FROM resources r JOIN courses c ON c.id = r.course_id WHERE c.code IN ('DEMO110', 'DEMO210'))",
+      ),
+    ).toHaveLength(0);
     // Every published demo resource has a stored file and keeps its (fake) backup link.
     const badPublished = await query(
       "SELECT 1 FROM resources WHERE is_published AND num_nonnulls(file_key, external_url) <> 2",
@@ -200,7 +213,7 @@ describe("seeders", () => {
       const again = runCli("db:seed:all", FULL_ENV);
       expect(again.status, again.output).toBe(0);
       expect(await chapterState()).toEqual(expected);
-      expect(await count("courses")).toBe(12);
+      expect(await count("courses")).toBe(14);
     });
   });
 

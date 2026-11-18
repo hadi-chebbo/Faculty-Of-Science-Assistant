@@ -201,8 +201,9 @@ describe("listResources by semester", () => {
   it("treats a blank semester as no filter and rejects one out of range", async () => {
     await seedSemesters();
     expect((await listResources(null, { semester: "" } as never)).total).toBe(6);
+    expect((await listResources(null, { semester: 1 })).total).toBe(0);
     expect((await listResources(null, { semester: "5" } as never)).total).toBe(1);
-    await expect(listResources(null, { semester: 2 })).rejects.toMatchObject({ name: "ValidationError", fields: ["semester"] });
+    await expect(listResources(null, { semester: 0 })).rejects.toMatchObject({ name: "ValidationError", fields: ["semester"] });
     await expect(listResources(null, { semester: 7 })).rejects.toBeInstanceOf(ValidationError);
   });
 });
