@@ -6,6 +6,12 @@ and plan their own study.
 
 ## Course material
 
+**Year**:
+One of the three years of the Computer Science programme, written "First year", "Second year",
+"Third year". Always derived from a course's semester (1–2 first, 3–4 second, 5–6 third), never
+stored. Students browse by year; a course still belongs to one semester.
+_Avoid_: Level, L1/L2/L3, Year 2, academic year (that is the 2024-2025 year of an exam)
+
 **Lecturer**:
 The person who taught or wrote a resource, named as written (e.g. "Dr. Ali Ghorayeb"). A resource
 has at most one lecturer, or none when unknown; a course's lecturers are those of its resources.
