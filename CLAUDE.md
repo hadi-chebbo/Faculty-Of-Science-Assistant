@@ -49,12 +49,16 @@ mock exam generation, personalization.
 - AI-generated content is always visibly labelled and never presented as
   official university material.
 - University material is not published publicly until the faculty has
-  approved its use. Until then, use seed/sample data.
+  approved its use. The faculty approved it (owner, 2026-11-16), so real material may be published.
 - Seed data is placeholder during development: obviously fake course codes,
   titles and resources. The real course list and files are loaded in a
   separate data-gathering phase; do not ask for them or invent real-looking
   ones before then. The seeded demo student has a few completions (DEMO610: chapter 1 finished, two files of chapter 2,
   one exam; DEMO410: one lecture) and active days (today and up to two earlier days of the current Beirut week) so demos show progress; e2e specs that mark files must not use those courses.
+- Real content source (owner, 2026-11-14): the real files come from the local folder
+  `~/Computer Science Resources`, one folder per semester (`Sem 5`, ...) and inside it one
+  folder per course named "CODE - Name" (e.g. `I3305 - GUI`). Content is loaded through the
+  platform's admin pages (upload), never committed to the repo or seeded.
 - Every resource has a stored file (owner's decision, 2026-10-13). A link is
   never the resource itself: `external_url` is an optional backup shown beside
   the file. A resource cannot be published without a file; a draft may be
