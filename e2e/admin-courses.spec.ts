@@ -107,6 +107,39 @@ test("the admin adds, refuses a duplicate, and edits a course", async ({ page },
   }
 });
 
+test("the admin adds a first-year course and it is listed and browsable", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "writing test, desktop only");
+  const stamp = randomBytes(3).toString("hex").toUpperCase();
+  const code = `E2E${stamp}`;
+  try {
+    await signIn(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+    await page.goto("/admin/courses");
+    const add = page.getByRole("region", { name: "Courses" });
+    await add.getByLabel("Code").first().fill(code);
+    await add.getByLabel("Title").first().fill("E2E First Year");
+    await expect(add.getByLabel("Semester").first().getByRole("option")).toHaveText([
+      "Semester 1 (First year)",
+      "Semester 2 (First year)",
+      "Semester 3 (Second year)",
+      "Semester 4 (Second year)",
+      "Semester 5 (Third year)",
+      "Semester 6 (Third year)",
+    ]);
+    await add.getByLabel("Semester").first().selectOption("1");
+    await add.getByRole("button", { name: "Add course" }).click();
+    await expect(page.getByText("Course added.")).toBeVisible();
+    // Listed under the "Semester 1" heading.
+    const group = page.locator("div").filter({ has: page.getByRole("heading", { name: "Semester 1", exact: true }) }).last();
+    await expect(group.getByRole("listitem").filter({ hasText: code })).toBeVisible();
+
+    await page.goto("/semesters/1");
+    await expect(page.getByRole("heading", { name: "Semester 1" })).toBeVisible();
+    await expect(page.getByRole("link", { name: new RegExp(code) })).toBeVisible();
+  } finally {
+    await deleteCourses(`E2E${stamp}`);
+  }
+});
+
 test("a student gets the not-found page and a visitor goes to sign-in", async ({ page }) => {
   await page.goto("/admin/courses");
   await expect(page).toHaveURL(/\/sign-in/);

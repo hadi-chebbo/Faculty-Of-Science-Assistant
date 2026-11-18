@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// Needs the demo data: SEED_DEMO_DATA=true npm run db:seed (courses in all four semesters).
+// Needs the demo data: SEED_DEMO_DATA=true npm run db:seed (courses in all six semesters).
 // Read-only: it only visits pages.
 
 test("the headline and the two buttons", async ({ page }) => {
@@ -26,10 +26,10 @@ test("the numbers strip shows four labels with numbers", async ({ page }) => {
   }
 });
 
-test("four semester cards, S3 links to its page and shows counts", async ({ page }) => {
+test("six semester cards, S3 links to its page and shows counts", async ({ page }) => {
   await page.goto("/");
   const cards = page.locator("#semesters li");
-  await expect(cards).toHaveCount(4);
+  await expect(cards).toHaveCount(6);
   const s3 = page.locator("#semesters").getByRole("link", { name: /S3/ });
   await expect(s3).toHaveAttribute("href", "/semesters/3");
   await expect(s3).toContainText("Autumn");
