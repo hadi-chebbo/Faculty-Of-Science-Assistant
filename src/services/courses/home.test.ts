@@ -32,10 +32,10 @@ async function seed() {
 }
 
 describe("getHomeStats", () => {
-  it("gives zeros and four ordered semesters for an empty database", async () => {
+  it("gives zeros and six ordered semesters for an empty database", async () => {
     expect(await getHomeStats(null)).toEqual({
       totals: { courses: 0, chapters: 0, resources: 0, exams: 0 },
-      semesters: [3, 4, 5, 6].map((semester) => ({ semester, courseCount: 0, resourceCount: 0 })),
+      semesters: [1, 2, 3, 4, 5, 6].map((semester) => ({ semester, courseCount: 0, resourceCount: 0 })),
     });
   });
 
@@ -62,11 +62,13 @@ describe("getHomeStats", () => {
   it("puts per-semester counts in the right semester, in order", async () => {
     await seed();
     expect((await getHomeStats(null)).semesters).toEqual([
+      { semester: 1, courseCount: 0, resourceCount: 0 },
+      { semester: 2, courseCount: 0, resourceCount: 0 },
       { semester: 3, courseCount: 2, resourceCount: 2 },
       { semester: 4, courseCount: 0, resourceCount: 0 },
       { semester: 5, courseCount: 1, resourceCount: 1 },
       { semester: 6, courseCount: 0, resourceCount: 0 },
     ]);
-    expect((await getHomeStats(admin)).semesters.map((s) => s.resourceCount)).toEqual([3, 0, 2, 0]);
+    expect((await getHomeStats(admin)).semesters.map((s) => s.resourceCount)).toEqual([0, 0, 3, 0, 2, 0]);
   });
 });
