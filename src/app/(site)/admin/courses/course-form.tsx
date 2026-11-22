@@ -10,7 +10,7 @@ import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select"
 import { COURSE_CODE_MAX_LENGTH, COURSE_TITLE_MAX_LENGTH } from "@/db/constants";
 import { adminFetch } from "@/lib/admin-fetch";
 import { useHydrated } from "@/lib/use-hydrated";
-import { YEARS, parseYear, semesterInYear, semesterLabel, storedSemester, yearLabel, yearOfSemester } from "@/lib/years";
+import { YEARS, semesterInYear, semesterLabel, storedSemester, yearLabel, yearOfSemester } from "@/lib/years";
 
 export interface CourseValues {
   code: string;
@@ -74,7 +74,8 @@ export function CourseForm({
   const year = yearOfSemester(stored);
   const inYear = semesterInYear(stored);
   const setYearAndSemester = (nextYear: number | null, nextInYear: 1 | 2) => {
-    const y = parseYear(nextYear);
+    // Any entry of YEARS (Master 1 included later), not only the three numeric years parseYear knows.
+    const y = YEARS.find((candidate) => candidate === nextYear);
     if (y) setValues((v) => ({ ...v, semester: String(storedSemester(y, nextInYear)) }));
   };
 

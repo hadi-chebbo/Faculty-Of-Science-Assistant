@@ -60,15 +60,20 @@ export function courseYearSemesterLabel(semester: number): string {
   return `${yearLabel(yearOfSemester(semester))} · ${semesterLabel(semester)}`;
 }
 
-// The year a semester is in, from the number a form posts: the year and its 1-based place in it.
-export function storedSemester(year: Year, semesterInYearNumber: 1 | 2): number {
-  return semestersOfYear(year)[semesterInYearNumber - 1];
+// The stored semester number for a year and a place in it (1 or 2), e.g. (2, 1) → 3. What a form posts.
+export function storedSemester(year: Year, place: 1 | 2): number {
+  return semestersOfYear(year)[place - 1];
 }
 
-// Stored semesters grouped by their year, in YEARS order, semesters ascending; years with none are left out.
+// Items grouped under their year, in YEARS order, keeping the items' own order; years with none are left out.
+export function groupByYear<T>(items: readonly T[], semesterOf: (item: T) => number): { year: Year; items: T[] }[] {
+  return YEARS.map((year) => ({ year, items: items.filter((item) => yearOfSemester(semesterOf(item)) === year) })).filter(
+    (group) => group.items.length > 0,
+  );
+}
+
+// Stored semesters grouped by their year, semesters ascending without repeats.
 export function groupSemestersByYear(semesters: readonly number[]): { year: Year; semesters: number[] }[] {
-  return YEARS.map((year) => ({
-    year,
-    semesters: [...new Set(semesters)].filter((s) => yearOfSemester(s) === year).sort((a, b) => a - b),
-  })).filter((group) => group.semesters.length > 0);
+  const sorted = [...new Set(semesters)].sort((a, b) => a - b);
+  return groupByYear(sorted, (s) => s).map(({ year, items }) => ({ year, semesters: items }));
 }

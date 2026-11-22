@@ -77,11 +77,11 @@ Students (signed in or not):
     find my semester quickly, and I want my shared filter links to keep working.
 17. As a student on Search, I want "Or browse a year" with three links when I have not typed enough,
     so that I can browse instead.
-18. As a student on Search, I want a course result to say "Second year · Semester 3", so that I know
+18. As a student on Search, I want a course result to say "Second year · Semester 1", so that I know
     where it belongs.
 19. As a signed-in student on Progress, I want My courses grouped under year headings with the
     semester shown on each course, so that the page matches how I browse.
-20. As a signed-in student on Saved, I want each course group to say "Second year · Semester 3", so
+20. As a signed-in student on Saved, I want each course group to say "Second year · Semester 1", so
     that it matches the rest of the site.
 21. As a phone user, I want the year cards stacked one under another and easy to tap, so that the
     page works on a small screen.
@@ -184,7 +184,9 @@ Admin (ticket 1):
 - The admin course form's Semester select offers 1 to 6 labelled "Semester 1 (First year)" …
   "Semester 6 (Third year)". The courses page groups by "Semester N" for 1 to 6 (an empty semester
   says "No courses yet."). The admin resource list's semester filter accepts 1 to 6. No year
-  grouping on admin pages.
+  grouping on admin pages. *(Superseded 2026-11-22, ticket 3: the form has a Year select and a
+  "Semester 1" / "Semester 2" select that together post the stored number, and the courses page
+  headings read "Second year · Semester 1".)*
 
 Seed (ticket 1):
 - A new development-only seeder (runs only with `SEED_DEMO_DATA=true`, after the demo courses seeder,
@@ -224,7 +226,7 @@ Content:
 - Loading the real first-year content (a separate data task after ticket 1).
 - Any Year, Major or Faculty entity, table or column.
 - A year filter on the Exams page or Search (the semester filter stays).
-- Year grouping on admin pages.
+- Year grouping on admin pages (beyond the year + semester wording added by the 2026-11-22 amendment).
 - Changing what a course page, chapter page or the reader show beyond their breadcrumbs.
 - Other majors, and semesters beyond 6.
 
