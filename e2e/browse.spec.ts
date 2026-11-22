@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { mainNav } from "./nav-helpers";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed
-test("a visitor browses from home to a year to a course and back", async ({ page }) => {
+test("a visitor browses from home to a year to a course and back", async ({ page, isMobile }) => {
   await page.goto("/");
   await page.locator("#years").getByRole("link", { name: /Second year/ }).click();
   await expect(page).toHaveURL(/\/years\/2$/);
@@ -15,12 +15,17 @@ test("a visitor browses from home to a year to a course and back", async ({ page
   await page.getByRole("link", { name: /DEMO301/ }).click();
   await expect(page.getByRole("heading", { name: "Sample Course A" })).toBeVisible();
 
-  const crumb = page.getByRole("navigation", { name: /breadcrumb/i }).getByRole("link", { name: "Second year" });
-  await expect(crumb).toHaveAttribute("href", "/years/2#semester-1");
-  await crumb.click();
-  await expect(page).toHaveURL(/\/years\/2#semester-1$/);
+  // The breadcrumb trail is for md and up; a phone goes back with the browser.
+  if (isMobile) {
+    await page.goBack();
+  } else {
+    const crumb = page.getByRole("navigation", { name: /breadcrumb/i }).getByRole("link", { name: "Second year" });
+    await expect(crumb).toHaveAttribute("href", "/years/2#semester-1");
+    await crumb.click();
+    await expect(page).toHaveURL(/\/years\/2#semester-1$/);
+  }
   await expect(page.getByRole("heading", { level: 1, name: "Second year" })).toBeVisible();
-  await page.goBack();
+  await page.goto("/courses/DEMO301");
 
   // DEMO301 has chapters: its exams are in the "Previous exams" area.
   await page.getByRole("link", { name: "Previous exams" }).click();
