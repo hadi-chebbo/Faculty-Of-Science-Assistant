@@ -2,14 +2,29 @@ import { describe, expect, it } from "vitest";
 import {
   YEARS,
   parseYear,
+  semesterAnchor,
   semesterInYear,
   semesterLabel,
   semestersOfYear,
+  yearCrumb,
   yearHref,
   yearLabel,
   yearOfSemester,
   yearSlug,
 } from "./years";
+
+describe("semester anchors and year crumbs", () => {
+  it("anchors a semester by its place in the year", () => {
+    expect([1, 2, 3, 4, 5, 6].map(semesterAnchor)).toEqual([
+      "semester-1", "semester-2", "semester-1", "semester-2", "semester-1", "semester-2",
+    ]);
+  });
+
+  it("builds the year crumb for a course's semester", () => {
+    expect(yearCrumb(3)).toEqual({ label: "Second year", href: "/years/2#semester-1" });
+    expect(yearCrumb(6)).toEqual({ label: "Third year", href: "/years/3#semester-2" });
+  });
+});
 
 describe("years", () => {
   it("lists the three years", () => {

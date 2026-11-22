@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { Crumbs } from "@/components/site/crumbs";
 import { PageTitle } from "@/components/site/page-title";
 import { CourseSkeleton } from "@/components/site/skeletons";
-import { yearHref, yearLabel, yearOfSemester } from "@/lib/years";
+import { yearCrumb } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
 import { getCourseByCode } from "@/services/courses/courses";
 import { AreaSwitch, ChapterCards, ExamsArea, OtherArea, parseArea } from "./course-areas";
@@ -52,7 +52,7 @@ async function CourseContent({
       <Crumbs
         items={[
           { label: "Home", href: "/" },
-          { label: yearLabel(yearOfSemester(course.semester)), href: yearHref(yearOfSemester(course.semester), course.semester) },
+          yearCrumb(course.semester),
           { label: course.code },
         ]}
       />

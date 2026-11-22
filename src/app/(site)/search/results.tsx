@@ -28,7 +28,6 @@ const CHIP_LABELS: Record<SearchChip, string> = {
   exam: "Exams",
 };
 
-
 // What shows before there is a query to search for (fewer than two characters).
 export function SearchHints() {
   return (

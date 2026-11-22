@@ -17,7 +17,8 @@ fast, mobile-friendly place to find course material and previous exams.
   add the entity then, by migration.
 - Semesters covered: S1–S6, the three years of the programme (owner, 2026-11-18). Students browse by year;
   spec `docs/specs/browse-by-year.md`. Inside a year students see "Semester 1" / "Semester 2", never the
-  stored 1–6 number (owner, 2026-11-22). Master 1 (stored semesters 7–8, `/years/m1`) is planned as a fourth
+  stored 1–6 number (owner, 2026-11-22; Home, year pages and breadcrumbs follow it, the Exams, Search,
+  Progress, Saved and admin labels change in #151). Master 1 (stored semesters 7–8, `/years/m1`) is planned as a fourth
   year, ticket #154.
 - Built and operated by one developer, who is also the only admin and the only
   person who uploads content.

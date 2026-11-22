@@ -38,8 +38,19 @@ export function yearSlug(year: Year): string {
   return String(year);
 }
 
+// The id of a semester's section on its year page ("semester-1"), never the stored number.
+export function semesterAnchor(semester: number): string {
+  return `semester-${semesterInYear(semester)}`;
+}
+
 // The one place year URLs are built. With a semester it points at that semester's section.
 export function yearHref(year: Year, semester?: number): string {
   const base = `/years/${yearSlug(year)}`;
-  return semester === undefined ? base : `${base}#semester-${semesterInYear(semester)}`;
+  return semester === undefined ? base : `${base}#${semesterAnchor(semester)}`;
+}
+
+// The breadcrumb that leads from a course (or anything in it) back to its year page.
+export function yearCrumb(semester: number): { label: string; href: string } {
+  const year = yearOfSemester(semester);
+  return { label: yearLabel(year), href: yearHref(year, semester) };
 }

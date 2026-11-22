@@ -24,7 +24,7 @@ export function SavedList({ groups }: { groups: SavedCourseGroup[] }) {
         icon={Bookmark}
         actions={
           <Button asChild className="h-11 px-5 md:h-9">
-            <Link href="/#semesters">Browse courses</Link>
+            <Link href="/#years">Browse courses</Link>
           </Button>
         }
       >

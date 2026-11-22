@@ -7,7 +7,7 @@ import { Crumbs } from "@/components/site/crumbs";
 import { PageTitle } from "@/components/site/page-title";
 import { CourseListSkeleton, YearSkeleton } from "@/components/site/skeletons";
 import { readForPage } from "@/lib/page-errors";
-import { YEARS, parseYear, type Year, semesterLabel, yearLabel, yearSlug } from "@/lib/years";
+import { YEARS, parseYear, type Year, semesterAnchor, semesterLabel, yearLabel, yearSlug } from "@/lib/years";
 import { listCoursesByYear, type YearSemester } from "@/services/courses/courses";
 import { CourseProgressRing } from "./course-progress-ring";
 
@@ -66,8 +66,7 @@ async function Semesters({ year }: { year: Year }) {
 
 function SemesterSection({ entry }: { entry: YearSemester }) {
   const label = semesterLabel(entry.semester);
-  // The anchor is the number within the year ("semester-1"), never the stored 1-6 number.
-  const id = label.toLowerCase().replace(" ", "-");
+  const id = semesterAnchor(entry.semester);
   return (
     <section aria-labelledby={id}>
       <h2 id={id} className="mb-3 scroll-mt-20 text-xl font-semibold text-heading">

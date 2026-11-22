@@ -70,6 +70,25 @@ describe("listCoursesByYear", () => {
     ]);
   });
 
+  it("counts only published resources for a signed-in student too", async () => {
+    await seed();
+    const [first] = await listCoursesByYear(student, 2);
+    expect(first.courses.map((c) => c.resourceCount)).toEqual([2, 0]);
+  });
+
+  it("lists first-year courses under their semesters", async () => {
+    const { Course } = getDb();
+    await Course.create({ code: "TEST101", title: "First year", semester: 1 });
+    await Course.create({ code: "TEST201", title: "First year, spring", semester: 2 });
+    const result = await listCoursesByYear(null, 1);
+    expect(result.map((s) => s.courses.map((c) => c.code))).toEqual([["TEST101"], ["TEST201"]]);
+  });
+
+  it("accepts the year as a string, as it arrives from a URL", async () => {
+    await seed();
+    expect((await listCoursesByYear(null, "2" as never)).map((s) => s.semester)).toEqual([3, 4]);
+  });
+
   it("does not mix in other years", async () => {
     await seed();
     const result = await listCoursesByYear(null, 3);
