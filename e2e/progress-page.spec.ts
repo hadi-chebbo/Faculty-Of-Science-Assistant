@@ -50,7 +50,7 @@ test("the demo student sees their courses by semester with rings and chapter row
   await signInTo(page, "/progress");
   await expect(page.getByRole("heading", { level: 1, name: "Your progress" })).toBeVisible();
   await expect(page.getByText("Based only on the files you marked as done.")).toBeVisible();
-  await expect(page.getByRole("heading", { level: 2, name: "Semester 6" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Third year" })).toBeVisible();
 
   const card = page.getByRole("listitem").filter({ has: page.getByRole("link", { name: "DEMO610 Sample Full Course D" }) });
   await expect(card.getByRole("link", { name: "DEMO610 Sample Full Course D" })).toHaveAttribute("href", "/courses/DEMO610");
@@ -62,7 +62,11 @@ test("the demo student sees their courses by semester with rings and chapter row
   await expect(card).toContainText("4/4");
   await expect(card).toContainText(/2 · Sample chapter 2/);
   await expect(card).toContainText(/2\/\d+/);
-  await expect(page.getByRole("heading", { level: 2, name: "Semester 4" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Second year" })).toBeVisible();
+  // Year headings run in order, and the semester is a muted detail on the card.
+  await expect(page.getByRole("main").getByRole("heading", { level: 2 })).toHaveText(["Second year", "Third year"]);
+  await expect(card).toContainText("Semester 2");
+  await expect(page.getByRole("main")).not.toContainText(/Semester [3-6]/);
   if (!isMobile) {
     await expect(page.getByRole("navigation", { name: "Breadcrumb" })).toContainText("Progress");
   }

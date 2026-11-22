@@ -7,7 +7,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationNext, Paginati
 import type { ExamSession, ResourceType } from "@/db/constants";
 import { descriptionSnippet, markText } from "@/lib/highlight";
 import { RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
-import { YEARS, yearHref, yearLabel } from "@/lib/years";
+import { YEARS, courseYearSemesterLabel, yearHref, yearLabel } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
 import { cn } from "@/lib/utils";
 import { SEARCH_CHIPS, type SearchChip } from "@/services/search/query";
@@ -266,7 +266,7 @@ function Pager({ outcome, params }: { outcome: SearchOutcome; params: SearchPara
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 function CourseCard({ course, terms }: { course: CourseHit; terms: string[] }) {
-  const details = [`Semester ${course.semester}`, course.chapterCount > 0 && plural(course.chapterCount, "chapter"), plural(course.fileCount, "file")].filter(Boolean);
+  const details = [courseYearSemesterLabel(course.semester), course.chapterCount > 0 && plural(course.chapterCount, "chapter"), plural(course.fileCount, "file")].filter(Boolean);
   return (
     <li className="overflow-hidden rounded-xl border bg-card transition-colors hover:border-primary/40">
       <Link href={`/courses/${encodeURIComponent(course.code)}`} className={`group/hit flex items-center gap-3.5 p-3.5 hover:bg-muted/60 focus-visible:bg-muted/60 ${FOCUS}`}>

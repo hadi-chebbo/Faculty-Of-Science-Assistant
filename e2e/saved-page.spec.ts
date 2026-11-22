@@ -122,7 +122,7 @@ test("courses are listed by semester and code, not by the order of saving", asyn
   await expect(page.getByText("Nothing saved yet.")).toBeVisible();
 
   const origin = new URL(baseURL!).origin;
-  // Saved later, listed first: DEMO301 (semester 3) before DEMO501 (semester 5).
+  // Saved later, listed first: DEMO301 (second year) before DEMO501 (third year).
   for (const code of ["DEMO501", "DEMO301"]) {
     const response = await page.request.put(`/api/v1/saved/${await resourceId(code, "Sample notes")}`, { headers: { origin } });
     expect(response.status()).toBe(204);
@@ -131,7 +131,7 @@ test("courses are listed by semester and code, not by the order of saving", asyn
   const headings = page.getByRole("main").getByRole("heading", { level: 2 });
   await expect(headings).toHaveCount(2);
   await expect(headings.nth(0)).toContainText("DEMO301");
-  await expect(headings.nth(0)).toContainText("Semester 3");
+  await expect(headings.nth(0)).toContainText("Second year · Semester 1");
   await expect(headings.nth(1)).toContainText("DEMO501");
 });
 

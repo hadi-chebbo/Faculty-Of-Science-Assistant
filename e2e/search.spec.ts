@@ -174,7 +174,7 @@ test("typing updates the results and the address without adding history, and Bac
   const first = section(page, "Courses").getByRole("link").first();
   await expect(first).toContainText("DEMO301");
   await expect(first).toContainText("Sample Course A");
-  await expect(first).toContainText("Semester 3");
+  await expect(first).toContainText("Second year · Semester 1");
 
   // Changing the text again replaces the address in place.
   const before = await page.evaluate(() => history.length);
@@ -221,7 +221,7 @@ test("a course code finds its course first, with or without a space and in any c
 
 test("a course card says the semester, the chapters and the files", async ({ page }) => {
   await page.goto("/search?q=demo301");
-  await expect(section(page, "Courses").getByRole("link").first()).toContainText(/Semester 3 · 3 chapters · \d+ files?/);
+  await expect(section(page, "Courses").getByRole("link").first()).toContainText(/Second year · Semester 1 · 3 chapters · \d+ files?/);
 });
 
 test("a chapter result links to the chapter page", async ({ page }) => {

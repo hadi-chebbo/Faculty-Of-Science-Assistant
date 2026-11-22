@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   YEARS,
+  courseYearSemesterLabel,
+  groupSemestersByYear,
+  storedSemester,
   parseYear,
   semesterAnchor,
   semesterInYear,
@@ -72,5 +75,29 @@ describe("years", () => {
     expect(yearHref(2, 3)).toBe("/years/2#semester-1");
     expect(yearHref(2, 4)).toBe("/years/2#semester-2");
     expect(yearHref(3, 6)).toBe("/years/3#semester-2");
+  });
+});
+
+describe("year labels elsewhere", () => {
+  it("combines year and semester", () => {
+    expect([1, 2, 3, 4, 5, 6].map(courseYearSemesterLabel)).toEqual([
+      "First year · Semester 1", "First year · Semester 2",
+      "Second year · Semester 1", "Second year · Semester 2",
+      "Third year · Semester 1", "Third year · Semester 2",
+    ]);
+  });
+
+  it("maps a year and a place in it to the stored number", () => {
+    expect([storedSemester(1, 1), storedSemester(2, 2), storedSemester(3, 1)]).toEqual([1, 4, 5]);
+  });
+
+  it("groups semesters by year, skipping empty years and duplicates", () => {
+    expect(groupSemestersByYear([5, 3, 3, 1])).toEqual([
+      { year: 1, semesters: [1] },
+      { year: 2, semesters: [3] },
+      { year: 3, semesters: [5] },
+    ]);
+    expect(groupSemestersByYear([4, 3])).toEqual([{ year: 2, semesters: [3, 4] }]);
+    expect(groupSemestersByYear([])).toEqual([]);
   });
 });
