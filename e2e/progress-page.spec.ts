@@ -124,19 +124,24 @@ test("on a phone the page fits the screen and the milestones row scrolls inside 
   expect(scrollsInside).toBe(true);
 });
 
-test("a semester page rings the started courses for the student, and nothing for a visitor", async ({ page, browser, baseURL }) => {
-  await signInTo(page, "/semesters/6");
+test("a year page rings the started courses for the student, and nothing for a visitor", async ({ page, browser, baseURL }) => {
+  const progressRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/v1/progress")) progressRequests.push(request.url());
+  });
+  await signInTo(page, "/years/3");
   const ring = page.getByRole("img", { name: /^Your progress: \d+% done$/ });
   await expect(ring).toHaveCount(1);
   const card = page.getByRole("listitem").filter({ has: page.getByRole("link", { name: /DEMO610/ }) });
   await expect(card.getByRole("img", { name: /^Your progress/ })).toBeVisible();
+  expect(progressRequests.filter((url) => new URL(url).pathname === "/api/v1/progress")).toHaveLength(1);
 
   const visitor = await browser.newContext({ baseURL });
   try {
     const anon = await visitor.newPage();
     const requests: string[] = [];
     anon.on("request", (request) => requests.push(request.url()));
-    await anon.goto("/semesters/6");
+    await anon.goto("/years/3");
     await expect(anon.getByRole("link", { name: /DEMO610/ })).toBeVisible();
     await anon.waitForLoadState("networkidle");
     await expect(anon.getByRole("img", { name: /^Your progress/ })).toHaveCount(0);

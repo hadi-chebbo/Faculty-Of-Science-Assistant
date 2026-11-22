@@ -58,19 +58,19 @@ test("the Search nav item leads to /search and is the current page there", async
   await expect(nav.getByRole("link", { name: "Exams", exact: true })).not.toHaveAttribute("aria-current", "page");
 });
 
-test("before typing it shows hints and a link to every semester", async ({ page }) => {
+test("before typing it shows hints and a link to every year", async ({ page }) => {
   await page.goto("/search");
   await expect(page.getByText("Try a course code (DEMO301), a topic (graphs), or an exam (final 2024). Accents don't matter.")).toBeVisible();
-  for (const semester of [1, 2, 3, 4, 5, 6]) {
-    await expect(page.getByRole("link", { name: `Semester ${semester}`, exact: true })).toHaveAttribute("href", `/semesters/${semester}`);
+  for (const [year, label] of [["1", "First year"], ["2", "Second year"], ["3", "Third year"]]) {
+    await expect(page.getByRole("link", { name: label, exact: true })).toHaveAttribute("href", `/years/${year}`);
   }
   // One character is still too short: the same hints, no results.
   await page.goto("/search?q=d");
-  await expect(page.getByText("Or browse a semester")).toBeVisible();
+  await expect(page.getByText("Or browse a year")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Result types" })).toHaveCount(0);
 
-  await page.getByRole("link", { name: "Semester 5", exact: true }).click();
-  await expect(page).toHaveURL(/\/semesters\/5$/);
+  await page.getByRole("link", { name: "Third year", exact: true }).click();
+  await expect(page).toHaveURL(/\/years\/3$/);
 });
 
 test("a session word beside plain words is text, not a filter", async ({ page }) => {
@@ -186,7 +186,7 @@ test("typing updates the results and the address without adding history, and Bac
   // Clearing goes back to the hints.
   await page.getByRole("button", { name: "Clear search" }).click();
   await expect(page).toHaveURL(/\/search$/);
-  await expect(page.getByText("Or browse a semester")).toBeVisible();
+  await expect(page.getByText("Or browse a year")).toBeVisible();
   await expect(box).toHaveValue("");
 
   // No history entry per keystroke: one Back leaves the search page for the one before it.
