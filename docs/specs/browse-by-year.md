@@ -4,6 +4,14 @@ by year instead of by semester. Decisions come from a grilling session (two roun
 the year page of variant A and the Home card of variant F, "course code chips", 2026-11-18). Terms
 follow `GLOSSARY.md` (**Year** is new).
 
+> **Amended 2026-11-22 (owner).** Students never see a semester number from 1 to 6 (or 8): inside a
+> year the semesters are "Semester 1" and "Semester 2" (the stored number stays 1–6; its place in
+> the year is derived). Where both are shown: "Second year · Semester 1". Year page anchors are
+> `#semester-1` / `#semester-2`. The admin course form and the Exams filter choose a year and a
+> semester of that year (ticket 3). A fourth year, **Master 1** ("Master 1", `/years/m1`, stored
+> semesters 7 and 8), follows in its own ticket after ticket 2; ticket 2 must not assume exactly
+> three years.
+
 ## Problem Statement
 
 The platform only covers semesters 3 to 6. First-year students (semesters 1 and 2) find nothing for
@@ -119,8 +127,9 @@ Scope and model:
   it; no page writes the wording itself.
 
 Wording:
-- A year is always written "First year", "Second year", "Third year". A semester is written in full,
-  "Semester 3". Where both are shown: "Second year · Semester 3". Never "Year 2", "L2" or "S3" in
+- A year is always written "First year", "Second year", "Third year" (and later "Master 1"). A
+  semester is written in full and numbered within its year, "Semester 1" or "Semester 2". Where both
+  are shown: "Second year · Semester 1". Never "Year 2", "L2", "S3" or a semester number above 2 in
   student-facing text.
 - "Academic year" (2024-2025, exams) is unchanged and keeps its own label.
 
@@ -146,7 +155,7 @@ Home (ticket 2):
 Year page (ticket 2):
 - `/years/1`, `/years/2`, `/years/3`, prerendered; anything else is the 404 page. Breadcrumb Home ›
   Second year, title "Second year" (with the usual yellow bar), then one section per semester with a
-  plain "Semester 3" heading (id `semester-3`, scroll margin so a jump does not hide it under the
+  plain "Semester 1" / "Semester 2" heading (id `semester-1` / `semester-2`, scroll margin so a jump does not hide it under the
   bar), and the course cards exactly as on today's semester page (code, title, resource count,
   chevron, the signed-in progress ring loaded from the one `/api/v1/progress` request). A semester
   with no course says "No courses yet.". No intro line, no counts beside the headings (owner: keep it
@@ -154,22 +163,22 @@ Year page (ticket 2):
 - A course service returns a year's courses grouped by semester (both semesters always present, in
   order, each with its courses in code order and their visible-resource counts), in a fixed number of
   queries. The year page reads it; the page still never reads the session.
-- `/semesters/N` for N from 1 to 6 redirects permanently to `/years/Y#semester-N`. Other values are
+- `/semesters/N` for N from 1 to 6 redirects permanently to `/years/Y#semester-K` (K = 1 for an odd N, 2 for an even one). Other values are
   the 404 page. The semester page itself is removed.
 - The Browse navigation item is active on `/years/…` (and still on Home and course pages).
 - Breadcrumbs on the course page, the chapter page and the reader go through the year: Home › Second
-  year › …, the year crumb linking to `/years/2#semester-3`.
+  year › …, the year crumb linking to `/years/2#semester-1`.
 
 Year labels elsewhere (ticket 3):
 - Exams: the Semester filter stays (`?semester=N`, shared links keep working); its options are
   grouped by year (native option groups "First year", "Second year", "Third year"), still only
   semesters that have a visible exam. The Course dropdown keeps its semester groups.
 - Search: under 2 characters, "Or browse a year" with three links to the year pages; a course result
-  says "Second year · Semester 3" before its chapter and file counts.
+  says "Second year · Semester 1" before its chapter and file counts.
 - Progress: My courses are grouped under year headings ("Second year"), year then semester then code;
-  each course card shows its semester muted ("Semester 3"). The progress API is unchanged (it already
+  each course card shows its semester muted ("Semester 1"). The progress API is unchanged (it already
   carries each course's semester).
-- Saved: each course group's muted line says "Second year · Semester 3". The saved API is unchanged.
+- Saved: each course group's muted line says "Second year · Semester 1". The saved API is unchanged.
 
 Admin (ticket 1):
 - The admin course form's Semester select offers 1 to 6 labelled "Semester 1 (First year)" …

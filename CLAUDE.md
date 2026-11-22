@@ -16,7 +16,9 @@ fast, mobile-friendly place to find course material and previous exams.
   University or Branch entities or abstractions. Other majors may come later;
   add the entity then, by migration.
 - Semesters covered: S1–S6, the three years of the programme (owner, 2026-11-18). Students browse by year;
-  spec `docs/specs/browse-by-year.md`.
+  spec `docs/specs/browse-by-year.md`. Inside a year students see "Semester 1" / "Semester 2", never the
+  stored 1–6 number (owner, 2026-11-22). Master 1 (stored semesters 7–8, `/years/m1`) is planned as a fourth
+  year, ticket #154.
 - Built and operated by one developer, who is also the only admin and the only
   person who uploads content.
 - Target: usable MVP live before partial exams (around early December 2026).
