@@ -32,10 +32,10 @@ async function seed() {
 }
 
 describe("getHomeStats", () => {
-  it("gives zeros and six ordered semesters for an empty database", async () => {
+  it("gives zeros and one ordered entry per year for an empty database", async () => {
     expect(await getHomeStats(null)).toEqual({
       totals: { courses: 0, chapters: 0, resources: 0, exams: 0 },
-      semesters: [1, 2, 3, 4, 5, 6].map((semester) => ({ semester, courseCount: 0, resourceCount: 0 })),
+      years: [1, 2, 3].map((year) => ({ year, courseCount: 0, resourceCount: 0, courseCodes: [] })),
     });
   });
 
@@ -59,16 +59,23 @@ describe("getHomeStats", () => {
     expect(stats.totals.resources).toBe(0);
   });
 
-  it("puts per-semester counts in the right semester, in order", async () => {
+  it("puts per-year counts and codes in the right year, in order", async () => {
     await seed();
-    expect((await getHomeStats(null)).semesters).toEqual([
-      { semester: 1, courseCount: 0, resourceCount: 0 },
-      { semester: 2, courseCount: 0, resourceCount: 0 },
-      { semester: 3, courseCount: 2, resourceCount: 2 },
-      { semester: 4, courseCount: 0, resourceCount: 0 },
-      { semester: 5, courseCount: 1, resourceCount: 1 },
-      { semester: 6, courseCount: 0, resourceCount: 0 },
+    expect((await getHomeStats(null)).years).toEqual([
+      { year: 1, courseCount: 0, resourceCount: 0, courseCodes: [] },
+      { year: 2, courseCount: 2, resourceCount: 2, courseCodes: ["TEST301", "TEST302"] },
+      { year: 3, courseCount: 1, resourceCount: 1, courseCodes: ["TEST501"] },
     ]);
-    expect((await getHomeStats(admin)).semesters.map((s) => s.resourceCount)).toEqual([0, 0, 3, 0, 2, 0]);
+    expect((await getHomeStats(admin)).years.map((y) => y.resourceCount)).toEqual([0, 3, 2]);
+  });
+
+  it("orders codes by semester, then code, and keeps a year with only courses without files", async () => {
+    const { Course } = getDb();
+    await Course.create({ code: "TEST100", title: "S2 course", semester: 2 });
+    await Course.create({ code: "TEST900", title: "S1 course", semester: 1 });
+    await Course.create({ code: "TEST200", title: "S1 course b", semester: 1 });
+    const [first] = (await getHomeStats(null)).years;
+    expect(first.courseCodes).toEqual(["TEST200", "TEST900", "TEST100"]);
+    expect(first.resourceCount).toBe(0);
   });
 });

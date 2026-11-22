@@ -197,6 +197,9 @@ test("choosing a lecturer narrows the list, updates the address and can be clear
   await page.goto("/exams");
   await expect(page.getByLabel("Lecturer")).toHaveValue("");
   await choose(page, "Lecturer", "ada-example", /\/exams\?lecturer=ada-example$/);
+  // The address changes before the filtered list arrives, and the old "45 exams" also matches a count, so wait
+  // until the old rows are gone (every row shows the lecturer) before counting.
+  await expect(rows(page).filter({ hasNotText: "Dr. Ada Example" })).toHaveCount(0);
   await expect(page.getByText(/^\d+ exams?$/)).toBeVisible();
   const count = await rows(page).count();
   expect(count).toBeGreaterThan(0);

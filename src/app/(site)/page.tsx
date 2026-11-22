@@ -1,19 +1,19 @@
 import { Suspense } from "react";
-import { StatsAndSemestersSkeleton } from "@/components/site/skeletons";
+import { StatsAndYearsSkeleton } from "@/components/site/skeletons";
 import { Hero } from "./home/hero";
 import { ExamBand, HowItWorks, Questions, WhatYouWillFind } from "./home/sections";
 import { ProgressBand } from "./home/progress-band";
-import { StatsAndSemesters } from "./home/stats-and-semesters";
+import { StatsAndYears } from "./home/stats-and-years";
 
-// Everything is static except the numbers strip and the semester cards, which read the database
+// Everything is static except the numbers strip and the year cards, which read the database
 // inside one Suspense boundary (one service call feeds both).
 export default function Home() {
   return (
     <main className="page-container flex flex-col gap-12 py-6 md:gap-14 md:py-8">
       <Hero />
       <ProgressBand />
-      <Suspense fallback={<StatsAndSemestersSkeleton />}>
-        <StatsAndSemesters />
+      <Suspense fallback={<StatsAndYearsSkeleton />}>
+        <StatsAndYears />
       </Suspense>
       <HowItWorks />
       <WhatYouWillFind />

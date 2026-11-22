@@ -8,6 +8,7 @@ import { ResourceRow } from "@/components/site/resource-row";
 import { CourseSkeleton } from "@/components/site/skeletons";
 import { StateBlock } from "@/components/site/state-block";
 import { RESOURCE_TYPE_LABELS } from "@/lib/labels";
+import { yearCrumb } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
 import { getChapterPage } from "@/services/courses/courses";
 import type { ChapterLink } from "@/services/courses/types";
@@ -58,7 +59,7 @@ async function ChapterContent({
       <Crumbs
         items={[
           { label: "Home", href: "/" },
-          { label: `Semester ${course.semester}`, href: `/semesters/${course.semester}` },
+          yearCrumb(course.semester),
           { label: course.code, href: courseHref },
           { label: `Chapter ${chapter.position}` },
         ]}

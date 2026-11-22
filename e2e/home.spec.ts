@@ -10,11 +10,11 @@ test("the headline and the two buttons", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Previous exams" }).first()).toHaveAttribute("href", "/exams");
 });
 
-test("Browse courses jumps to the semesters section", async ({ page }) => {
+test("Browse courses jumps to the years section", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: "Browse courses" }).click();
-  await expect(page).toHaveURL(/#semesters$/);
-  await expect(page.getByRole("heading", { name: "Choose your semester" })).toBeInViewport();
+  await expect(page).toHaveURL(/#years$/);
+  await expect(page.getByRole("heading", { name: "Choose your year" })).toBeInViewport();
 });
 
 test("the numbers strip shows four labels with numbers", async ({ page }) => {
@@ -26,21 +26,20 @@ test("the numbers strip shows four labels with numbers", async ({ page }) => {
   }
 });
 
-test("six semester cards, S3 links to its page and shows counts", async ({ page }) => {
+test("three year cards, the second links to its page and shows counts", async ({ page }) => {
   await page.goto("/");
-  const cards = page.locator("#semesters li");
-  await expect(cards).toHaveCount(6);
-  const s3 = page.locator("#semesters").getByRole("link", { name: /S3/ });
-  await expect(s3).toHaveAttribute("href", "/semesters/3");
-  await expect(s3).toContainText("Autumn");
-  await expect(s3).toContainText("Semester 3");
-  await expect(s3).toContainText(/\d+ courses? · \d+ files?/);
-  await expect(s3).toContainText("Open");
+  await expect(page.locator("#years li")).toHaveCount(3);
+  const second = page.locator("#years").getByRole("link", { name: /Second year/ });
+  await expect(second).toHaveAttribute("href", "/years/2");
+  await expect(second).toContainText("DEMO301");
+  await expect(second).toContainText(/\d+ courses? · \d+ files?/);
+  await expect(second).toContainText("Browse");
+  await expect(page.locator("#years")).not.toContainText(/semester/i);
 });
 
 test("the steps, the features and the sections", async ({ page }) => {
   await page.goto("/");
-  const steps = page.getByRole("list").filter({ has: page.getByRole("heading", { name: "Pick your semester" }) });
+  const steps = page.getByRole("list").filter({ has: page.getByRole("heading", { name: "Pick your year" }) });
   await expect(steps.locator("> li")).toHaveCount(3);
   await expect(page.getByRole("heading", { name: "Open a course" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Study, or go straight to exams" })).toBeVisible();
@@ -88,7 +87,7 @@ test("the page makes no claim about features that do not exist", async ({ page }
 
 test("nothing scrolls sideways", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("#semesters li").first()).toBeVisible();
+  await expect(page.locator("#years li").first()).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });

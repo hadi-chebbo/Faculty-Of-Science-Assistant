@@ -3,7 +3,7 @@ import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { NotFoundError, ValidationError } from "../errors";
 import type { Viewer } from "../viewer";
-import { getChapterPage, getCourseByCode, listCourses, listCoursesBySemester } from "./courses";
+import { getChapterPage, getCourseByCode, listCourses, listCoursesByYear } from "./courses";
 
 const SAMPLE_URL = "https://example.com/sample";
 const SAMPLE_KEY = "resources/sample.pdf";
@@ -42,57 +42,71 @@ describe("listCourses", () => {
   });
 });
 
-describe("listCoursesBySemester", () => {
-  it("returns only that semester, ordered by code", async () => {
+describe("listCoursesByYear", () => {
+  it("returns both semesters in order with courses by code and visible counts", async () => {
     await seed();
-    const list = await listCoursesBySemester(null, 3);
-    expect(list.map((c) => c.code)).toEqual(["TEST301", "TEST302"]);
+    expect(await listCoursesByYear(null, 2)).toEqual([
+      {
+        semester: 3,
+        courses: [
+          { code: "TEST301", title: "Course A", resourceCount: 2 },
+          { code: "TEST302", title: "Course B", resourceCount: 0 },
+        ],
+      },
+      { semester: 4, courses: [] },
+    ]);
   });
 
-  it("returns an empty list for a semester with no courses", async () => {
+  it("counts drafts for an admin", async () => {
     await seed();
-    expect(await listCoursesBySemester(null, 6)).toEqual([]);
+    const [first] = await listCoursesByYear(admin, 2);
+    expect(first.courses.map((c) => c.resourceCount)).toEqual([3, 1]);
   });
 
-  it("counts only published resources for anonymous visitors and students", async () => {
-    await seed();
-    for (const viewer of [null, student]) {
-      const list = await listCoursesBySemester(viewer, 3);
-      expect(list.map((c) => c.resourceCount)).toEqual([2, 0]);
-    }
+  it("keeps both semesters when the year has no course", async () => {
+    expect(await listCoursesByYear(null, 1)).toEqual([
+      { semester: 1, courses: [] },
+      { semester: 2, courses: [] },
+    ]);
   });
 
-  it("counts everything for an admin", async () => {
+  it("counts only published resources for a signed-in student too", async () => {
     await seed();
-    const list = await listCoursesBySemester(admin, 3);
-    expect(list.map((c) => c.resourceCount)).toEqual([3, 1]);
+    const [first] = await listCoursesByYear(student, 2);
+    expect(first.courses.map((c) => c.resourceCount)).toEqual([2, 0]);
   });
-});
 
-describe("listCoursesBySemester input", () => {
-  it("works for the first-year semesters", async () => {
+  it("lists first-year courses under their semesters", async () => {
     const { Course } = getDb();
     await Course.create({ code: "TEST101", title: "First year", semester: 1 });
     await Course.create({ code: "TEST201", title: "First year, spring", semester: 2 });
-    expect((await listCoursesBySemester(null, 1)).map((c) => c.code)).toEqual(["TEST101"]);
+    const result = await listCoursesByYear(null, 1);
+    expect(result.map((s) => s.courses.map((c) => c.code))).toEqual([["TEST101"], ["TEST201"]]);
   });
 
-  it("rejects a semester that is not 1 to 6 with a ValidationError", async () => {
-    for (const semester of [NaN, 0, 7, 3.5]) {
-      await expect(listCoursesBySemester(null, semester)).rejects.toBeInstanceOf(ValidationError);
-    }
-  });
-
-  it("accepts the semester as a string, as it arrives from a URL", async () => {
+  it("accepts the year as a string, as it arrives from a URL", async () => {
     await seed();
-    expect(await listCoursesBySemester(null, "5" as never)).toHaveLength(1);
+    expect((await listCoursesByYear(null, "2" as never)).map((s) => s.semester)).toEqual([3, 4]);
+  });
+
+  it("does not mix in other years", async () => {
+    await seed();
+    const result = await listCoursesByYear(null, 3);
+    expect(result.map((s) => s.semester)).toEqual([5, 6]);
+    expect(result[0].courses.map((c) => c.code)).toEqual(["TEST501"]);
+  });
+
+  it("rejects an unusable year with a ValidationError", async () => {
+    for (const year of [0, 4, NaN, 1.5]) {
+      await expect(listCoursesByYear(null, year as never)).rejects.toBeInstanceOf(ValidationError);
+    }
   });
 });
 
 describe("public course DTOs", () => {
   it("do not expose a course id", async () => {
     await seed();
-    const [first] = await listCoursesBySemester(null, 3);
+    const [first] = (await listCoursesByYear(null, 2))[0].courses;
     expect(first).not.toHaveProperty("id");
     expect(await getCourseByCode(null, "TEST301")).not.toHaveProperty("id");
   });

@@ -26,12 +26,12 @@ export function Hero() {
           Every course, chapter and past exam in one place.
         </h1>
         <p className="mt-4 max-w-[46ch] text-[1.0625rem]">
-          Lectures, notes, exercises and previous exams for semesters 3 to 6, organised the way your courses are taught.
+          Lectures, notes, exercises and previous exams for all three years of the programme, organised the way your courses are taught.
           Stop digging through Drive links.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Button asChild size="lg" className="h-11 px-5 text-base">
-            <Link href="#semesters">Browse courses</Link>
+            <Link href="#years">Browse courses</Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="h-11 px-5 text-base">
             <Link href="/exams">Previous exams</Link>

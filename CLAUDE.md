@@ -16,7 +16,10 @@ fast, mobile-friendly place to find course material and previous exams.
   University or Branch entities or abstractions. Other majors may come later;
   add the entity then, by migration.
 - Semesters covered: S1–S6, the three years of the programme (owner, 2026-11-18). Students browse by year;
-  spec `docs/specs/browse-by-year.md`.
+  spec `docs/specs/browse-by-year.md`. Inside a year students see "Semester 1" / "Semester 2", never the
+  stored 1–6 number (owner, 2026-11-22; Home, year pages and breadcrumbs follow it, the Exams, Search,
+  Progress, Saved and admin labels change in #151). Master 1 (stored semesters 7–8, `/years/m1`) is planned as a fourth
+  year, ticket #154.
 - Built and operated by one developer, who is also the only admin and the only
   person who uploads content.
 - Target: usable MVP live before partial exams (around early December 2026).
@@ -24,7 +27,7 @@ fast, mobile-friendly place to find course material and previous exams.
 ## MVP scope
 
 In:
-- Browse semesters → courses → resources, grouped by resource type.
+- Browse years → courses → resources, grouped by resource type.
 - Previous exams filterable by course, academic year and session.
 - Search over course codes, titles and resource metadata.
 - Read every resource on a page of our own (the reader), and download it.
@@ -223,14 +226,28 @@ mock exam generation, personalization.
 - Page width: every site page, the header and the footer use the `page-container` utility (`globals.css`): content up to 1280px (`max-w-7xl`), centred, side padding 16px on a phone, 24px from sm, 32px from lg, so the edges never move between pages; the reader follows it too. The account pages keep their full-screen split.
 - Home is a landing page: a hero (headline, description, "Browse courses" and "Previous exams"
   buttons, three facts, and a decorative course preview), a numbers strip (only from 5 courses), the
-  semester cards (an empty semester is a muted card, not a link), how it works, what you will find,
+  "Choose your year" cards (`#years`; one per entry of `YEARS`, three columns from md: a filled primary circle with the
+  year number, "Second year", up to four course-code chips and "+N more", "7 courses · 101 files" and "Browse →", lift and
+  primary border on hover; a year with no course is a muted dashed card, not a link, "No courses yet"; wording in
+  `year-card.ts`, data from `getHomeStats().years`: year, course count, visible-file count, codes by semester then code),
+  how it works, what you will find,
   an "Exams coming up?" band with a link per session, and four questions. Only the strip and the
-  cards read the database. For a signed-in student a "Your progress" band (`ProgressBand`, `data-personal`)
+  cards read the database. The texts cover all three years; no semester numbers are shown. For a signed-in student a "Your progress" band (`ProgressBand`, `data-personal`)
   follows the hero: loaded by the browser from `GET /api/v1/progress` after the page shows (Home stays static;
   a visitor gets no band and no request), "N active days this week", up to three of My courses by latest
   completion (ring, code, title, "x of y files · P%" or "✓ Finished", or "Exams: x of y done" for an
   exams-only course) and "See all ›" to `/progress`; with no My courses it says "Mark files as done in the
   reader to track your progress here." and leaves "See all" out. No claims about features that do not exist.
+- Year page (`/years/1..3`, prerendered, any other value is the 404 page; `src/app/(site)/years/[year]/page.tsx`): breadcrumb
+  Home › Second year, title "Second year", then an `h2` "Semester 1" (`id="semester-1"`, scroll margin) and "Semester 2"
+  (`semester-2`), each with the course cards (code, title, "N resources", the signed-in progress ring from the one shared
+  `GET /api/v1/progress` request) or "No courses yet.". Students never see the stored 1–6 number: `semesterInYear`,
+  `semesterLabel` and `yearHref(year, semester?)` in `src/lib/years.ts` (the one place year URLs are built; anything
+  that lists years iterates `YEARS`, so a fourth year can be added). Backed by `listCoursesByYear(viewer, year)`
+  (`src/services/courses/courses.ts`; both semesters always present). The page never reads the session. Old
+  `/semesters/1..6` links redirect permanently to `/years/Y#semester-K` (K = 1 for odd, 2 for even); other values are
+  the 404 page. The Browse nav item is active on `/years/…`. Breadcrumbs of the course page, chapter page and reader read
+  Home › Second year › …, the year crumb linking to `/years/Y#semester-K`.
 - Course page: for a course with chapters, three areas, one visible at a time and chosen by
   links that live in the URL: Chapters (default), Previous exams (`?tab=exams`) and Other
   material (`?tab=other`, only when there is material with no chapter). Chapters are cards, each
@@ -280,7 +297,7 @@ mock exam generation, personalization.
   with or without a space ("demo 301"); there is no typo tolerance. The query and the chip live in
   the URL; results follow the typing after about 300 ms (`router.replace`, no history entry per
   keystroke), and without JavaScript it is a plain GET form with a Search button. Under 2
-  characters it shows hints and the four semester links. Results are Courses, Chapters and Files
+  characters it shows hints and "Or browse a year" with one link per year. Results are Courses, Chapters and Files
   (the course-page resource row), each with its count and its top 5 plus "Show all N files"
   (`&show=files`, 20 per page); empty sections are hidden. Words that name a type, session or year
   ("exam", "cours", "final", "partiel", "2024", "2024-2025"; a session word only with a year or
@@ -399,7 +416,7 @@ mock exam generation, personalization.
   bars are `aria-hidden`. Empty: "Nothing marked as done yet. Open a file and press Mark as done to see your progress
   here." and "Browse courses". Backed by `getProgressOverview` (`src/services/progress`; one grouped count over all My
   courses, sharing its counting with `getCourseProgress`) and `GET /api/v1/progress` (`{ courses: [{ code, title,
-  semester, lastCompletedAt, course, exams, chapters, general }] }`). Semester pages (`/semesters/N`) show a small ring
+  semester, lastCompletedAt, course, exams, chapters, general }] }`). Year pages (`/years/N`) show a small ring
   (34px, `data-personal`, labelled "Your progress: 62% done") at the right of the course card of each started course,
   loaded by the browser after the page shows from the same `GET /api/v1/progress` (`useProgressOverview`, one request
   per page, none for a visitor); a finished course shows a check in the ring.

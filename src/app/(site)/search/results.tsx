@@ -4,10 +4,10 @@ import { ResourceRow } from "@/components/site/resource-row";
 import { Highlighted } from "@/components/site/highlighted";
 import { Button } from "@/components/ui/button";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { SEMESTER_MAX, SEMESTER_MIN } from "@/db/constants";
 import type { ExamSession, ResourceType } from "@/db/constants";
 import { descriptionSnippet, markText } from "@/lib/highlight";
 import { RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
+import { YEARS, yearHref, yearLabel } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
 import { cn } from "@/lib/utils";
 import { SEARCH_CHIPS, type SearchChip } from "@/services/search/query";
@@ -28,8 +28,6 @@ const CHIP_LABELS: Record<SearchChip, string> = {
   exam: "Exams",
 };
 
-const SEMESTERS = Array.from({ length: SEMESTER_MAX - SEMESTER_MIN + 1 }, (_, i) => SEMESTER_MIN + i);
-
 // What shows before there is a query to search for (fewer than two characters).
 export function SearchHints() {
   return (
@@ -39,15 +37,15 @@ export function SearchHints() {
         <b className="font-semibold text-heading">final 2024</b>). Accents don&apos;t matter.
       </p>
       <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Or browse a semester</h2>
-        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {SEMESTERS.map((semester) => (
-            <li key={semester}>
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Or browse a year</h2>
+        <ul className="grid gap-2 sm:grid-cols-3">
+          {YEARS.map((year) => (
+            <li key={year}>
               <Link
-                href={`/semesters/${semester}`}
+                href={yearHref(year)}
                 className={`flex min-h-12 items-center rounded-lg border bg-card px-4 font-semibold text-heading transition-colors hover:border-primary/40 hover:bg-muted/60 ${FOCUS}`}
               >
-                Semester {semester}
+                {yearLabel(year)}
               </Link>
             </li>
           ))}

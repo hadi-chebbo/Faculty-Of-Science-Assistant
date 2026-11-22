@@ -6,7 +6,8 @@ import { lecturerInclude, resourceOrder, toResourceListItem, visibleSolutionsOf 
 import { parseInput } from "../validation";
 import { visibleResources } from "../visibility";
 import type { Viewer } from "../viewer";
-import { courseCodeSchema, semesterSchema } from "./schemas";
+import { semestersOfYear } from "@/lib/years";
+import { courseCodeSchema, yearSchema } from "./schemas";
 import type { ResourceListItem } from "../resources/types";
 import { lecturerSlugSchema } from "../lecturers/schemas";
 import type { LecturerRef } from "../lecturers/types";
@@ -15,32 +16,39 @@ import type {
   CourseDetail,
   CourseOption,
   CourseOutline,
-  CourseSummary,
   LecturerCount,
   ResourceGroup,
 } from "./types";
 
-export async function listCoursesBySemester(viewer: Viewer, semester: number): Promise<CourseSummary[]> {
-  const parsedSemester = parseInput(semesterSchema, semester);
+export interface YearSemester {
+  semester: number; // the stored number; the page shows it as "Semester 1" or "Semester 2"
+  courses: { code: string; title: string; resourceCount: number }[];
+}
+
+// A year's courses grouped by its two semesters (both always present, in order), courses by code, with visible-resource
+// counts. Two queries whatever the amount of data.
+export async function listCoursesByYear(viewer: Viewer, year: number): Promise<YearSemester[]> {
+  const parsedYear = parseInput(yearSchema, year);
+  const semesters = semestersOfYear(parsedYear);
   const { Course, Resource } = getDb();
 
-  const courses = await Course.findAll({ where: { semester: parsedSemester }, order: [["code", "ASC"]] });
-  if (courses.length === 0) return [];
-
-  // One grouped query for all counts, using the same visibility rule as the lists.
-  const counts = (await Resource.findAll({
-    attributes: ["courseId", [fn("count", col("id")), "count"]],
-    where: { courseId: courses.map((c) => c.id), ...visibleResources(viewer) },
-    group: ["courseId"],
-    raw: true,
-  })) as unknown as { courseId: string; count: string }[];
+  const courses = await Course.findAll({ where: { semester: semesters }, order: [["code", "ASC"]] });
+  const counts =
+    courses.length === 0
+      ? []
+      : ((await Resource.findAll({
+          attributes: ["courseId", [fn("count", col("id")), "count"]],
+          where: { courseId: courses.map((c) => c.id), ...visibleResources(viewer) },
+          group: ["courseId"],
+          raw: true,
+        })) as unknown as { courseId: string; count: string }[]);
   const countByCourse = new Map(counts.map((c) => [c.courseId, Number(c.count)]));
 
-  return courses.map((c) => ({
-    code: c.code,
-    title: c.title,
-    semester: c.semester,
-    resourceCount: countByCourse.get(c.id) ?? 0,
+  return semesters.map((semester) => ({
+    semester,
+    courses: courses
+      .filter((c) => c.semester === semester)
+      .map((c) => ({ code: c.code, title: c.title, resourceCount: countByCourse.get(c.id) ?? 0 })),
   }));
 }
 

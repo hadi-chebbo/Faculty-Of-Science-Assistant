@@ -2,13 +2,30 @@ import { expect, test } from "@playwright/test";
 import { mainNav } from "./nav-helpers";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed
-test("a visitor browses from home to a semester to a course", async ({ page }) => {
+test("a visitor browses from home to a year to a course and back", async ({ page, isMobile }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: /Semester 3/ }).click();
-  await expect(page.getByRole("heading", { name: "Semester 3" })).toBeVisible();
+  await page.locator("#years").getByRole("link", { name: /Second year/ }).click();
+  await expect(page).toHaveURL(/\/years\/2$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Second year" })).toBeVisible();
+  // Numbered within the year, never the stored 3 / 4.
+  await expect(page.getByRole("heading", { level: 2, name: "Semester 1" })).toHaveAttribute("id", "semester-1");
+  await expect(page.getByRole("heading", { level: 2, name: "Semester 2" })).toHaveAttribute("id", "semester-2");
+  await expect(page.getByRole("heading", { name: /Semester [3-6]/ })).toHaveCount(0);
 
   await page.getByRole("link", { name: /DEMO301/ }).click();
   await expect(page.getByRole("heading", { name: "Sample Course A" })).toBeVisible();
+
+  // The breadcrumb trail is for md and up; a phone goes back with the browser.
+  if (isMobile) {
+    await page.goBack();
+  } else {
+    const crumb = page.getByRole("navigation", { name: /breadcrumb/i }).getByRole("link", { name: "Second year" });
+    await expect(crumb).toHaveAttribute("href", "/years/2#semester-1");
+    await crumb.click();
+    await expect(page).toHaveURL(/\/years\/2#semester-1$/);
+  }
+  await expect(page.getByRole("heading", { level: 1, name: "Second year" })).toBeVisible();
+  await page.goto("/courses/DEMO301");
 
   // DEMO301 has chapters: its exams are in the "Previous exams" area.
   await page.getByRole("link", { name: "Previous exams" }).click();
@@ -33,8 +50,15 @@ test("a visitor browses from home to a semester to a course", async ({ page }) =
 // (unknown semester, any course code) the first request streams the not-found page with status
 // 200, and a repeat request may be served from the cache as 404. So these tests assert the page,
 // not the status.
-test("an unknown semester shows the not-found page", async ({ page }) => {
-  for (const path of ["/semesters/9", "/semesters/abc"]) {
+test("an old semester link redirects to its place in the year page", async ({ page }) => {
+  for (const [semester, target] of [[1, "/years/1#semester-1"], [3, "/years/2#semester-1"], [4, "/years/2#semester-2"], [6, "/years/3#semester-2"]]) {
+    await page.goto(`/semesters/${semester}`);
+    await expect(page).toHaveURL(new RegExp(`${target}$`));
+  }
+});
+
+test("an unknown year or semester shows the not-found page", async ({ page }) => {
+  for (const path of ["/years/4", "/years/0", "/years/abc", "/semesters/9", "/semesters/abc"]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Back to home" })).toBeVisible();

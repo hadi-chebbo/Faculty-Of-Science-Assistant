@@ -6,6 +6,7 @@ import { Crumbs, type Crumb } from "@/components/site/crumbs";
 import { StateBlock } from "@/components/site/state-block";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EXAM_SESSION_LABELS, LANGUAGE_NAMES, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
+import { yearCrumb } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
 import { readerBackTarget } from "@/services/resources/back-target";
 import { isMarkable } from "@/services/progress/markable";
@@ -76,7 +77,7 @@ async function ReaderContent({ id }: { id: string }) {
         };
   const crumbs: Crumb[] = [
     { label: "Home", href: "/" },
-    { label: `Semester ${resource.courseSemester}`, href: `/semesters/${resource.courseSemester}` },
+    yearCrumb(resource.courseSemester),
     { label: resource.courseCode, href: course },
     ...(area ? [area] : []),
     { label: resource.title },
