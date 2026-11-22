@@ -245,7 +245,8 @@ test("the Semester filter groups its options by year and keeps the stored values
   await expect(groups.nth(2)).toHaveAttribute("label", "Third year");
   await expect(groups.nth(1).locator("option")).toHaveText(["Semester 1", "Semester 2"]);
   await expect(groups.nth(1).locator("option")).toHaveText(["Semester 1", "Semester 2"]);
-  await expect(page.getByLabel("Semester").locator("option")).not.toHaveText(/Semester [3-6]/);
+  const texts = await page.getByLabel("Semester").locator("option").allTextContents();
+  expect(texts).toEqual(["All", "Semester 1", "Semester 2", "Semester 1", "Semester 2", "Semester 1", "Semester 2"]);
   // A shared link with the stored number still selects its option.
   await page.goto("/exams?semester=3");
   await expect(page.getByLabel("Semester")).toHaveValue("3");

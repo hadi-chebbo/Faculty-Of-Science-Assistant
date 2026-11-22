@@ -64,7 +64,7 @@ test("the demo student sees their courses by semester with rings and chapter row
   await expect(card).toContainText(/2\/\d+/);
   await expect(page.getByRole("heading", { level: 2, name: "Second year" })).toBeVisible();
   // Year headings run in order, and the semester is a muted detail on the card.
-  await expect(page.getByRole("main").getByRole("heading", { level: 2 })).toHaveText(["Second year", "Third year"]);
+  await expect(page.getByRole("main").locator('h2[id^="year-"]')).toHaveText(["Second year", "Third year"]);
   await expect(card).toContainText("Semester 2");
   await expect(page.getByRole("main")).not.toContainText(/Semester [3-6]/);
   if (!isMobile) {
