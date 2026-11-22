@@ -59,6 +59,10 @@ mock exam generation, personalization.
   `~/Computer Science Resources`, one folder per semester (`Sem 5`, ...) and inside it one
   folder per course named "CODE - Name" (e.g. `I3305 - GUI`). Content is loaded through the
   platform's admin pages (upload), never committed to the repo or seeded.
+  Master 1 material comes only from the Google Classroom
+  https://classroom.google.com/c/ODk4Nzg5NDA0MDQx (owner, 2026-11-22); that Classroom is not a
+  source for S1–S6, and Master 1 is not taken from the Drive folders. It needs the owner's Google
+  sign-in, so it is read through the browser.
 - Every resource has a stored file (owner's decision, 2026-10-13). A link is
   never the resource itself: `external_url` is an optional backup shown beside
   the file. A resource cannot be published without a file; a draft may be
