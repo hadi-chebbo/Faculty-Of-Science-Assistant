@@ -1,3 +1,4 @@
+import { YEARS } from "@/lib/years";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function TitleSkeleton() {
@@ -74,9 +75,9 @@ export function TodoSkeleton() {
   );
 }
 
-export function SemesterSkeleton() {
+export function YearSkeleton() {
   return (
-    <div role="status" aria-label="Loading semester">
+    <div role="status" aria-label="Loading year">
       <TitleSkeleton />
       <CourseListSkeleton />
     </div>
@@ -106,21 +107,21 @@ export function ExamsListSkeleton() {
   );
 }
 
-// Home page: the numbers strip and the semester cards, which are read together.
-export function StatsAndSemestersSkeleton() {
+// Home page: the numbers strip and the year cards, which are read together.
+export function StatsAndYearsSkeleton() {
   return (
-    <div className="contents" role="status" aria-label="Loading semesters">
+    <div className="contents" role="status" aria-label="Loading years">
       <Skeleton className="-mt-4 h-[7.5rem] w-full rounded-lg sm:h-[4.75rem] md:-mt-8" />
-      {/* Same id as the real section: "Browse courses" (#semesters) can be clicked while the
-          semesters are still loading, and must land here rather than nowhere. */}
-      <div id="semesters" className="scroll-mt-20">
+      {/* Same id as the real section: "Browse courses" (#years) can be clicked while the
+          years are still loading, and must land here rather than nowhere. */}
+      <div id="years" className="scroll-mt-20">
         <div className="mb-4">
           <Skeleton className="h-8 w-56" />
           <Skeleton className="mt-2.5 h-1 w-12" />
         </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {Array.from({ length: 4 }, (_, i) => (
-            <Skeleton key={i} className="h-36 w-full rounded-xl" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {YEARS.map((year) => (
+            <Skeleton key={year} className="h-44 w-full rounded-2xl" />
           ))}
         </div>
       </div>

@@ -23,7 +23,7 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Browse",
     icon: BookOpen,
     href: "/",
-    isActive: (p) => p === "/" || p.startsWith("/semesters") || p.startsWith("/courses"),
+    isActive: (p) => p === "/" || p.startsWith("/years") || p.startsWith("/courses"),
   },
   { label: "Exams", icon: FileText, href: "/exams", isActive: (p) => p.startsWith("/exams") },
   { label: "Search", icon: Search, href: "/search", isActive: (p) => p.startsWith("/search") },

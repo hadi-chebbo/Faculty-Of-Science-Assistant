@@ -1,13 +1,13 @@
 import { fn, col } from "sequelize";
-import { SEMESTER_MAX, SEMESTER_MIN } from "@/db/constants";
+import { YEARS, yearOfSemester, type Year } from "@/lib/years";
 import { getDb } from "@/db/models";
 import { visibleResources } from "../visibility";
 import type { Viewer } from "../viewer";
 
 export interface HomeStats {
   totals: { courses: number; chapters: number; resources: number; exams: number };
-  // One entry per semester from SEMESTER_MIN to SEMESTER_MAX, in order, including semesters with no course.
-  semesters: { semester: number; courseCount: number; resourceCount: number }[];
+  // One entry per year in YEARS, in order, including years with no course. Codes are ordered semester, then code.
+  years: { year: Year; courseCount: number; resourceCount: number; courseCodes: string[] }[];
 }
 
 // Numbers for the landing page. Three queries, whatever the amount of data: all courses,
@@ -16,7 +16,7 @@ export async function getHomeStats(viewer: Viewer): Promise<HomeStats> {
   const { Course, Chapter, Resource } = getDb();
 
   const [courses, chapters, groups] = await Promise.all([
-    Course.findAll({ attributes: ["id", "semester"], raw: true }),
+    Course.findAll({ attributes: ["id", "code", "semester"], order: [["semester", "ASC"], ["code", "ASC"]], raw: true }),
     Chapter.count(),
     Resource.findAll({
       attributes: ["courseId", "type", [fn("count", col("id")), "count"]],
@@ -26,17 +26,15 @@ export async function getHomeStats(viewer: Viewer): Promise<HomeStats> {
     }) as unknown as Promise<{ courseId: string; type: string; count: string }[]>,
   ]);
 
-  const semesterOfCourse = new Map(courses.map((c) => [c.id, c.semester]));
-  const semesters = Array.from({ length: SEMESTER_MAX - SEMESTER_MIN + 1 }, (_, i) => ({
-    semester: SEMESTER_MIN + i,
-    courseCount: 0,
-    resourceCount: 0,
-  }));
-  const bySemester = new Map(semesters.map((s) => [s.semester, s]));
+  const yearOfCourse = new Map(courses.map((c) => [c.id, yearOfSemester(c.semester)]));
+  const years = YEARS.map((year) => ({ year, courseCount: 0, resourceCount: 0, courseCodes: [] as string[] }));
+  const byYear = new Map(years.map((y) => [y.year, y]));
 
   for (const c of courses) {
-    const entry = bySemester.get(c.semester);
-    if (entry) entry.courseCount += 1;
+    const entry = byYear.get(yearOfSemester(c.semester));
+    if (!entry) continue;
+    entry.courseCount += 1;
+    entry.courseCodes.push(c.code);
   }
 
   let resources = 0;
@@ -45,10 +43,10 @@ export async function getHomeStats(viewer: Viewer): Promise<HomeStats> {
     const count = Number(g.count);
     resources += count;
     if (g.type === "exam") exams += count;
-    const semester = semesterOfCourse.get(g.courseId);
-    const entry = semester === undefined ? undefined : bySemester.get(semester);
+    const year = yearOfCourse.get(g.courseId);
+    const entry = year === undefined ? undefined : byYear.get(year);
     if (entry) entry.resourceCount += count;
   }
 
-  return { totals: { courses: courses.length, chapters, resources, exams }, semesters };
+  return { totals: { courses: courses.length, chapters, resources, exams }, years };
 }

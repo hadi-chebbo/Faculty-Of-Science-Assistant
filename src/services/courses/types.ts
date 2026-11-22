@@ -2,13 +2,6 @@ import type { ResourceType } from "@/db/constants";
 import type { LecturerRef } from "../lecturers/types";
 import type { ResourceListItem } from "../resources/types";
 
-export interface CourseSummary {
-  code: string;
-  title: string;
-  semester: number;
-  resourceCount: number;
-}
-
 // A course to choose from in the admin area.
 export interface CourseOption {
   id: string;

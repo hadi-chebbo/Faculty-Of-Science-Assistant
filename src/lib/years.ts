@@ -23,3 +23,23 @@ export function parseYear(value: string | number | null | undefined): Year | nul
   if (text === "1" || text === "2" || text === "3") return Number(text) as Year;
   return null;
 }
+
+// A semester's number inside its year: 1 for the first (odd stored number), 2 for the second.
+export function semesterInYear(semester: number): 1 | 2 {
+  return semester % 2 === 1 ? 1 : 2;
+}
+
+// What students see instead of the stored 1-6 number.
+export function semesterLabel(semester: number): string {
+  return `Semester ${semesterInYear(semester)}`;
+}
+
+export function yearSlug(year: Year): string {
+  return String(year);
+}
+
+// The one place year URLs are built. With a semester it points at that semester's section.
+export function yearHref(year: Year, semester?: number): string {
+  const base = `/years/${yearSlug(year)}`;
+  return semester === undefined ? base : `${base}#semester-${semesterInYear(semester)}`;
+}
