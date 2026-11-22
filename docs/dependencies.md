@@ -20,7 +20,7 @@ It prints nothing when the file is complete. Terms: "runtime" means the app need
 
 | Package | What it is | Why we have it | Where used | Declared / installed | Section OK? |
 |---|---|---|---|---|---|
-| `next` | The React framework: routing, server rendering, build. | CLAUDE.md: one Next.js app, App Router, no separate backend. | `src/app/**` (pages, route handlers), `next.config.ts`, `next/font/google` in `src/app/layout.tsx`. | `16.4.0` / 16.4.0 | Yes, runtime |
+| `next` | The React framework: routing, server rendering, build. | CLAUDE.md: one Next.js app, App Router, no separate backend. | `src/app/**` (pages, route handlers), `next.config.ts`, `next/font/google` in `src/app/layout.tsx`. | `16.4.6` / 16.4.6 | Yes, runtime |
 | `react` | The UI library. | Required by Next. | Every `.tsx` file under `src/`. | `19.3.0` / 19.3.0 | Yes, runtime |
 | `react-dom` | Lets React draw into a browser page. | Required by Next as a peer dependency. | Not imported by our code; Next loads it. | `19.3.0` / 19.3.0 | Yes, runtime |
 
@@ -92,7 +92,7 @@ Why `sequelize`, `pg` and `pg-hstore` are in `serverExternalPackages` (`next.con
 | `@types/react` | Type definitions for React. | Type checking of `.tsx`. | `tsc` only. | `^19` / 19.3.0 | Yes, dev |
 | `@types/react-dom` | Type definitions for React DOM. | Type checking of `.tsx`. | `tsc` only. | `^19` / 19.3.0 | Yes, dev |
 | `eslint` | Finds code problems and style errors. | Standard Next.js setup; reason not recorded beyond that. | `eslint.config.mjs`; `npm run lint`. | `^9` / 9.39.5 | Yes, dev |
-| `eslint-config-next` | The Next.js rule set for ESLint. | Same. | Imported in `eslint.config.mjs` (`core-web-vitals`, `typescript`). | `16.4.0` / 16.4.0 | Yes, dev |
+| `eslint-config-next` | The Next.js rule set for ESLint. | Same. | Imported in `eslint.config.mjs` (`core-web-vitals`, `typescript`). | `16.4.6` / 16.4.6 | Yes, dev |
 
 Why `@types/node` is `^24` while `engines.node` is `>=22`: CLAUDE.md says to keep it at 24, and CI runs Node 24. The types would not warn if code used a Node API that is newer than 22.
 
