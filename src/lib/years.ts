@@ -4,7 +4,13 @@ export type Year = 1 | 2 | 3 | 4;
 
 export const YEARS: readonly Year[] = [1, 2, 3, 4];
 
-const LABELS: Record<Year, string> = { 1: "First year", 2: "Second year", 3: "Third year", 4: "Master 1" };
+// Everything students see of a year, in one table: its name, its URL slug and the short text in its circle.
+const YEAR_INFO: Record<Year, { label: string; slug: string; badge: string }> = {
+  1: { label: "First year", slug: "1", badge: "1" },
+  2: { label: "Second year", slug: "2", badge: "2" },
+  3: { label: "Third year", slug: "3", badge: "3" },
+  4: { label: "Master 1", slug: "m1", badge: "M1" },
+};
 
 export function yearOfSemester(semester: number): Year {
   return Math.ceil(semester / 2) as Year;
@@ -15,16 +21,14 @@ export function semestersOfYear(year: Year): [number, number] {
 }
 
 export function yearLabel(year: Year): string {
-  return LABELS[year];
+  return YEAR_INFO[year].label;
 }
 
 // A year from a URL slug ("1", "2", "3", "m1") or, for callers holding the internal number, 1 to 4; otherwise null.
 // The string "4" is not a slug, so /years/4 is the not-found page.
 export function parseYear(value: string | number | null | undefined): Year | null {
-  if (typeof value === "number") return value === 1 || value === 2 || value === 3 || value === 4 ? value : null;
-  if (value === "1" || value === "2" || value === "3") return Number(value) as Year;
-  if (value === "m1") return 4;
-  return null;
+  if (typeof value === "number") return YEARS.find((year) => year === value) ?? null;
+  return YEARS.find((year) => YEAR_INFO[year].slug === value) ?? null;
 }
 
 // A semester's number inside its year: 1 for the first (odd stored number), 2 for the second.
@@ -38,12 +42,12 @@ export function semesterLabel(semester: number): string {
 }
 
 export function yearSlug(year: Year): string {
-  return year === 4 ? "m1" : String(year);
+  return YEAR_INFO[year].slug;
 }
 
 // The short text in a year's circle: "1", "2", "3", "M1".
 export function yearBadge(year: Year): string {
-  return year === 4 ? "M1" : String(year);
+  return YEAR_INFO[year].badge;
 }
 
 // The id of a semester's section on its year page ("semester-1"), never the stored number.

@@ -15,7 +15,7 @@ fast, mobile-friendly place to find course material and previous exams.
 - Scope is one major in one faculty and branch. Do not add Major, Faculty,
   University or Branch entities or abstractions. Other majors may come later;
   add the entity then, by migration.
-- Semesters covered: S1–S6, the three years of the programme (owner, 2026-11-18), plus Master 1 as a fourth year (stored semesters 7–8, ticket #154). Students browse by year;
+- Semesters covered: S1–S8: the three years of the programme (S1–S6, owner, 2026-11-18) and Master 1 (S7–S8, #154). Students browse by year;
   spec `docs/specs/browse-by-year.md`. Inside a year students see "Semester 1" / "Semester 2", never the
   stored 1–8 number (owner, 2026-11-22; all pages follow it: Home, year pages, breadcrumbs, Exams, Search,
   Progress, Saved and admin, with `courseYearSemesterLabel` in `src/lib/years.ts` giving "Second year · Semester 1"). Master 1 (stored semesters 7–8, `/years/m1`, "Master 1 · Semester 1") is the fourth year
@@ -284,7 +284,7 @@ mock exam generation, personalization.
   Chapter Previous / Next skip chapters with none of the chosen lecturer's files. The initials use the shadcn `Avatar` and
   `lecturerInitials` (`src/lib/lecturer-name.ts`, which also holds the title rule the slug uses). Progress (block, rings,
   chapter text and bars, `/api/v1/progress`) ignores the filter. The page still never reads the session.
-- Exams page (`/exams`): filters (semester, course, academic year, session, lecturer: a fifth dropdown, `?lecturer=SLUG`, "All" first, then lecturers with a visible exam by name; an unknown slug is ignored) live in the URL (`?semester=N` keeps the stored number; the Semester dropdown groups its options in native option groups "First year" / "Second year" / "Third year", each option "Semester 1" / "Semester 2", only semesters with a visible exam; the Course dropdown's groups read "Second year · Semester 1"), so
+- Exams page (`/exams`): filters (semester, course, academic year, session, lecturer: a fifth dropdown, `?lecturer=SLUG`, "All" first, then lecturers with a visible exam by name; an unknown slug is ignored) live in the URL (`?semester=N` keeps the stored number; the Semester dropdown groups its options in native option groups "First year" / "Second year" / "Third year" / "Master 1" (one per entry of `YEARS`), each option "Semester 1" / "Semester 2", only semesters with a visible exam; the Course dropdown's groups read "Second year · Semester 1"), so
   views are shareable and Back works. A plain GET form with an Apply button works without
   JavaScript; with JavaScript a dropdown change submits automatically. Unusable URL values are
   ignored, not errors. Results are one flat list (newest year first), 20 per page, reusing the

@@ -26,7 +26,7 @@ export function Hero() {
           Every course, chapter and past exam in one place.
         </h1>
         <p className="mt-4 max-w-[46ch] text-[1.0625rem]">
-          Lectures, notes, exercises and previous exams for the three years of the programme and Master 1, organised the way your courses are taught.
+          Lectures, notes, exercises and previous exams for Computer Science, organised the way your courses are taught.
           Stop digging through Drive links.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
