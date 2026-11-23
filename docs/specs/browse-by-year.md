@@ -4,12 +4,12 @@ by year instead of by semester. Decisions come from a grilling session (two roun
 the year page of variant A and the Home card of variant F, "course code chips", 2026-11-18). Terms
 follow `GLOSSARY.md` (**Year** is new).
 
-> **Amended 2026-11-22 (owner).** Students never see a semester number from 1 to 6 (or 8): inside a
-> year the semesters are "Semester 1" and "Semester 2" (the stored number stays 1–6; its place in
+> **Amended 2026-11-22 (owner).** Students never see a semester number from 1 to 6 : inside a
+> year the semesters are "Semester 1" and "Semester 2" (the stored number stays 1–6, 1–8 with Master 1; its place in
 > the year is derived). Where both are shown: "Second year · Semester 1". Year page anchors are
 > `#semester-1` / `#semester-2`. The admin course form and the Exams filter choose a year and a
 > semester of that year (ticket 3). A fourth year, **Master 1** ("Master 1", `/years/m1`, stored
-> semesters 7 and 8), follows in its own ticket after ticket 2; ticket 2 must not assume exactly
+> semesters 7 and 8), was added in ticket #154 (migration widening the check to 1–8, `Year` 4, `yearBadge`); ticket 2 must not assume exactly
 > three years.
 
 ## Problem Statement
