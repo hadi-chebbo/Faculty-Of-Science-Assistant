@@ -468,3 +468,12 @@ test("a lecturer's name finds their published files", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 2, name: /^Courses ·/ })).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 2, name: /^Chapters ·/ })).toHaveCount(0);
 });
+
+test("the hints and the tips name no course code", async ({ page }) => {
+  await page.goto("/search");
+  const hint = page.getByText("Try a course code, a topic");
+  await expect(hint).toBeVisible();
+  await expect(hint).not.toContainText("DEMO");
+  await page.goto("/search?q=zzzzqqqq");
+  await expect(page.getByText("Try a course code, or a word from the course title")).not.toContainText("DEMO");
+});

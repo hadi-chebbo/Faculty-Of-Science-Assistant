@@ -55,3 +55,15 @@ test("an unknown chapter or course shows the not-found page", async ({ page }) =
     await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
   }
 });
+
+test("the chapter tab is titled with the course code, chapter number and title", async ({ page }) => {
+  await page.goto("/courses/DEMO301/chapters/2");
+  await expect(page).toHaveTitle("DEMO301 · Chapter 2: Sample chapter 2 | University Assistant");
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "DEMO301 · Chapter 2: Sample chapter 2");
+});
+
+test("an unknown chapter keeps the generic title", async ({ page }) => {
+  const response = await page.goto("/courses/DEMO301/chapters/99");
+  expect(response?.status()).toBe(404);
+  await expect(page).toHaveTitle("Chapter | University Assistant");
+});

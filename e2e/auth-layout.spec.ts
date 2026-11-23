@@ -29,6 +29,7 @@ for (const path of [
       page.getByRole("banner").getByRole("button", { name: /theme/i }),
     ).toBeVisible();
     await expect(page.getByText(DISCLAIMER)).toBeVisible();
+    await expect(page.getByRole("link", { name: "Back to courses" })).toHaveAttribute("href", "/");
   });
 }
 
@@ -52,3 +53,13 @@ for (const { path, label } of [
     await expect(page.locator('nav[aria-label="Main"]')).toHaveCount(1);
   });
 }
+
+test("email fields turn off spellcheck and automatic capitals", async ({ page }) => {
+  for (const path of ["/sign-in", "/sign-up", "/confirm-email"]) {
+    await page.goto(path);
+    const email = page.locator('input[type="email"]');
+    await expect(email, path).toHaveCount(1);
+    await expect(email, path).toHaveAttribute("spellcheck", "false");
+    await expect(email, path).toHaveAttribute("autocapitalize", "none");
+  }
+});
