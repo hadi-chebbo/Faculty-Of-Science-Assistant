@@ -232,6 +232,8 @@ test("public pages render the same signed in and signed out", async ({ page }) =
       // runs. That figure depends on the moment, not on who is looking, so it is left out.
       // Parts that differ by viewer on purpose (a student's progress) are marked `data-personal`
       // and hidden before reading, so everything else must still match exactly.
+      // The signed-in marker (short hero on a phone) is personal too, so it is cleared the same way.
+      await page.evaluate(() => document.documentElement.removeAttribute("data-signed-in"));
       await page.locator("main [data-personal]").evaluateAll((elements) =>
         elements.forEach((element) => ((element as HTMLElement).style.display = "none")),
       );
