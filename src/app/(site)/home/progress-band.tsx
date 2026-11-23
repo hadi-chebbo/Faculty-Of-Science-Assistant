@@ -14,6 +14,8 @@ import type { ProgressOverview } from "@/services/progress/types";
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 const MARKER = "data-signed-in";
+// How long the reserved space waits for the progress answer before it is given back.
+const LOADING_GIVE_UP_MS = 8000;
 
 // The slot at the top of Home's phone order. A pre-paint script marks <html data-signed-in> when the
 // readable hint cookie is there; CSS (globals.css, `.home-band-slot`) then reserves the band's last
@@ -30,6 +32,12 @@ export function ProgressBand() {
     const root = document.documentElement;
     if (status === "ready") root.setAttribute(MARKER, "1");
     else if (status === "none") root.removeAttribute(MARKER);
+    else {
+      // Still loading: if the answer never comes (a failed session or ids request leaves the viewer
+      // unknown), release the reserved space rather than keep an empty gap at the top of Home.
+      const timer = window.setTimeout(() => root.removeAttribute(MARKER), LOADING_GIVE_UP_MS);
+      return () => window.clearTimeout(timer);
+    }
   }, [status]);
 
   // Signing in or out in this tab: follow the cookie, which the response has already changed.
