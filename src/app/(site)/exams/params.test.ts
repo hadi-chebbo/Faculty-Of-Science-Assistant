@@ -24,12 +24,14 @@ describe("parseExamParams", () => {
     });
   });
 
-  it("accepts the first-year semesters and refuses 0 and 7", () => {
+  it("accepts the first-year semesters and Master 1 ones, and refuses 0 and 9", () => {
     expect(parseExamParams({ semester: "1" }).semester).toBe(1);
     expect(parseExamParams({ semester: "2" }).semester).toBe(2);
     expect(parseExamParams({ semester: "6" }).semester).toBe(6);
     expect(parseExamParams({ semester: "0" }).semester).toBeUndefined();
-    expect(parseExamParams({ semester: "7" }).semester).toBeUndefined();
+    expect(parseExamParams({ semester: "7" }).semester).toBe(7);
+    expect(parseExamParams({ semester: "8" }).semester).toBe(8);
+    expect(parseExamParams({ semester: "9" }).semester).toBeUndefined();
   });
 
   it("drops each bad value on its own and keeps the good ones", () => {
