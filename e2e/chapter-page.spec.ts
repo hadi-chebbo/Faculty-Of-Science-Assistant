@@ -63,7 +63,7 @@ test("the chapter tab is titled with the course code, chapter number and title",
 });
 
 test("an unknown chapter keeps the generic title", async ({ page }) => {
-  const response = await page.goto("/courses/DEMO301/chapters/99");
-  expect(response?.status()).toBe(404);
+  await page.goto("/courses/DEMO301/chapters/99");
+  await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
   await expect(page).toHaveTitle("Chapter | University Assistant");
 });

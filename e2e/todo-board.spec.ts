@@ -243,7 +243,10 @@ test("phone: the last card's buttons can be tapped with the + button present", a
   test.skip(!isMobile, "phone layout");
   await signInOnBoard(page, isMobile);
   for (let i = 1; i <= 8; i++) {
-    const created = await page.request.post("/api/v1/todos", { data: { title: `Filler ${i}`, status: "todo" } });
+    const created = await page.request.post("/api/v1/todos", {
+      data: { title: `Filler ${i}`, status: "todo" },
+      headers: { origin: new URL(page.url()).origin },
+    });
     expect(created.status()).toBe(201);
   }
   await page.reload();

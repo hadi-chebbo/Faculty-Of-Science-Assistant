@@ -87,7 +87,7 @@ test("finishing a chapter shows one toast with Undo and Next chapter", async ({ 
     await markDone(page);
     const toast = page.locator("[data-sonner-toast]").filter({ hasText: "Chapter 1 finished!" });
     await expect(toast).toBeVisible();
-    await expect(toast).toContainText("Sample chapter 1, all 1 files done.");
+    await expect(toast).toContainText("Sample chapter 1, 1 file done.");
     await expect(toast.getByRole("button", { name: "Undo" })).toBeVisible();
     await expect(page.locator("[data-sonner-toast]").filter({ hasText: "Marked as done" })).toHaveCount(0);
     await expect(page.getByRole("dialog")).toHaveCount(0);
