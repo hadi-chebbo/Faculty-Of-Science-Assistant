@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { Crumbs } from "@/components/site/crumbs";
 import { PageTitle } from "@/components/site/page-title";
 import { CourseSkeleton } from "@/components/site/skeletons";
-import { courseTitle } from "@/lib/page-title";
+import { courseTitle, pageMetadata } from "@/lib/page-title";
 import { yearCrumb } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
 import { getCourseByCode } from "@/services/courses/courses";
@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: PageProps<"/courses/[code]">)
   const { code } = await params;
   await connection();
   const course = await getCourseByCode(null, code).catch(() => null);
-  return { title: course ? courseTitle(course) : "Course" };
+  return course ? pageMetadata(courseTitle(course)) : { title: "Course" };
 }
 
 // Course codes come from the database and are unknown at build time, so the code is runtime

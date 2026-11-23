@@ -9,7 +9,7 @@ import { ResourceRow } from "@/components/site/resource-row";
 import { CourseSkeleton } from "@/components/site/skeletons";
 import { StateBlock } from "@/components/site/state-block";
 import { RESOURCE_TYPE_LABELS } from "@/lib/labels";
-import { chapterTitle } from "@/lib/page-title";
+import { chapterTitle, pageMetadata } from "@/lib/page-title";
 import { yearCrumb } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
 import { getChapterPage } from "@/services/courses/courses";
@@ -23,7 +23,7 @@ export async function generateMetadata({
   const { code, position } = await params;
   await connection();
   const page = await getChapterPage(null, code, position).catch(() => null);
-  return { title: page ? chapterTitle(page.course, page.chapter) : "Chapter" };
+  return page ? pageMetadata(chapterTitle(page.course, page.chapter)) : { title: "Chapter" };
 }
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
