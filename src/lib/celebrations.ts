@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { MILESTONE_LABELS, type MilestoneKey } from "@/db/constants";
+import { chapterFinishedDescription } from "@/lib/celebration-text";
 import { showUndoToast } from "@/lib/undo-toast";
 import type { MarkResult, Rewards } from "@/services/progress/types";
 
@@ -80,7 +81,7 @@ export function celebrate(result: Pick<MarkResult, "progress" | "rewards">, opti
     const total = result.progress.chapter?.total ?? 0;
     const code = result.progress.course.code;
     toast(`Chapter ${chapterFinished.position} finished!`, {
-      description: `${chapterFinished.title}, all ${total} files done.`,
+      description: chapterFinishedDescription(chapterFinished.title, total),
       classNames: { title: "font-semibold" },
       duration: CHAPTER_TOAST_MS,
       action: { label: "Undo", onClick: undo },

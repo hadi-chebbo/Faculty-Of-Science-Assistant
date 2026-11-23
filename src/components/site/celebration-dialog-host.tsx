@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { celebrationDialog } from "@/lib/celebrations";
+import { allFiles } from "@/lib/celebration-text";
 
 // Brand colours for the confetti: primary, bright blue, the decorative yellow, success green.
 const COLOURS = ["var(--primary)", "#5473ff", "var(--highlight)", "var(--success)"];
@@ -50,7 +51,7 @@ export function CelebrationDialogHost() {
             <div className="space-y-2">
               <DialogTitle className="text-xl font-semibold text-heading">{course.code} finished</DialogTitle>
               <DialogDescription>
-                You marked all {course.filesTotal} files of {course.title} as done.{exams}
+                You marked {allFiles(course.filesTotal)} of {course.title} as done.{exams}
               </DialogDescription>
             </div>
             <div className="flex gap-2">

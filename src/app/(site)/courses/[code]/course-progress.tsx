@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import Link from "next/link";
 import { ProgressRing } from "@/components/site/progress-ring";
 import { useCourseProgress } from "@/lib/course-progress-client";
+import { noun } from "@/lib/plural";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
@@ -19,7 +20,7 @@ export function CourseProgressBlock({ code }: { code: string }) {
   const { course, exams } = progress;
   const percent = Math.floor((course.done / course.total) * 100);
   const label =
-    `Your progress: ${percent}% done, ${course.done} of ${course.total} files.` +
+    `Your progress: ${percent}% done, ${course.done} of ${course.total} ${noun(course.total, "file")}.` +
     (exams.total > 0 ? ` Exams: ${exams.done} of ${exams.total} done.` : "");
   return (
     <>
@@ -41,7 +42,7 @@ export function CourseProgressBlock({ code }: { code: string }) {
           <span className="block text-sm text-muted-foreground">
             <span className="block font-semibold text-heading">Your progress</span>
             <span className="block">
-              {course.done} of {course.total} files done
+              {course.done} of {course.total} {noun(course.total, "file")} done
             </span>
             {exams.total > 0 && (
               <span className="block">

@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight, FileQuestion } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { Crumbs } from "@/components/site/crumbs";
 import { PageTitle } from "@/components/site/page-title";
@@ -8,13 +9,22 @@ import { ResourceRow } from "@/components/site/resource-row";
 import { CourseSkeleton } from "@/components/site/skeletons";
 import { StateBlock } from "@/components/site/state-block";
 import { RESOURCE_TYPE_LABELS } from "@/lib/labels";
+import { chapterTitle } from "@/lib/page-title";
 import { yearCrumb } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
 import { getChapterPage } from "@/services/courses/courses";
 import type { ChapterLink } from "@/services/courses/types";
 import { ShowingOnly, TaughtBy, pageHref } from "../../taught-by";
 
-export const metadata: Metadata = { title: "Chapter" };
+// The tab title is "CODE · Chapter N: Title"; an unknown course or chapter keeps the generic title.
+export async function generateMetadata({
+  params,
+}: PageProps<"/courses/[code]/chapters/[position]">): Promise<Metadata> {
+  const { code, position } = await params;
+  await connection();
+  const page = await getChapterPage(null, code, position).catch(() => null);
+  return { title: page ? chapterTitle(page.course, page.chapter) : "Chapter" };
+}
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 const BUTTON = `inline-flex min-h-11 items-center gap-2 rounded-lg border bg-card px-4 py-2 text-sm font-medium text-heading transition-colors hover:border-primary/40 ${FOCUS}`;

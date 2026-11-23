@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { Crumbs } from "@/components/site/crumbs";
 import { PageTitle } from "@/components/site/page-title";
 import { CourseSkeleton } from "@/components/site/skeletons";
+import { courseTitle } from "@/lib/page-title";
 import { yearCrumb } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
 import { getCourseByCode } from "@/services/courses/courses";
@@ -11,7 +13,13 @@ import { CourseProgressBlock } from "./course-progress";
 import { ResourceTabs } from "./resource-tabs";
 import { ShowingOnly, TaughtBy } from "./taught-by";
 
-export const metadata: Metadata = { title: "Course" };
+// The tab title is the course, "CODE Title"; an unknown code keeps the generic title.
+export async function generateMetadata({ params }: PageProps<"/courses/[code]">): Promise<Metadata> {
+  const { code } = await params;
+  await connection();
+  const course = await getCourseByCode(null, code).catch(() => null);
+  return { title: course ? courseTitle(course) : "Course" };
+}
 
 // Course codes come from the database and are unknown at build time, so the code is runtime
 // data: reading it and the course happens inside Suspense, behind a skeleton.
