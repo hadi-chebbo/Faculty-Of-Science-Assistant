@@ -56,7 +56,8 @@ test("the admin adds, refuses a duplicate, and edits a course", async ({ page },
     const add = page.getByRole("region", { name: "Courses" });
     await add.getByLabel("Code").first().fill(`e2e ${stamp.toLowerCase()}`);
     await add.getByLabel("Title").first().fill("E2E Course");
-    await add.getByLabel("Semester").first().selectOption("5");
+    await add.getByLabel("Year").first().selectOption("3");
+    await add.getByLabel("Semester").first().selectOption("1");
     await add.getByRole("button", { name: "Add course" }).click();
     await expect(page.getByText("Course added.")).toBeVisible();
     await expect(add.getByLabel("Code").first()).toBeFocused();
@@ -90,11 +91,11 @@ test("the admin adds, refuses a duplicate, and edits a course", async ({ page },
     await expect(dialog.getByText("Changing the code changes the course's address (/courses/CODE).")).toBeVisible();
     await dialog.getByLabel("Code").fill(newCode);
     await dialog.getByLabel("Title").fill("E2E Renamed");
-    await dialog.getByLabel("Semester").selectOption("6");
+    await dialog.getByLabel("Semester").selectOption("2");
     await dialog.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Course saved.")).toBeVisible();
     await expect(dialog).toBeHidden();
-    // The row moved to Semester 6; the focus follows it.
+    // The row moved to Third year · Semester 2; the focus follows it.
     await expect(page.getByRole("button", { name: `Edit ${newCode}` })).toBeFocused();
     await expect(page.getByRole("listitem").filter({ hasText: newCode })).toContainText("E2E Renamed");
 
@@ -117,22 +118,17 @@ test("the admin adds a first-year course and it is listed and browsable", async 
     const add = page.getByRole("region", { name: "Courses" });
     await add.getByLabel("Code").first().fill(code);
     await add.getByLabel("Title").first().fill("E2E First Year");
-    await expect(add.getByLabel("Semester").first().getByRole("option")).toHaveText([
-      "Semester 1 (First year)",
-      "Semester 2 (First year)",
-      "Semester 3 (Second year)",
-      "Semester 4 (Second year)",
-      "Semester 5 (Third year)",
-      "Semester 6 (Third year)",
-    ]);
+    await expect(add.getByLabel("Year").first().getByRole("option")).toHaveText(["First year", "Second year", "Third year"]);
+    await expect(add.getByLabel("Semester").first().getByRole("option")).toHaveText(["Semester 1", "Semester 2"]);
+    await add.getByLabel("Year").first().selectOption("1");
     await add.getByLabel("Semester").first().selectOption("1");
     await add.getByRole("button", { name: "Add course" }).click();
     await expect(page.getByText("Course added.")).toBeVisible();
-    // Listed under the "Semester 1" heading.
-    const group = page.locator("div").filter({ has: page.getByRole("heading", { name: "Semester 1", exact: true }) }).last();
+    // Listed under the "First year · Semester 1" heading.
+    const group = page.locator("div").filter({ has: page.getByRole("heading", { name: "First year · Semester 1", exact: true }) }).last();
     await expect(group.getByRole("listitem").filter({ hasText: code })).toBeVisible();
 
-    await page.goto("/semesters/1");
+    await page.goto("/years/1");
     await expect(page.getByRole("heading", { name: "Semester 1" })).toBeVisible();
     await expect(page.getByRole("link", { name: new RegExp(code) })).toBeVisible();
   } finally {

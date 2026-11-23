@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@/components/ui/native-select";
+import { courseYearSemesterLabel, groupSemestersByYear, semesterLabel, yearLabel } from "@/lib/years";
 import { EXAM_SESSION_LABELS, formatAcademicYear } from "@/lib/labels";
 import type { ExamFilterOptions } from "@/services/resources/types";
 import { FilterForm } from "./filter-form";
@@ -36,10 +37,14 @@ export function ExamFilters({ options, params }: { options: ExamFilterOptions; p
             <label htmlFor="exam-semester" className={LABEL}>Semester</label>
             <NativeSelect id="exam-semester" name="semester" defaultValue={values.semester} className={SELECT}>
               <NativeSelectOption value="">All</NativeSelectOption>
-              {options.semesters.map((semester) => (
-                <NativeSelectOption key={semester} value={semester}>
-                  Semester {semester}
-                </NativeSelectOption>
+              {groupSemestersByYear(options.semesters).map((group) => (
+                <NativeSelectOptGroup key={group.year} label={yearLabel(group.year)}>
+                  {group.semesters.map((semester) => (
+                    <NativeSelectOption key={semester} value={semester}>
+                      {semesterLabel(semester)}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelectOptGroup>
               ))}
             </NativeSelect>
           </div>
@@ -49,7 +54,7 @@ export function ExamFilters({ options, params }: { options: ExamFilterOptions; p
               <NativeSelectOption value="">All</NativeSelectOption>
               {courses
                 ? courses.map((group) => (
-                    <NativeSelectOptGroup key={group.semester} label={`Semester ${group.semester}`}>
+                    <NativeSelectOptGroup key={group.semester} label={courseYearSemesterLabel(group.semester)}>
                       {group.courses.map((c) => (
                         <NativeSelectOption key={c.code} value={c.code}>
                           {courseLabel(c)}

@@ -7,6 +7,7 @@ import { ResourceRow } from "@/components/site/resource-row";
 import { StateBlock } from "@/components/site/state-block";
 import { Button } from "@/components/ui/button";
 import { useSavedLookup } from "@/lib/saved-client";
+import { courseYearSemesterLabel } from "@/lib/years";
 import type { SavedCourseGroup } from "@/services/saved/saved";
 
 // The server-rendered groups. An item the shared store reports as not saved (just removed here, or
@@ -48,7 +49,7 @@ export function SavedList({ groups }: { groups: SavedCourseGroup[] }) {
               {group.courseCode}
             </Link>
             <span>{group.courseTitle}</span>
-            <span className="text-sm font-normal text-muted-foreground">Semester {group.semester}</span>
+            <span className="text-sm font-normal text-muted-foreground">{courseYearSemesterLabel(group.semester)}</span>
           </h2>
           <ul className="space-y-2">
             {group.items.map((resource) => (

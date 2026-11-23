@@ -115,6 +115,7 @@ test("a semester narrows the course dropdown", async ({ page }) => {
   await page.goto("/exams");
   // Without a semester all courses with an exam are offered, grouped by semester.
   await expect(page.getByLabel("Course").locator("optgroup")).toHaveCount(6);
+  await expect(page.getByLabel("Course").locator("optgroup").nth(2)).toHaveAttribute("label", "Second year · Semester 1");
   await choose(page, "Semester", "4", /\/exams\?semester=4$/);
   const options = page.getByLabel("Course").locator("option");
   await expect(options).toHaveText(["All", "DEMO401 - Sample Course C", "DEMO402 - Sample Course D", "DEMO410 - Sample Full Course B"]);
@@ -233,4 +234,21 @@ test.describe("without JavaScript, the lecturer filter", () => {
     await expect(page).toHaveURL(/\/exams\?.*lecturer=grace-placeholder/);
     await expect(rows(page).first()).toContainText("Pr. Grace Placeholder");
   });
+});
+
+test("the Semester filter groups its options by year and keeps the stored values", async ({ page }) => {
+  await page.goto("/exams");
+  const groups = page.getByLabel("Semester").locator("optgroup");
+  await expect(groups).toHaveCount(3);
+  await expect(groups.nth(0)).toHaveAttribute("label", "First year");
+  await expect(groups.nth(1)).toHaveAttribute("label", "Second year");
+  await expect(groups.nth(2)).toHaveAttribute("label", "Third year");
+  await expect(groups.nth(1).locator("option")).toHaveText(["Semester 1", "Semester 2"]);
+  const texts = await page.getByLabel("Semester").locator("option").allTextContents();
+  expect(texts).toEqual(["All", "Semester 1", "Semester 2", "Semester 1", "Semester 2", "Semester 1", "Semester 2"]);
+  // A shared link with the stored number still selects its option.
+  await page.goto("/exams?semester=3");
+  await expect(page.getByLabel("Semester")).toHaveValue("3");
+  await expect(page.getByLabel("Semester").locator("option:checked")).toHaveText("Semester 1");
+  await expect(page.getByLabel("Semester").locator("optgroup:has(option:checked)")).toHaveAttribute("label", "Second year");
 });

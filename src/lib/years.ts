@@ -54,3 +54,26 @@ export function yearCrumb(semester: number): { label: string; href: string } {
   const year = yearOfSemester(semester);
   return { label: yearLabel(year), href: yearHref(year, semester) };
 }
+
+// Where a course belongs, as students read it: "Second year · Semester 1".
+export function courseYearSemesterLabel(semester: number): string {
+  return `${yearLabel(yearOfSemester(semester))} · ${semesterLabel(semester)}`;
+}
+
+// The stored semester number for a year and a place in it (1 or 2), e.g. (2, 1) → 3. What a form posts.
+export function storedSemester(year: Year, place: 1 | 2): number {
+  return semestersOfYear(year)[place - 1];
+}
+
+// Items grouped under their year, in YEARS order, keeping the items' own order; years with none are left out.
+export function groupByYear<T>(items: readonly T[], semesterOf: (item: T) => number): { year: Year; items: T[] }[] {
+  return YEARS.map((year) => ({ year, items: items.filter((item) => yearOfSemester(semesterOf(item)) === year) })).filter(
+    (group) => group.items.length > 0,
+  );
+}
+
+// Stored semesters grouped by their year, semesters ascending without repeats.
+export function groupSemestersByYear(semesters: readonly number[]): { year: Year; semesters: number[] }[] {
+  const sorted = [...new Set(semesters)].sort((a, b) => a - b);
+  return groupByYear(sorted, (s) => s).map(({ year, items }) => ({ year, semesters: items }));
+}

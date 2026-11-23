@@ -3,13 +3,15 @@ import Link from "next/link";
 import { ProgressRing } from "@/components/site/progress-ring";
 import { StateBlock } from "@/components/site/state-block";
 import { Button } from "@/components/ui/button";
+import { groupCoursesByYear } from "./group-by-year";
+import { semesterLabel, yearLabel } from "@/lib/years";
 import type { ProgressOverview } from "@/services/progress/types";
 
 type CourseEntry = ProgressOverview["courses"][number];
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
-// My courses grouped by semester (the list arrives ordered by semester, then code). Server
+// My courses grouped by year, then semester, then code. Server
 // rendered: nothing here needs the browser.
 export function ProgressOverviewList({ courses }: { courses: CourseEntry[] }) {
   if (courses.length === 0) {
@@ -26,20 +28,17 @@ export function ProgressOverviewList({ courses }: { courses: CourseEntry[] }) {
       </StateBlock>
     );
   }
-  const semesters = [...new Set(courses.map((c) => c.semester))];
   return (
     <div className="space-y-8">
-      {semesters.map((semester) => (
-        <section key={semester} aria-labelledby={`semester-${semester}`}>
-          <h2 id={`semester-${semester}`} className="mb-3 text-xl font-semibold tracking-tight">
-            Semester {semester}
+      {groupCoursesByYear(courses).map((group) => (
+        <section key={group.year} aria-labelledby={`year-${group.year}`}>
+          <h2 id={`year-${group.year}`} className="mb-3 text-xl font-semibold tracking-tight">
+            {yearLabel(group.year)}
           </h2>
           <ul className="grid gap-3 md:grid-cols-2">
-            {courses
-              .filter((c) => c.semester === semester)
-              .map((course) => (
-                <CourseCard key={course.code} course={course} />
-              ))}
+            {group.courses.map((course) => (
+              <CourseCard key={course.code} course={course} />
+            ))}
           </ul>
         </section>
       ))}
@@ -72,6 +71,7 @@ function CourseCard({ course }: { course: CourseEntry }) {
               {code} {title}
             </Link>
           </h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">{semesterLabel(course.semester)}</p>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {files.finished && (
               <>

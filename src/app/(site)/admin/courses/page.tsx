@@ -6,6 +6,7 @@ import { PageTitle } from "@/components/site/page-title";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SEMESTER_MAX, SEMESTER_MIN } from "@/db/constants";
+import { courseYearSemesterLabel } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
 import { listAdminCourses } from "@/services/courses/admin";
 import type { Viewer } from "@/services/viewer";
@@ -53,7 +54,7 @@ async function CourseList({ viewer }: { viewer: Viewer }) {
         const inSemester = courses.filter((c) => c.semester === semester);
         return (
           <div key={semester} className="space-y-2">
-            <h3 className="text-base font-semibold text-heading">Semester {semester}</h3>
+            <h3 className="text-base font-semibold text-heading">{courseYearSemesterLabel(semester)}</h3>
             {inSemester.length === 0 ? (
               <p className="text-sm text-muted-foreground">No courses yet.</p>
             ) : (

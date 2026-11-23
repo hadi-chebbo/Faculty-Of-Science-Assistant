@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
-import { COURSE_CODE_MAX_LENGTH, COURSE_TITLE_MAX_LENGTH, SEMESTER_MAX, SEMESTER_MIN } from "@/db/constants";
+import { COURSE_CODE_MAX_LENGTH, COURSE_TITLE_MAX_LENGTH } from "@/db/constants";
 import { adminFetch } from "@/lib/admin-fetch";
 import { useHydrated } from "@/lib/use-hydrated";
-import { yearLabel, yearOfSemester } from "@/lib/years";
+import { YEARS, semesterInYear, semesterLabel, storedSemester, yearLabel, yearOfSemester } from "@/lib/years";
 
 export interface CourseValues {
   code: string;
@@ -18,11 +18,10 @@ export interface CourseValues {
   semester: string;
 }
 
-const SEMESTERS = Array.from({ length: SEMESTER_MAX - SEMESTER_MIN + 1 }, (_, i) => SEMESTER_MIN + i);
 const FIELD_MESSAGES: Record<string, string> = {
   code: "Use 2 to 20 letters and digits.",
   title: `Enter a title of 1 to ${COURSE_TITLE_MAX_LENGTH} characters.`,
-  semester: `Choose a semester from ${SEMESTER_MIN} to ${SEMESTER_MAX}.`,
+  semester: "Choose a year and a semester.",
 };
 const TAKEN_MESSAGE = "A course with this code already exists.";
 
@@ -69,6 +68,16 @@ export function CourseForm({
   const [values, setValues] = useState(initial);
   const [errors, setErrors] = useState<Errors>({});
   const [pending, setPending] = useState(false);
+
+  // The stored 1-6 number is never shown: the form picks a year and a semester of it, and posts the number.
+  const stored = Number(values.semester);
+  const year = yearOfSemester(stored);
+  const inYear = semesterInYear(stored);
+  const setYearAndSemester = (nextYear: number | null, nextInYear: 1 | 2) => {
+    // Any entry of YEARS (Master 1 included later), not only the three numeric years parseYear knows.
+    const y = YEARS.find((candidate) => candidate === nextYear);
+    if (y) setValues((v) => ({ ...v, semester: String(storedSemester(y, nextInYear)) }));
+  };
 
   const set = (key: keyof CourseValues) => (value: string) => setValues((v) => ({ ...v, [key]: value }));
 
@@ -127,7 +136,7 @@ export function CourseForm({
     <form
       method="post"
       onSubmit={onSubmit}
-      className={stacked ? "grid gap-4" : "grid gap-4 md:grid-cols-[1fr_2fr_1fr_auto] md:items-start"}
+      className={stacked ? "grid gap-4" : "grid gap-4 md:grid-cols-[1fr_2fr_1fr_1fr_auto] md:items-start"}
     >
       <div>
         <Label htmlFor={`${idPrefix}-code`} className="mb-1.5">Code</Label>
@@ -160,15 +169,30 @@ export function CourseForm({
         {error("title")}
       </div>
       <div>
+        <Label htmlFor={`${idPrefix}-year`} className="mb-1.5">Year</Label>
+        <NativeSelect
+          id={`${idPrefix}-year`}
+          value={String(year)}
+          onChange={(e) => setYearAndSemester(Number(e.target.value), inYear)}
+          className="w-full [&_select]:h-11 md:[&_select]:h-9"
+        >
+          {YEARS.map((y) => (
+            <NativeSelectOption key={y} value={String(y)}>{yearLabel(y)}</NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </div>
+      <div>
         <Label htmlFor={`${idPrefix}-semester`} className="mb-1.5">Semester</Label>
         <NativeSelect
           id={`${idPrefix}-semester`}
-          value={values.semester}
-          onChange={(e) => set("semester")(e.target.value)}
+          value={String(inYear)}
+          onChange={(e) => setYearAndSemester(year, Number(e.target.value) === 1 ? 1 : 2)}
+          aria-invalid={errors.semester ? true : undefined}
+          aria-describedby={errors.semester ? `${idPrefix}-semester-error` : undefined}
           className="w-full [&_select]:h-11 md:[&_select]:h-9"
         >
-          {SEMESTERS.map((n) => (
-            <NativeSelectOption key={n} value={String(n)}>Semester {n} ({yearLabel(yearOfSemester(n))})</NativeSelectOption>
+          {([1, 2] as const).map((n) => (
+            <NativeSelectOption key={n} value={String(n)}>{semesterLabel(n)}</NativeSelectOption>
           ))}
         </NativeSelect>
         {error("semester")}

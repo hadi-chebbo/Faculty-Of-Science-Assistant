@@ -36,7 +36,7 @@ export function EditCourseButton({ course }: { course: AdminCourse }) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit {course.code}</DialogTitle>
-          <DialogDescription>Change the code, title or semester of this course.</DialogDescription>
+          <DialogDescription>Change the code, title, year or semester of this course.</DialogDescription>
         </DialogHeader>
         <EditFields course={course} onSaved={onSaved} />
       </DialogContent>
