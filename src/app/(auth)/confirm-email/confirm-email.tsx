@@ -53,7 +53,7 @@ export function ConfirmEmail() {
     return (
       <div aria-busy="true" role="status" className="flex items-center gap-2.5 py-6">
         <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden />
-        Confirming your email...
+        Confirming your email…
       </div>
     );
   }

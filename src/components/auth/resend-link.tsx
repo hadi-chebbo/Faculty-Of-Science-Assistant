@@ -50,6 +50,8 @@ export function ResendLink({ email, waitOnArrival }: { email: string | null; wai
             id="resend-email"
             type="email"
             autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
             required
             maxLength={254}
             value={typed}

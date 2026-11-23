@@ -474,7 +474,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
                 variant="ghost"
                 data-add-card={status}
                 onClick={() => openComposer(status)}
-                className="justify-start text-muted-foreground hover:bg-card hover:text-heading"
+                className="justify-start text-foreground hover:bg-card hover:text-heading"
               >
                 <Plus aria-hidden /> Add a card
               </Button>
@@ -491,7 +491,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
         <BoardFilterBar filter={effective} codes={codes} onChange={setFilter} />
         <Button className="hidden md:inline-flex" onClick={() => openComposer("todo")}>
           <Plus aria-hidden /> New card
-          <kbd className="ml-1 rounded border border-primary-foreground/40 px-1 text-[10px] leading-4" aria-hidden>
+          <kbd className="ml-1 rounded border border-primary-foreground/40 px-1 text-xs leading-4" aria-hidden>
             N
           </kbd>
         </Button>
@@ -518,7 +518,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
           })}
         </TabsList>
         {TODO_STATUSES.map((status) => (
-          <TabsContent key={status} value={status} className={`-mx-4 min-h-80 px-4 py-4 sm:-mx-6 sm:px-6 ${STATUS_LOOK[status].tint}`}>
+          <TabsContent key={status} value={status} className={`-mx-4 min-h-80 px-4 pt-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6 md:pb-4 ${STATUS_LOOK[status].tint}`}>
             {adding === status && (
               <div className="mb-3">
                 <CardComposer status={status} onAdd={add} onClose={closeComposer} />

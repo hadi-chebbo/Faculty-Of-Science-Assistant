@@ -277,7 +277,7 @@ export function BulkUpload({
   else if (invalid) hint = "Fix the marked rows to save.";
   else if (ready.length === 0 && rows.length > 0) hint = "No file is ready to save.";
   const canSave = course !== undefined && !busy && !saving && !invalid && ready.length > 0;
-  const saveLabel = saving ? "Saving..." : `${isPublished ? "Save and publish" : "Save as drafts"}${ready.length ? ` (${ready.length})` : ""}`;
+  const saveLabel = saving ? "Saving…" : `${isPublished ? "Save and publish" : "Save as drafts"}${ready.length ? ` (${ready.length})` : ""}`;
 
   function onDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();

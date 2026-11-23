@@ -444,7 +444,7 @@ export function ResourceForm({
                   void onDelete();
                 }}
               >
-                {pending ? "Deleting..." : "Delete"}
+                {pending ? "Deleting…" : "Delete"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

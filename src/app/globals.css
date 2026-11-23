@@ -166,6 +166,10 @@
   html {
     @apply font-sans;
   }
+  /* No double-tap-to-zoom delay on touch screens. */
+  a, button, [role="button"], input, select, textarea, label {
+    touch-action: manipulation;
+  }
 }
 
 @layer base {

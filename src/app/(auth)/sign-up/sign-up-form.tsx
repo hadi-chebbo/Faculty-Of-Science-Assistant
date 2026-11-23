@@ -89,6 +89,8 @@ export function SignUpForm() {
           name="email"
           type="email"
           autoComplete="email"
+          autoCapitalize="none"
+          spellCheck={false}
           required
           maxLength={254}
           disabled={pending}
@@ -133,7 +135,7 @@ export function SignUpForm() {
       </div>
       <Button type="submit" disabled={pending || !hydrated} className="h-11 w-full text-base">
         {pending && <Loader2 className="animate-spin" aria-hidden />}
-        {pending ? "Creating account..." : "Create account"}
+        {pending ? "Creating account…" : "Create account"}
       </Button>
     </form>
   );

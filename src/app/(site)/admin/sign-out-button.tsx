@@ -22,7 +22,7 @@ export function SignOutButton() {
 
   return (
     <Button variant="outline" onClick={signOut} disabled={pending} className="h-11 md:h-9">
-      {pending ? "Signing out..." : "Sign out"}
+      {pending ? "Signing out…" : "Sign out"}
     </Button>
   );
 }

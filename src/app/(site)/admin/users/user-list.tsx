@@ -57,6 +57,8 @@ export async function UserList({ viewer, raw }: { viewer: Viewer; raw: Record<st
             defaultValue={params.q ?? ""}
             placeholder="Part of an email address"
             autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
             className="h-11 md:h-9"
           />
         </div>
