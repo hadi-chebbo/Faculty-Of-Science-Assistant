@@ -634,7 +634,8 @@ export function ReaderCard({
         desktop && !focus && "h-[max(30rem,calc(100dvh-13rem))] overflow-hidden",
       )}
     >
-      {/* The top row holds only Contents (left) and Search and More actions (right). The search bar,
+      {/* The top row holds only Contents (left) and Search and More actions (right), plus Exit focus mode on a
+          phone while focus mode is on. The search bar,
           when open, hangs under it inside the same sticky box. */}
       <div ref={topRowRef} className={cn("z-20 shrink-0 border-b bg-card", !focus && "rounded-t-xl", !inner && "sticky top-14")}>
         <div className={cn("flex items-center gap-1 px-2", desktop ? "h-12" : "h-[52px]")}>

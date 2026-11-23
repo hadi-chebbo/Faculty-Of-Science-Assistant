@@ -829,6 +829,8 @@ test.describe("Download PDF and leaving focus mode", () => {
     const card = page.getByRole("region", { name: "Document" });
     await exit.click();
     await expect(exit).toHaveCount(0);
+    // As after Esc: the focus goes back to More actions.
+    await expect(page.getByRole("button", { name: MENU_BUTTON })).toBeFocused();
     expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe("");
     await expect(card).toBeVisible();
   });

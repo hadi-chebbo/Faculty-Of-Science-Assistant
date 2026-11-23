@@ -7,6 +7,7 @@ import { AddToTodoButton } from "./add-to-todo-button";
 import { MarkDoneButton } from "./mark-done-button";
 import { SaveButton } from "./save-button";
 import type { ReaderResource } from "@/services/resources/types";
+import { downloadHref } from "@/lib/file-routes";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 const LINK = `inline-flex min-h-11 items-center gap-1.5 rounded-md text-sm text-link underline-offset-4 hover:underline md:min-h-9 ${FOCUS}`;
@@ -42,7 +43,7 @@ export function ReaderDetails({ resource }: { resource: ReaderResource }) {
             prefetched. Downloading never marks the file as done. */}
         {resource.hasFile && (
           <Button asChild variant="outline" className="min-h-11 w-full md:min-h-9">
-            <a href={`/api/v1/resources/${resource.id}/download`}>
+            <a href={downloadHref(resource.id)}>
               <Download aria-hidden />
               Download PDF
             </a>

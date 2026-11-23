@@ -310,7 +310,7 @@ mock exam generation, personalization.
 - Reader page (`/resources/ID`, public, published resources only; anything else is the 404 page):
   PDF.js draws every page of the file on canvases in one vertical scroll, drawn lazily. The document
   dominates the page: a card with a top row (only Contents on the left and Search and "More actions"
-  on the right; nothing else goes there) and the pages on a muted reading surface. Each drawn page
+  on the right; nothing else goes there, except an "Exit focus mode" button on a phone while focus mode is on) and the pages on a muted reading surface. Each drawn page
   also has PDF.js's own text layer over it (invisible text, so text can be selected and copied and a
   screen reader can read it; built only for pages near the screen, scaled with the zoom; a scanned
   page simply has none). Search ("Search in document", or Ctrl+F / Cmd+F, which replaces the
