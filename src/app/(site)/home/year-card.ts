@@ -1,9 +1,9 @@
-import { yearLabel, type Year } from "@/lib/years";
+import { yearBadge, yearLabel, type Year } from "@/lib/years";
 
 // The wording of one year card on the home page. Pure, so the cases the demo data cannot
 // show (a year with no course, more than four courses) are covered by unit tests.
 export interface YearCardText {
-  circle: string; // the year number
+  circle: string; // "1", "2", "3" or "M1"
   label: string; // "Second year"
   codes: string[]; // at most CODE_CHIPS
   more: string | null; // "+3 more"
@@ -32,7 +32,7 @@ export function yearCardText(entry: {
   courseCodes: string[];
 }): YearCardText {
   const base = {
-    circle: String(entry.year),
+    circle: yearBadge(entry.year),
     label: yearLabel(entry.year),
     codes: entry.courseCodes.slice(0, CODE_CHIPS),
     more: entry.courseCodes.length > CODE_CHIPS ? `+${entry.courseCodes.length - CODE_CHIPS} more` : null,

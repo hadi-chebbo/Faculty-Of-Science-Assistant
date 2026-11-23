@@ -204,7 +204,7 @@ describe("listResources by semester", () => {
     expect((await listResources(null, { semester: 1 })).total).toBe(0);
     expect((await listResources(null, { semester: "5" } as never)).total).toBe(1);
     await expect(listResources(null, { semester: 0 })).rejects.toMatchObject({ name: "ValidationError", fields: ["semester"] });
-    await expect(listResources(null, { semester: 7 })).rejects.toBeInstanceOf(ValidationError);
+    await expect(listResources(null, { semester: 9 })).rejects.toBeInstanceOf(ValidationError);
   });
 });
 

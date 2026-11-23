@@ -7,11 +7,12 @@ and plan their own study.
 ## Course material
 
 **Year**:
-One of the three years of the Computer Science programme, written "First year", "Second year",
-"Third year". Always derived from a course's semester (1–2 first, 3–4 second, 5–6 third), never
+One of the years of the Computer Science programme, written "First year", "Second year",
+"Third year" and "Master 1". Always derived from a course's semester (1–2 first, 3–4 second, 5–6 third,
+7–8 Master 1), never
 stored. Students browse by year; a course still belongs to one semester, shown to students as
-"Semester 1" or "Semester 2" of its year (stored 3 is "Second year · Semester 1"). Master 1 joins as a
-fourth year later.
+"Semester 1" or "Semester 2" of its year (stored 3 is "Second year · Semester 1"). Master 1 is the fourth
+year (URL `/years/m1`, circle text "M1"; students never see a 4).
 _Avoid_: Level, L1/L2/L3, Year 2, S3, Semester 3 (in student-facing text), academic year (that is the 2024-2025 year of an exam)
 
 **Lecturer**:

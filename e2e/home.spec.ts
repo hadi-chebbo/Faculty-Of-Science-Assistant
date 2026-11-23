@@ -26,9 +26,9 @@ test("the numbers strip shows four labels with numbers", async ({ page }) => {
   }
 });
 
-test("three year cards, the second links to its page and shows counts", async ({ page }) => {
+test("four year cards, the second links to its page and shows counts", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("#years li")).toHaveCount(3);
+  await expect(page.locator("#years li")).toHaveCount(4);
   const second = page.locator("#years").getByRole("link", { name: /Second year/ });
   await expect(second).toHaveAttribute("href", "/years/2");
   await expect(second).toContainText("DEMO301");

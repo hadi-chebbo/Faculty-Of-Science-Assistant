@@ -1,9 +1,16 @@
-// The year rule: a Year is two consecutive semesters (1-2, 3-4, 5-6). Derived, never stored.
-export type Year = 1 | 2 | 3;
+// The year rule: a Year is two consecutive semesters (1-2, 3-4, 5-6, 7-8). Derived, never stored.
+// Year 4 is Master 1; students never see the number 4: it is "Master 1", the URL slug "m1" and the badge "M1".
+export type Year = 1 | 2 | 3 | 4;
 
-export const YEARS: readonly Year[] = [1, 2, 3];
+export const YEARS: readonly Year[] = [1, 2, 3, 4];
 
-const LABELS: Record<Year, string> = { 1: "First year", 2: "Second year", 3: "Third year" };
+// Everything students see of a year, in one table: its name, its URL slug and the short text in its circle.
+const YEAR_INFO: Record<Year, { label: string; slug: string; badge: string }> = {
+  1: { label: "First year", slug: "1", badge: "1" },
+  2: { label: "Second year", slug: "2", badge: "2" },
+  3: { label: "Third year", slug: "3", badge: "3" },
+  4: { label: "Master 1", slug: "m1", badge: "M1" },
+};
 
 export function yearOfSemester(semester: number): Year {
   return Math.ceil(semester / 2) as Year;
@@ -14,14 +21,14 @@ export function semestersOfYear(year: Year): [number, number] {
 }
 
 export function yearLabel(year: Year): string {
-  return LABELS[year];
+  return YEAR_INFO[year].label;
 }
 
-// A year from a URL segment or number: only 1, 2 or 3 (plain digits), otherwise null.
+// A year from a URL slug ("1", "2", "3", "m1") or, for callers holding the internal number, 1 to 4; otherwise null.
+// The string "4" is not a slug, so /years/4 is the not-found page.
 export function parseYear(value: string | number | null | undefined): Year | null {
-  const text = typeof value === "number" ? String(value) : value;
-  if (text === "1" || text === "2" || text === "3") return Number(text) as Year;
-  return null;
+  if (typeof value === "number") return YEARS.find((year) => year === value) ?? null;
+  return YEARS.find((year) => YEAR_INFO[year].slug === value) ?? null;
 }
 
 // A semester's number inside its year: 1 for the first (odd stored number), 2 for the second.
@@ -29,13 +36,18 @@ export function semesterInYear(semester: number): 1 | 2 {
   return semester % 2 === 1 ? 1 : 2;
 }
 
-// What students see instead of the stored 1-6 number.
+// What students see instead of the stored semester number.
 export function semesterLabel(semester: number): string {
   return `Semester ${semesterInYear(semester)}`;
 }
 
 export function yearSlug(year: Year): string {
-  return String(year);
+  return YEAR_INFO[year].slug;
+}
+
+// The short text in a year's circle: "1", "2", "3", "M1".
+export function yearBadge(year: Year): string {
+  return YEAR_INFO[year].badge;
 }
 
 // The id of a semester's section on its year page ("semester-1"), never the stored number.

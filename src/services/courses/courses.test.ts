@@ -96,8 +96,25 @@ describe("listCoursesByYear", () => {
     expect(result[0].courses.map((c) => c.code)).toEqual(["TEST501"]);
   });
 
+  it("lists Master 1 under semesters 7 and 8, by slug or number", async () => {
+    const { Course } = getDb();
+    await Course.create({ code: "TESTM71", title: "Master 1 course", semester: 7 });
+    await Course.create({ code: "TESTM81", title: "Master 1 spring", semester: 8 });
+    for (const year of [4, "m1"]) {
+      const result = await listCoursesByYear(null, year as never);
+      expect(result.map((s) => s.semester)).toEqual([7, 8]);
+      expect(result.map((s) => s.courses.map((c) => c.code))).toEqual([["TESTM71"], ["TESTM81"]]);
+    }
+  });
+
+  it("lets the database accept semester 8 and refuse 9", async () => {
+    const { Course } = getDb();
+    await Course.create({ code: "TESTDB8", title: "Last", semester: 8 });
+    await expect(Course.create({ code: "TESTDB9", title: "Too far", semester: 9 })).rejects.toThrow();
+  });
+
   it("rejects an unusable year with a ValidationError", async () => {
-    for (const year of [0, 4, NaN, 1.5]) {
+    for (const year of [0, 5, NaN, 1.5, "4", "M1"]) {
       await expect(listCoursesByYear(null, year as never)).rejects.toBeInstanceOf(ValidationError);
     }
   });

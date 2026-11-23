@@ -76,9 +76,10 @@ describe("courses: semester check", () => {
     }
   });
 
-  it("the database refuses semesters 0 and 7", async () => {
+  it("the database accepts 8 and refuses semesters 0 and 9", async () => {
     const { Course } = getDb();
-    for (const semester of [0, 7]) {
+    await Course.create({ code: "OK8", title: "T", semester: 8 });
+    for (const semester of [0, 9]) {
       await expect(Course.create({ code: `BAD${semester}`, title: "T", semester })).rejects.toThrow();
     }
   });

@@ -52,6 +52,17 @@ describe("yearCardText", () => {
   });
 });
 
+describe("yearCardText for Master 1", () => {
+  it("uses the M1 badge and the Master 1 label", () => {
+    expect(yearCardText({ year: 4, courseCount: 0, resourceCount: 0, courseCodes: [] })).toMatchObject({
+      circle: "M1",
+      label: "Master 1",
+      counts: null,
+      empty: "No courses yet",
+    });
+  });
+});
+
 describe("showStats", () => {
   it("needs at least 5 courses", () => {
     expect(showStats(4)).toBe(false);

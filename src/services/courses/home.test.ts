@@ -35,7 +35,7 @@ describe("getHomeStats", () => {
   it("gives zeros and one ordered entry per year for an empty database", async () => {
     expect(await getHomeStats(null)).toEqual({
       totals: { courses: 0, chapters: 0, resources: 0, exams: 0 },
-      years: [1, 2, 3].map((year) => ({ year, courseCount: 0, resourceCount: 0, courseCodes: [] })),
+      years: [1, 2, 3, 4].map((year) => ({ year, courseCount: 0, resourceCount: 0, courseCodes: [] })),
     });
   });
 
@@ -65,8 +65,9 @@ describe("getHomeStats", () => {
       { year: 1, courseCount: 0, resourceCount: 0, courseCodes: [] },
       { year: 2, courseCount: 2, resourceCount: 2, courseCodes: ["TEST301", "TEST302"] },
       { year: 3, courseCount: 1, resourceCount: 1, courseCodes: ["TEST501"] },
+      { year: 4, courseCount: 0, resourceCount: 0, courseCodes: [] },
     ]);
-    expect((await getHomeStats(admin)).years.map((y) => y.resourceCount)).toEqual([0, 3, 2]);
+    expect((await getHomeStats(admin)).years.map((y) => y.resourceCount)).toEqual([0, 3, 2, 0]);
   });
 
   it("orders codes by semester, then code, and keeps a year with only courses without files", async () => {

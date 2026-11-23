@@ -51,7 +51,7 @@ test("a visitor browses from home to a year to a course and back", async ({ page
 // 200, and a repeat request may be served from the cache as 404. So these tests assert the page,
 // not the status.
 test("an old semester link redirects to its place in the year page", async ({ page }) => {
-  for (const [semester, target] of [[1, "/years/1#semester-1"], [3, "/years/2#semester-1"], [4, "/years/2#semester-2"], [6, "/years/3#semester-2"]]) {
+  for (const [semester, target] of [[1, "/years/1#semester-1"], [3, "/years/2#semester-1"], [4, "/years/2#semester-2"], [6, "/years/3#semester-2"], [7, "/years/m1#semester-1"], [8, "/years/m1#semester-2"]]) {
     await page.goto(`/semesters/${semester}`);
     await expect(page).toHaveURL(new RegExp(`${target}$`));
   }

@@ -39,6 +39,8 @@ describe("createCourse", () => {
     const a = await admin();
     expect((await createCourse(a, { code: "SEM1", title: "T", semester: 1 })).semester).toBe(1);
     expect((await createCourse(a, { code: "SEM6", title: "T", semester: 6 })).semester).toBe(6);
+    expect((await createCourse(a, { code: "SEM7", title: "T", semester: 7 })).semester).toBe(7);
+    expect((await createCourse(a, { code: "SEM8", title: "T", semester: 8 })).semester).toBe(8);
   });
 
   it("accepts a semester sent as a string", async () => {
@@ -57,7 +59,7 @@ describe("createCourse", () => {
     expect(await fieldsOf({ code: "A", title: "T", semester: 3 })).toEqual(["code"]);
     expect(await fieldsOf({ code: "A".repeat(21), title: "T", semester: 3 })).toEqual(["code"]);
     expect(await fieldsOf({ code: "AB", title: "   ", semester: 3 })).toEqual(["title"]);
-    expect(await fieldsOf({ code: "AB", title: "T", semester: 7 })).toEqual(["semester"]);
+    expect(await fieldsOf({ code: "AB", title: "T", semester: 9 })).toEqual(["semester"]);
     expect(await fieldsOf({ code: "AB", title: "T", semester: 0 })).toEqual(["semester"]);
     expect(await getDb().Course.count()).toBe(0);
   });
@@ -96,12 +98,12 @@ describe("updateCourse", () => {
     expect(saved).toMatchObject({ id: c.id, code: "NEW1", title: "New", semester: 5 });
   });
 
-  it("moves a course to the first and the last semester and refuses 0 and 7", async () => {
+  it("moves a course to the first and the last semester and refuses 0 and 9", async () => {
     const a = await admin();
     const c = await createCourse(a, { code: "MOVE1", title: "Move", semester: 3 });
     expect((await updateCourse(a, c.id, { semester: 1 })).semester).toBe(1);
     expect((await updateCourse(a, c.id, { semester: 6 })).semester).toBe(6);
-    for (const semester of [0, 7]) {
+    for (const semester of [0, 9]) {
       const error = await updateCourse(a, c.id, { semester }).catch((e) => e);
       expect(error).toBeInstanceOf(ValidationError);
       expect((error as ValidationError).fields).toEqual(["semester"]);

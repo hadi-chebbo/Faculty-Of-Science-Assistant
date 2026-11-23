@@ -118,7 +118,7 @@ test("the admin adds a first-year course and it is listed and browsable", async 
     const add = page.getByRole("region", { name: "Courses" });
     await add.getByLabel("Code").first().fill(code);
     await add.getByLabel("Title").first().fill("E2E First Year");
-    await expect(add.getByLabel("Year").first().getByRole("option")).toHaveText(["First year", "Second year", "Third year"]);
+    await expect(add.getByLabel("Year").first().getByRole("option")).toHaveText(["First year", "Second year", "Third year", "Master 1"]);
     await expect(add.getByLabel("Semester").first().getByRole("option")).toHaveText(["Semester 1", "Semester 2"]);
     await add.getByLabel("Year").first().selectOption("1");
     await add.getByLabel("Semester").first().selectOption("1");
@@ -131,6 +131,33 @@ test("the admin adds a first-year course and it is listed and browsable", async 
     await page.goto("/years/1");
     await expect(page.getByRole("heading", { name: "Semester 1" })).toBeVisible();
     await expect(page.getByRole("link", { name: new RegExp(code) })).toBeVisible();
+  } finally {
+    await deleteCourses(`E2E${stamp}`);
+  }
+});
+
+test("the admin adds a Master 1 course and it is listed and browsable", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "writing test, desktop only");
+  const stamp = randomBytes(3).toString("hex").toUpperCase();
+  const code = `E2E${stamp}`;
+  try {
+    await signIn(page, ADMIN_EMAIL, ADMIN_PASSWORD);
+    await page.goto("/admin/courses");
+    const add = page.getByRole("region", { name: "Courses" });
+    await add.getByLabel("Code").first().fill(code);
+    await add.getByLabel("Title").first().fill("E2E Master One");
+    await add.getByLabel("Year").first().selectOption({ label: "Master 1" });
+    await add.getByLabel("Semester").first().selectOption("2");
+    await add.getByRole("button", { name: "Add course" }).click();
+    await expect(page.getByText("Course added.")).toBeVisible();
+    const group = page.locator("div").filter({ has: page.getByRole("heading", { name: "Master 1 · Semester 2", exact: true }) }).last();
+    await expect(group.getByRole("listitem").filter({ hasText: code })).toBeVisible();
+
+    await page.goto("/years/m1");
+    const section = page.locator("section").filter({ has: page.getByRole("heading", { name: "Semester 2" }) });
+    await expect(section.getByRole("link", { name: new RegExp(code) })).toBeVisible();
+    await page.goto("/courses/" + code);
+    await expect(page.getByRole("heading", { name: "E2E Master One" })).toBeVisible();
   } finally {
     await deleteCourses(`E2E${stamp}`);
   }
