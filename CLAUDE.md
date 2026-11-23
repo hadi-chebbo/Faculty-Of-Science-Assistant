@@ -310,7 +310,7 @@ mock exam generation, personalization.
 - Reader page (`/resources/ID`, public, published resources only; anything else is the 404 page):
   PDF.js draws every page of the file on canvases in one vertical scroll, drawn lazily. The document
   dominates the page: a card with a top row (only Contents on the left and Search and "More actions"
-  on the right; nothing else goes there) and the pages on a muted reading surface. Each drawn page
+  on the right; nothing else goes there, except an "Exit focus mode" button on a phone while focus mode is on) and the pages on a muted reading surface. Each drawn page
   also has PDF.js's own text layer over it (invisible text, so text can be selected and copied and a
   screen reader can read it; built only for pages near the screen, scaled with the zoom; a scanned
   page simply has none). Search ("Search in document", or Ctrl+F / Cmd+F, which replaces the
@@ -339,7 +339,8 @@ mock exam generation, personalization.
   is saved), Add to to-do, Mark as done (or Mark as not done; only for a lecture, notes, exercise or
   exam), Download and Open outside the reader. Focus mode
   makes the card cover the whole viewport (and asks for real fullscreen where available, but does
-  not depend on it); Esc leaves it (or closes an open search first). Keys (when not typing): arrows,
+  not depend on it); Esc leaves it (or closes an open search first), and on a phone, which has no Esc, an "Exit focus
+  mode" button (44px, Minimize icon) sits in the top row while it is on (desktop keeps Esc and the menu). Keys (when not typing): arrows,
   PageUp/PageDown, Home/End, `+`/`-`, `0`. The page being read is remembered per resource in
   `localStorage` (`reader:last-page:ID`), and a later visit offers "Continue where you left off,
   page N?" once; this is a position only, never progress. Desktop (md and up): breadcrumb ending at
@@ -350,7 +351,9 @@ mock exam generation, personalization.
   makes a card in To do linked to this file (toast "Added to To do" with "View board"; the same file may be
   added again; signed out it opens the sign-in dialog like Save, then adds the card). Under it, for a lecture, notes, exercise or exam
   only, an outline "Mark as done" button becomes a filled success-green "Done" (check icon,
-  `aria-pressed`) once marked; pressing "Done" un-marks it. Like Save it is optimistic, shares one browser
+  `aria-pressed`) once marked; pressing "Done" un-marks it. Last in that group, for a file with a stored file, a full-width
+  outline "Download PDF" link (the same download route as the menu's Download, which stays; "Open outside the reader" is
+  in the menu only); downloading never marks a file as done. Like Save it is optimistic, shares one browser
   store with the menu item (`src/lib/completions-client.ts`, `GET /api/v1/completions/ids` once per page
   load, only for a signed-in viewer), rolls back with a toast on failure, and signed out opens the
   sign-in dialog (see "Sign-in dialog for actions") and, after signing in, marks the file with the usual toast. Toasts, both with Undo: "Marked as done. Chapter 2: 4 of

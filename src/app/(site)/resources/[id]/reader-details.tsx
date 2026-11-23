@@ -1,11 +1,13 @@
-import { CheckCircle2, ExternalLink } from "lucide-react";
+import { CheckCircle2, Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { EXAM_SESSION_LABELS, LANGUAGE_NAMES, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
 import { isMarkable } from "@/services/progress/markable";
+import { Button } from "@/components/ui/button";
 import { AddToTodoButton } from "./add-to-todo-button";
 import { MarkDoneButton } from "./mark-done-button";
 import { SaveButton } from "./save-button";
 import type { ReaderResource } from "@/services/resources/types";
+import { downloadHref } from "@/lib/file-routes";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 const LINK = `inline-flex min-h-11 items-center gap-1.5 rounded-md text-sm text-link underline-offset-4 hover:underline md:min-h-9 ${FOCUS}`;
@@ -37,6 +39,16 @@ export function ReaderDetails({ resource }: { resource: ReaderResource }) {
         <SaveButton resourceId={resource.id} />
         <AddToTodoButton resourceId={resource.id} />
         {isMarkable(resource.type) && <MarkDoneButton resourceId={resource.id} isExam={resource.type === "exam"} />}
+        {/* A plain <a>, not next/link: the download route redirects to the file and must not be
+            prefetched. Downloading never marks the file as done. */}
+        {resource.hasFile && (
+          <Button asChild variant="outline" className="min-h-11 w-full md:min-h-9">
+            <a href={downloadHref(resource.id)}>
+              <Download aria-hidden />
+              Download PDF
+            </a>
+          </Button>
+        )}
       </div>
 
       <section className="space-y-1.5">

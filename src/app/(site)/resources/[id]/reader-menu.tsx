@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { downloadHref, openHref } from "@/lib/file-routes";
 
 export interface ReaderMenuProps {
   id: string;
@@ -70,8 +71,8 @@ function entriesOf({ id, fit, focus, onFit, onFocus, saved, onToggleSaved, onAdd
                 run: onToggleDone,
               },
             ]),
-        { kind: "link", label: "Download", icon: Download, href: `/api/v1/resources/${id}/download` },
-        { kind: "link", label: "Open outside the reader", icon: ExternalLink, href: `/api/v1/resources/${id}/open`, newTab: true },
+        { kind: "link", label: "Download", icon: Download, href: downloadHref(id) },
+        { kind: "link", label: "Open outside the reader", icon: ExternalLink, href: openHref(id), newTab: true },
       ],
     },
   ];

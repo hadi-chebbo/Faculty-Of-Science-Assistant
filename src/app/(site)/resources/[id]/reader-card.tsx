@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Minus, PanelLeft, Plus, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minimize, Minus, PanelLeft, Plus, Search, X } from "lucide-react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -634,7 +634,8 @@ export function ReaderCard({
         desktop && !focus && "h-[max(30rem,calc(100dvh-13rem))] overflow-hidden",
       )}
     >
-      {/* The top row holds only Contents (left) and Search and More actions (right). The search bar,
+      {/* The top row holds only Contents (left) and Search and More actions (right), plus Exit focus mode on a
+          phone while focus mode is on. The search bar,
           when open, hangs under it inside the same sticky box. */}
       <div ref={topRowRef} className={cn("z-20 shrink-0 border-b bg-card", !focus && "rounded-t-xl", !inner && "sticky top-14")}>
         <div className={cn("flex items-center gap-1 px-2", desktop ? "h-12" : "h-[52px]")}>
@@ -674,6 +675,12 @@ export function ReaderCard({
             </Sheet>
           )}
           <div className="flex-1" />
+          {/* A phone has no Esc key: in focus mode the way out is on screen too, not only in the menu. */}
+          {focus && !desktop && (
+            <Button variant="ghost" size="icon" className="size-11" aria-label="Exit focus mode" onClick={exitFocus}>
+              <Minimize aria-hidden />
+            </Button>
+          )}
           <Button
             ref={searchButtonRef}
             variant="ghost"
