@@ -413,3 +413,47 @@ public/file.svg, globe.svg, next.svg, vercel.svg, window.svg - unused template f
 - The confirm-email success state (needs a real token) and the check-email page after a real sign-up (the screenshot shows the no-stored-address variant).
 - Production performance: only a throttled local production build was measured.
 - Drag and drop on the board, the Contents panel remembered state, and screen reader output were not tested.
+
+---
+
+## Review decisions (owner, 2026-11-23)
+
+Agreed, to go into the fix spec:
+- **Quick batch, no layout change (all agreed):**
+  - B1: a "UA" favicon in the primary blue; delete the leftover default SVGs.
+  - B2: no fake DEMO text. The Home hero preview becomes a generic example with no course code ("Your course",
+    "Chapter 1: Introduction", "Final exam 2024-2025"). Search hints give no fake code.
+  - S1: real page titles.
+  - S2: Open Graph tags and a theme colour.
+  - S16: pluralisation in "1 files".
+  - S6: a skip link.
+  - S8: 12px minimum text.
+  - S9: "…" instead of "...".
+  - S10: no spellcheck or autocapitalize on email fields.
+  - S17: touch and overscroll polish.
+  - S7: the hover lift respects reduced motion.
+  - N7: "Back to courses" on the account pages.
+  - N1: the FAQ account answer.
+  - N8: 404 links.
+- **S14:** a "Download PDF" button under "Mark as done" in the reader's details column. "Open outside the reader" stays in the menu.
+- **S3:** phone back links. The course page gets "‹ Second year" and the chapter page "‹ CODE". Desktop keeps its breadcrumbs.
+- **S4:** on a phone the Exams filters collapse into one "Filters (N)" control. Every exam row shows the course title
+  beside the code, and Search does too.
+- **S5:** on a phone "Choose your year" moves above the preview card. A signed-in student gets the "Your progress" band first,
+  with the hero shrunk to one line plus its buttons.
+  - Home stays static and never reads the session on the server.
+  - A non-httpOnly hint cookie holds "signed in" and nothing personal. It is set at sign-in and cleared at sign-out.
+  - A small script reads the cookie before paint and reserves the band, so nothing jumps. If the hint is stale, the space
+    is released once the session check answers.
+- **S11:** a course with 0 files gets a muted card that is not a link, saying "No files yet". Year cards are top-aligned.
+  Search mutes 0-file courses the same way (N4, first half).
+- **S15:** padding at the end of the to-do list so the last card clears the `+` button.
+- **Phone polish:**
+  - An edge fade on rows that scroll sideways (course tabs N2, search chips N4).
+  - An on-screen Exit button in focus mode on a phone (N3).
+  - Saved course headings limited to two lines (N5).
+- **S13:** with 5 or more lecturers, the "Taught by" strip is one sideways-scrolling row.
+- **N9, N10:** a title/code search on the admin resource list, and the admin tabs as one sideways-scrolling row on a phone.
+
+Rejected for now:
+- **S12:** the exams year grid on the desktop course page.
