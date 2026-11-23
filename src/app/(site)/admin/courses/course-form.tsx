@@ -69,12 +69,12 @@ export function CourseForm({
   const [errors, setErrors] = useState<Errors>({});
   const [pending, setPending] = useState(false);
 
-  // The stored 1-6 number is never shown: the form picks a year and a semester of it, and posts the number.
+  // The stored semester number is never shown: the form picks a year and a semester of it, and posts the number.
   const stored = Number(values.semester);
   const year = yearOfSemester(stored);
   const inYear = semesterInYear(stored);
   const setYearAndSemester = (nextYear: number | null, nextInYear: 1 | 2) => {
-    // Any entry of YEARS (Master 1 included later), not only the three numeric years parseYear knows.
+    // Any entry of YEARS.
     const y = YEARS.find((candidate) => candidate === nextYear);
     if (y) setValues((v) => ({ ...v, semester: String(storedSemester(y, nextInYear)) }));
   };

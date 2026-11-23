@@ -119,7 +119,7 @@ export function StatsAndYearsSkeleton() {
           <Skeleton className="h-8 w-56" />
           <Skeleton className="mt-2.5 h-1 w-12" />
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {YEARS.map((year) => (
             <Skeleton key={year} className="h-44 w-full rounded-2xl" />
           ))}

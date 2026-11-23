@@ -5,7 +5,7 @@ import type { ExamSession } from "@/db/constants";
 import { SectionTitle } from "./section-title";
 
 const STEPS = [
-  { title: "Pick your year", text: "First, second or third year of the Computer Science programme, each with its two semesters of courses." },
+  { title: "Pick your year", text: "First, second or third year of the Computer Science programme, or Master 1, each with its two semesters of courses." },
   { title: "Open a course", text: "See its chapters at a glance, with what each one holds: lectures, notes and exercise sheets." },
   { title: "Study, or go straight to exams", text: "Work through a chapter in order, or jump to previous exams grouped by year." },
 ];
@@ -47,7 +47,7 @@ const QUESTIONS = [
   { q: "Do I need an account?", a: "No. Browsing, opening and downloading files never require an account." },
   {
     q: "Which courses are covered?",
-    a: "Computer Science, all three years, Faculty of Science, Hadath branch. A year with no material yet says so on its card.",
+    a: "Computer Science, the three years and Master 1, Faculty of Science, Hadath branch. A year with no material yet says so on its card.",
   },
   { q: "Does it cost anything?", a: "No. Everything on the site is free." },
 ];

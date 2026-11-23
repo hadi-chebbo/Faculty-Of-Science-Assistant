@@ -35,7 +35,7 @@ export async function StatsAndYears() {
       )}
       <section id="years" className="scroll-mt-20">
         <SectionTitle>Choose your year</SectionTitle>
-        <ul className="grid gap-4 md:grid-cols-3">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.years.map((entry) => (
             <li key={entry.year}>
               <YearCard entry={entry} />
