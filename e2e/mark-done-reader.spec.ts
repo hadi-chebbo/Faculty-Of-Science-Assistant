@@ -156,3 +156,16 @@ test("a solution cannot be marked: no button and no menu entry", async ({ page, 
   await expect(menuEntry(page, isMobile, "Save for later")).toBeVisible();
   await expect(menuEntry(page, isMobile, "Mark as done")).toHaveCount(0);
 });
+
+test("downloading with Download PDF never marks the file as done", async ({ page, isMobile }) => {
+  const id = await resourceId(courseFor(isMobile), "Sample lecture 1");
+  await openSignedIn(page, id);
+  await expect(markButton(page)).toHaveAttribute("aria-pressed", "false");
+
+  const download = page.waitForEvent("download");
+  await details(page).getByRole("link", { name: "Download PDF" }).click();
+  await download;
+
+  await expect(markButton(page)).toHaveAttribute("aria-pressed", "false");
+  expect(await doneCount(id)).toBe(0);
+});

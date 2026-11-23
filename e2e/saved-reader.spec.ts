@@ -104,7 +104,7 @@ test("the More actions menu offers Save for later first in its download group, o
   await page.goto(`/resources/${await resourceId(courseFor(isMobile), "Sample lecture 1")}`);
   await openMenu(page);
   await expect(menuEntry(page, isMobile, "Save for later")).toBeVisible();
-  await expect(page.getByRole(isMobile ? "link" : "menuitem", { name: "Download" })).toBeVisible();
+  await expect(page.getByRole(isMobile ? "link" : "menuitem", { name: "Download", exact: true })).toBeVisible();
 });
 
 test("a signed-out Save opens the sign-in dialog without leaving the reader; Esc saves nothing, signing in saves", async ({ page, isMobile }) => {

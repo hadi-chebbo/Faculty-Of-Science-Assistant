@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Minus, PanelLeft, Plus, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Minimize, Minus, PanelLeft, Plus, Search, X } from "lucide-react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -674,6 +674,12 @@ export function ReaderCard({
             </Sheet>
           )}
           <div className="flex-1" />
+          {/* A phone has no Esc key: in focus mode the way out is on screen too, not only in the menu. */}
+          {focus && !desktop && (
+            <Button variant="ghost" size="icon" className="size-11" aria-label="Exit focus mode" onClick={exitFocus}>
+              <Minimize aria-hidden />
+            </Button>
+          )}
           <Button
             ref={searchButtonRef}
             variant="ghost"

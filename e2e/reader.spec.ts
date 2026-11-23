@@ -24,9 +24,11 @@ async function openMenu(page: Page) {
   await page.getByRole("button", { name: MENU_BUTTON }).click();
 }
 
-// Desktop: a dropdown whose entries are menu items. Phone: a bottom sheet of buttons and links.
+// Desktop: a dropdown whose entries are menu items. Phone: a bottom sheet of buttons and links, looked up
+// inside the sheet so the page's own controls with similar names (Download PDF, Exit focus mode) never match.
 function menuEntry(page: Page, isMobile: boolean, name: string | RegExp, link = false) {
-  return page.getByRole(isMobile ? (link ? "link" : "button") : "menuitem", { name });
+  if (isMobile) return page.getByRole("dialog", { name: "More actions" }).getByRole(link ? "link" : "button", { name });
+  return page.getByRole("menuitem", { name });
 }
 
 // Desktop: a box you can type into. Phone: plain text.
@@ -132,7 +134,7 @@ test.describe("the reader page", () => {
     const id = await resourceId("DEMO301", "Sample lecture 1");
     await page.goto(`/resources/${id}`);
     await openMenu(page);
-    const download = menuEntry(page, isMobile, "Download", true);
+    const download = menuEntry(page, isMobile, /^Download$/, true);
     await expect(download).toHaveAttribute("href", `/api/v1/resources/${id}/download`);
 
     const response = await request.get(`/api/v1/resources/${id}/download`, { maxRedirects: 0 });
@@ -467,7 +469,7 @@ test.describe("reading a long file", () => {
     await open(page);
     await openMenu(page);
     for (const name of ["Fit width", "Fit page", "Focus mode"]) await expect(menuEntry(page, isMobile, name)).toBeVisible();
-    const download = menuEntry(page, isMobile, "Download", true);
+    const download = menuEntry(page, isMobile, /^Download$/, true);
     await expect(download).toHaveAttribute("href", `/api/v1/resources/${id}/download`);
     const outside = menuEntry(page, isMobile, /Open outside the reader/, true);
     await expect(outside).toHaveAttribute("href", `/api/v1/resources/${id}/open`);
@@ -475,8 +477,8 @@ test.describe("reading a long file", () => {
     await expect(outside).toHaveAttribute("rel", /noopener/);
     await page.keyboard.press("Escape");
     await expect(download).toHaveCount(0);
-    // The old toolbar buttons are gone from the title area.
-    await expect(page.getByRole("link", { name: "Download" })).toHaveCount(0);
+    // The old toolbar buttons are gone from the title area (the details column's "Download PDF" is another link).
+    await expect(page.getByRole("link", { name: "Download", exact: true })).toHaveCount(0);
   });
 
   test("focus mode covers the viewport and Esc leaves it", async ({ page, isMobile }) => {
@@ -794,5 +796,40 @@ test.describe("GET /api/v1/resources/[id]/download", () => {
       expect(response.headers()["location"]).toBe("/resource-unavailable");
       expect(response.headers()["cache-control"]).toBe("no-store");
     }
+  });
+});
+
+test.describe("Download PDF and leaving focus mode", () => {
+  test("Download PDF in the details downloads the file", async ({ page, isMobile }) => {
+    const id = await resourceId("DEMO301", "Sample lecture 1");
+    await page.goto(`/resources/${id}`);
+    const button = page.getByRole("complementary", { name: "About this file" }).getByRole("link", { name: "Download PDF" });
+    await expect(button).toHaveAttribute("href", `/api/v1/resources/${id}/download`);
+    if (isMobile) expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+
+    const download = page.waitForEvent("download");
+    await button.click();
+    expect((await download).suggestedFilename()).toBe("Sample lecture 1.pdf");
+  });
+
+  test("on a phone, focus mode has an on-screen Exit button", async ({ page, isMobile }) => {
+    const id = await resourceId("DEMO301", "Sample lecture 1");
+    await page.goto(`/resources/${id}`);
+    const exit = page.getByRole("button", { name: "Exit focus mode" });
+    await expect(exit).toHaveCount(0);
+    await openMenu(page);
+    await menuEntry(page, isMobile, "Focus mode").click();
+    if (!isMobile) {
+      // Desktop keeps Esc and the menu; no extra button in the top row.
+      await expect(exit).toHaveCount(0);
+      return;
+    }
+    await expect(exit).toBeVisible();
+    expect((await exit.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    const card = page.getByRole("region", { name: "Document" });
+    await exit.click();
+    await expect(exit).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe("");
+    await expect(card).toBeVisible();
   });
 });
