@@ -1,18 +1,14 @@
-import { ClipboardCheck } from "lucide-react";
+import { BookOpen, ClipboardCheck } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const FACTS = ["No account needed", "Free", "Works on your phone"];
 
-const PREVIEW_YEARS = [
-  {
-    year: "2024-2025",
-    rows: [
-      { session: "Partial", title: "Sample partial exam 2024", solution: true },
-      { session: "Final", title: "Sample final exam 2024", solution: true },
-    ],
-  },
-  { year: "2023-2024", rows: [{ session: "Partial", title: "Sample partial exam 2023", solution: false }] },
+// Generic example rows: no course code and no real course, so nobody looks for something that is not there.
+const PREVIEW_ROWS = [
+  { title: "Chapter 1: Introduction", detail: "Lectures, notes and exercises", icon: BookOpen },
+  { title: "Chapter 2: Fundamentals", detail: "Lectures, notes and exercises", icon: BookOpen },
+  { title: "Final exam 2024-2025", detail: "Previous exam", icon: ClipboardCheck, solution: true },
 ];
 
 export function Hero() {
@@ -57,38 +53,33 @@ function CoursePreview() {
   return (
     <div
       aria-hidden="true"
+      data-testid="course-preview"
       className="min-w-0 select-none rounded-xl border bg-background p-4 shadow-xl shadow-primary/10"
     >
       <p className="mb-2.5 text-xs text-muted-foreground">What a course looks like</p>
-      <span className="font-mono text-xs font-medium text-link">DEMO310</span>
-      <p className="text-[1.0625rem] font-semibold text-heading">Sample Full Course A</p>
+      <p className="text-[1.0625rem] font-semibold text-heading">Your course</p>
       <div className="my-3 flex gap-1 rounded-lg border bg-muted p-1 text-[0.8125rem]">
-        {["Chapters", "Previous exams", "Other material"].map((tab) => (
+        {["Chapters", "Previous exams"].map((tab) => (
           <span
             key={tab}
-            className={`flex-1 truncate rounded-md px-1 py-1.5 text-center ${
-              tab === "Previous exams" ? "border bg-card font-medium text-heading" : "text-muted-foreground"
+            className={`flex-1 rounded-md px-1 py-1.5 text-center ${
+              tab === "Chapters" ? "border bg-card font-medium text-heading" : "text-muted-foreground"
             }`}
           >
             {tab}
           </span>
         ))}
       </div>
-      {PREVIEW_YEARS.map(({ year, rows }) => (
-        <div key={year}>
-          <p className="mb-1.5 mt-3 text-[0.8125rem] font-semibold text-heading">{year}</p>
-          {rows.map((row) => (
-            <div key={row.title} className="mt-1.5 flex items-center gap-2.5 rounded-lg border bg-card px-3 py-2.5">
-              <span className="flex size-[30px] shrink-0 items-center justify-center rounded-md bg-muted text-link">
-                <ClipboardCheck className="size-[18px]" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-heading">{row.session}</span>
-                <span className="block truncate text-xs text-muted-foreground">{row.title}</span>
-              </span>
-              {row.solution && <span className="text-[0.8125rem] font-medium text-link">Solution</span>}
-            </div>
-          ))}
+      {PREVIEW_ROWS.map(({ title, detail, icon: Icon, solution }) => (
+        <div key={title} className="mt-1.5 flex items-center gap-2.5 rounded-lg border bg-card px-3 py-2.5">
+          <span className="flex size-[30px] shrink-0 items-center justify-center rounded-md bg-muted text-link">
+            <Icon className="size-[18px]" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium text-heading">{title}</span>
+            <span className="block truncate text-xs text-muted-foreground">{detail}</span>
+          </span>
+          {solution && <span className="text-[0.8125rem] font-medium text-link">Solution</span>}
         </div>
       ))}
     </div>
