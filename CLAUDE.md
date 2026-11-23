@@ -585,7 +585,8 @@ mock exam generation, personalization.
   (`src/app/icon.svg`, `apple-icon.png`, `favicon.ico`; no Next.js sample files remain in `public`).
 - Page titles and link previews: the course tab is "CODE Title" and the chapter tab "CODE · Chapter N: Title"
   (`courseTitle`, `chapterTitle` and `pageMetadata` in `src/lib/page-title.ts`, used by `generateMetadata` on
-  both pages; an unknown course or chapter keeps the plain "Course" / "Chapter" title and the 404 page). The root
+  both pages with the light `getCourseTitle` / `getChapterTitle` queries, never the course's files; an unknown course or
+  chapter, and the 404 page, are titled "Page not found"; course and chapter previews keep the site description). The root
   metadata (`src/app/layout.tsx`) sets `metadataBase` (from `getAppUrl`), Open Graph (site name, description,
   type website, locale en) and a Twitter summary card; the one generic image is `opengraph-image.png`
   (`twitter-image.png` is a copy; 1200x630, brand blue, name and one line, no claim about courses). A page with

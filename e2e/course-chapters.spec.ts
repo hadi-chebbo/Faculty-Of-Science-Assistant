@@ -97,7 +97,7 @@ test("the course tab is titled with the code and the course title", async ({ pag
   await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "University Assistant");
 });
 
-test("an unknown course keeps the generic title", async ({ page }) => {
+test("an unknown course gets the not-found title", async ({ page }) => {
   await page.goto("/courses/NOPE999");
-  await expect(page).toHaveTitle("Course | University Assistant");
+  await expect(page).toHaveTitle("Page not found | University Assistant");
 });

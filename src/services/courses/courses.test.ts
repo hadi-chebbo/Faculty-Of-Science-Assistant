@@ -3,7 +3,7 @@ import { getDb } from "@/db/models";
 import { closeDb, truncateAllTables } from "@/db/test-utils";
 import { NotFoundError, ValidationError } from "../errors";
 import type { Viewer } from "../viewer";
-import { getChapterPage, getCourseByCode, listCourses, listCoursesByYear } from "./courses";
+import { getChapterPage, getChapterTitle, getCourseByCode, getCourseTitle, listCourses, listCoursesByYear } from "./courses";
 
 const SAMPLE_URL = "https://example.com/sample";
 const SAMPLE_KEY = "resources/sample.pdf";
@@ -462,5 +462,24 @@ describe("lecturer scope and filter", () => {
     expect(page.chapter.groups).toEqual([]);
     expect(page.lecturers.map((l) => l.slug)).toEqual(["alan-sample"]);
     expect(page.allFileCount).toBe(1);
+  });
+});
+
+describe("tab titles", () => {
+  it("gives a course's code and title, ignoring case, and null for an unknown or unusable code", async () => {
+    await seed();
+    expect(await getCourseTitle("test301")).toEqual({ code: "TEST301", title: "Course A" });
+    expect(await getCourseTitle("NOPE999")).toBeNull();
+    expect(await getCourseTitle("")).toBeNull();
+  });
+
+  it("gives a chapter's position and title, and null for an unknown course, chapter or position", async () => {
+    const { Course, Chapter } = getDb();
+    const course = await Course.create({ code: "TEST401", title: "Chapters", semester: 4 });
+    await Chapter.create({ courseId: course.id, position: 2, title: "Graphs" });
+    expect(await getChapterTitle("test401", "2")).toEqual({ course: { code: "TEST401" }, chapter: { position: 2, title: "Graphs" } });
+    expect(await getChapterTitle("TEST401", "3")).toBeNull();
+    expect(await getChapterTitle("TEST401", "2.5")).toBeNull();
+    expect(await getChapterTitle("NOPE999", "2")).toBeNull();
   });
 });

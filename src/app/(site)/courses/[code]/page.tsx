@@ -4,10 +4,10 @@ import { Suspense } from "react";
 import { Crumbs } from "@/components/site/crumbs";
 import { PageTitle } from "@/components/site/page-title";
 import { CourseSkeleton } from "@/components/site/skeletons";
-import { courseTitle, pageMetadata } from "@/lib/page-title";
+import { NOT_FOUND_TITLE, courseTitle, pageMetadata } from "@/lib/page-title";
 import { yearCrumb } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
-import { getCourseByCode } from "@/services/courses/courses";
+import { getCourseByCode, getCourseTitle } from "@/services/courses/courses";
 import { AreaSwitch, ChapterCards, ExamsArea, OtherArea, parseArea } from "./course-areas";
 import { CourseProgressBlock } from "./course-progress";
 import { ResourceTabs } from "./resource-tabs";
@@ -17,8 +17,8 @@ import { ShowingOnly, TaughtBy } from "./taught-by";
 export async function generateMetadata({ params }: PageProps<"/courses/[code]">): Promise<Metadata> {
   const { code } = await params;
   await connection();
-  const course = await getCourseByCode(null, code).catch(() => null);
-  return course ? pageMetadata(courseTitle(course)) : { title: "Course" };
+  const course = await getCourseTitle(code);
+  return course ? pageMetadata(courseTitle(course)) : { title: NOT_FOUND_TITLE };
 }
 
 // Course codes come from the database and are unknown at build time, so the code is runtime

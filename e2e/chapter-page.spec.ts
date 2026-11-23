@@ -62,8 +62,8 @@ test("the chapter tab is titled with the course code, chapter number and title",
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "DEMO301 · Chapter 2: Sample chapter 2");
 });
 
-test("an unknown chapter keeps the generic title", async ({ page }) => {
+test("an unknown chapter gets the not-found title", async ({ page }) => {
   await page.goto("/courses/DEMO301/chapters/99");
   await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
-  await expect(page).toHaveTitle("Chapter | University Assistant");
+  await expect(page).toHaveTitle("Page not found | University Assistant");
 });

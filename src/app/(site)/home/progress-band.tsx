@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ProgressRing } from "@/components/site/progress-ring";
 import { useProgressOverview } from "@/lib/progress-overview-client";
 import { activeDaysText, courseLabel, percentOf, topCourses, type BandCourse } from "./progress-band-logic";
-import { noun } from "@/lib/plural";
+import { filesOf } from "@/lib/plural";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
@@ -73,7 +73,7 @@ function CourseRow({ course: c }: { course: BandCourse }) {
           ) : c.course.finished ? (
             <span className="font-semibold text-success">✓ Finished</span>
           ) : (
-            `${c.course.done} of ${c.course.total} ${noun(c.course.total, "file")} · ${percentOf(c.course.done, c.course.total)}%`
+            `${filesOf(c.course.done, c.course.total)} · ${percentOf(c.course.done, c.course.total)}%`
           )}
         </span>
       </span>

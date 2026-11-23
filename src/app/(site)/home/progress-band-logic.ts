@@ -1,5 +1,5 @@
 import type { ProgressOverview } from "@/services/progress/types";
-import { noun } from "@/lib/plural";
+import { filesOf } from "@/lib/plural";
 
 export type BandCourse = ProgressOverview["courses"][number];
 
@@ -21,6 +21,6 @@ export function percentOf(done: number, total: number): number {
 export function courseLabel(c: BandCourse): string {
   const base = `${c.code} ${c.title}`;
   if (c.course.total === 0) return `${base}, exams: ${c.exams.done} of ${c.exams.total} done`;
-  if (c.course.finished) return `${base}, finished, ${c.course.done} of ${c.course.total} ${noun(c.course.total, "file")}`;
-  return `${base}, ${percentOf(c.course.done, c.course.total)}% done, ${c.course.done} of ${c.course.total} ${noun(c.course.total, "file")}`;
+  if (c.course.finished) return `${base}, finished, ${filesOf(c.course.done, c.course.total)}`;
+  return `${base}, ${percentOf(c.course.done, c.course.total)}% done, ${filesOf(c.course.done, c.course.total)}`;
 }

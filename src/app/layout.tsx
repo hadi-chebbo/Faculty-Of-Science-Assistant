@@ -1,3 +1,4 @@
+import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/page-title";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
@@ -14,9 +15,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_NAME = "University Assistant";
-const DESCRIPTION =
-  "Study resources and previous exams for Computer Science, Faculty of Science, Lebanese University.";
 
 // Absolute address for the link-preview image. The app URL helper throws on a malformed APP_URL;
 // a page must never fail for that, so the preview just goes without a base.
@@ -36,15 +34,15 @@ export function generateMetadata(): Metadata {
       default: SITE_NAME,
       template: `%s | ${SITE_NAME}`,
     },
-    description: DESCRIPTION,
+    description: SITE_DESCRIPTION,
     openGraph: {
       siteName: SITE_NAME,
       title: SITE_NAME,
-      description: DESCRIPTION,
+      description: SITE_DESCRIPTION,
       type: "website",
       locale: "en",
     },
-    twitter: { card: "summary_large_image", title: SITE_NAME, description: DESCRIPTION },
+    twitter: { card: "summary_large_image", title: SITE_NAME, description: SITE_DESCRIPTION },
   };
 }
 

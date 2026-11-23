@@ -9,21 +9,21 @@ import { ResourceRow } from "@/components/site/resource-row";
 import { CourseSkeleton } from "@/components/site/skeletons";
 import { StateBlock } from "@/components/site/state-block";
 import { RESOURCE_TYPE_LABELS } from "@/lib/labels";
-import { chapterTitle, pageMetadata } from "@/lib/page-title";
+import { NOT_FOUND_TITLE, chapterTitle, pageMetadata } from "@/lib/page-title";
 import { yearCrumb } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
-import { getChapterPage } from "@/services/courses/courses";
+import { getChapterPage, getChapterTitle } from "@/services/courses/courses";
 import type { ChapterLink } from "@/services/courses/types";
 import { ShowingOnly, TaughtBy, pageHref } from "../../taught-by";
 
-// The tab title is "CODE · Chapter N: Title"; an unknown course or chapter keeps the generic title.
+// The tab title is "CODE · Chapter N: Title"; an unknown course or chapter gets the not-found title.
 export async function generateMetadata({
   params,
 }: PageProps<"/courses/[code]/chapters/[position]">): Promise<Metadata> {
   const { code, position } = await params;
   await connection();
-  const page = await getChapterPage(null, code, position).catch(() => null);
-  return page ? pageMetadata(chapterTitle(page.course, page.chapter)) : { title: "Chapter" };
+  const found = await getChapterTitle(code, position);
+  return found ? pageMetadata(chapterTitle(found.course, found.chapter)) : { title: NOT_FOUND_TITLE };
 }
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
