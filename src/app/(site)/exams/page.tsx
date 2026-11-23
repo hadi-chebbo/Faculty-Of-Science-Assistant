@@ -28,7 +28,7 @@ const NO_SCRIPT_CSS = `
 // Everything that reads the search params or the database streams in behind a skeleton.
 export default function ExamsPage({ searchParams }: PageProps<"/exams">) {
   return (
-    <main className="page-container py-6 md:py-8">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-6 md:py-8">
       <Crumbs items={[{ label: "Home", href: "/" }, { label: "Exams" }]} />
       <PageTitle>Previous exams</PageTitle>
       <noscript>

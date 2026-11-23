@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Saved", robots: { index: false, foll
 // session the page shows the in-page sign-in state (no personal data) instead of redirecting.
 export default function SavedPage() {
   return (
-    <main className="page-container py-6 md:py-8">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-6 md:py-8">
       <Crumbs items={[{ label: "Home", href: "/" }, { label: "Saved" }]} />
       <PageTitle>Saved</PageTitle>
       <Suspense fallback={<SavedSkeleton />}>

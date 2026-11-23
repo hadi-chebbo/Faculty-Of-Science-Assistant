@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: PageProps<"/years/[year]">): 
 // fallback covers the breadcrumb and title too, since they depend on it. The page never reads the session.
 export default function YearPage({ params }: PageProps<"/years/[year]">) {
   return (
-    <main className="page-container py-6 md:py-8">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-6 md:py-8">
       <Suspense fallback={<YearSkeleton />}>
         {params.then(({ year }) => (
           <YearContent year={year} />

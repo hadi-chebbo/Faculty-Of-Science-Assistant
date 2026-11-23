@@ -165,6 +165,39 @@ function buildContent(data: CourseData, lecturer: LecturerRef | null) {
   return { groups, outline };
 }
 
+// The code and title of a course, for its browser-tab title: one small query, null when there is none.
+// Course and chapter titles are public, so there is no viewer.
+export async function getCourseTitle(code: string): Promise<{ code: string; title: string } | null> {
+  const parsed = courseCodeSchema.safeParse(code);
+  if (!parsed.success) return null;
+  const { Course, sequelize } = getDb();
+  const course = await Course.findOne({
+    attributes: ["code", "title"],
+    where: sequelize.where(fn("lower", col("code")), parsed.data.toLowerCase()),
+  });
+  return course ? { code: course.code, title: course.title } : null;
+}
+
+// The course code and the chapter's position and title, for the chapter page's tab title; null when either
+// does not exist. Two small queries, never the course's files.
+export async function getChapterTitle(
+  code: string,
+  position: number | string,
+): Promise<{ course: { code: string }; chapter: { position: number; title: string } } | null> {
+  const wanted = typeof position === "string" ? (/^\d+$/.test(position) ? Number(position) : NaN) : position;
+  if (!Number.isSafeInteger(wanted)) return null;
+  const parsed = courseCodeSchema.safeParse(code);
+  if (!parsed.success) return null;
+  const { Course, Chapter, sequelize } = getDb();
+  const course = await Course.findOne({
+    attributes: ["id", "code"],
+    where: sequelize.where(fn("lower", col("code")), parsed.data.toLowerCase()),
+  });
+  if (!course) return null;
+  const chapter = await Chapter.findOne({ attributes: ["position", "title"], where: { courseId: course.id, position: wanted } });
+  return chapter ? { course: { code: course.code }, chapter: { position: chapter.position, title: chapter.title } } : null;
+}
+
 export async function getCourseByCode(
   viewer: Viewer,
   code: string,

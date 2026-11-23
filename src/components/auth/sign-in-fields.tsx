@@ -141,6 +141,8 @@ export function SignInFields({
           name="email"
           type="email"
           autoComplete="username"
+          autoCapitalize="none"
+          spellCheck={false}
           required
           maxLength={254}
           disabled={pending}
@@ -183,7 +185,7 @@ export function SignInFields({
       </div>
       <Button type="submit" disabled={pending || !hydrated} className="h-11 w-full text-base">
         {pending && <Loader2 className="animate-spin" aria-hidden />}
-        {pending ? "Signing in..." : submitLabel}
+        {pending ? "Signing in…" : submitLabel}
       </Button>
     </form>
   );

@@ -763,7 +763,7 @@ test.describe("admin resource form: PDF upload", () => {
     }
   });
 
-  test("the save button reads Uploading... and is disabled while the upload runs; Cancel returns to the empty box", async ({ page }) => {
+  test("the save button reads Uploading… and is disabled while the upload runs; Cancel returns to the empty box", async ({ page }) => {
     await signInAsAdmin(page);
     await page.goto("/admin/resources/new");
     await fillBasics(page, uniqueTitle());
@@ -771,7 +771,7 @@ test.describe("admin resource form: PDF upload", () => {
 
     await fileInput(page).setInputFiles(pdfFile());
     await expect(page.getByText("0%")).toBeVisible();
-    const button = page.getByRole("button", { name: "Uploading..." });
+    const button = page.getByRole("button", { name: "Uploading…" });
     await expect(button).toBeVisible();
     await expect(button).toBeDisabled();
     await expect(page.getByRole("progressbar", { name: "Upload progress" })).toBeVisible();
@@ -795,7 +795,7 @@ test.describe("admin resource form: PDF upload", () => {
 
       const release = await holdUploads(page);
       await fileInput(page).setInputFiles(pdfFile("second.pdf"));
-      await expect(page.getByRole("button", { name: "Uploading..." })).toBeDisabled();
+      await expect(page.getByRole("button", { name: "Uploading…" })).toBeDisabled();
       await page.getByRole("button", { name: "Cancel" }).click();
       release();
 

@@ -725,7 +725,7 @@ export function ReaderCard({
       <div className={cn(inner && "flex min-h-0 flex-1")}>
         {panelShown && (
           <aside id="reader-contents" className="flex w-[200px] shrink-0 flex-col border-r bg-card pt-3">
-            <p aria-hidden className="px-4 pb-2 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+            <p aria-hidden className="px-4 pb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
               Contents
             </p>
             {contentsList}

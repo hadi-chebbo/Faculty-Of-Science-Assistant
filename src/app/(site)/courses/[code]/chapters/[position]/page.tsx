@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight, FileQuestion } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { Crumbs } from "@/components/site/crumbs";
 import { PageTitle } from "@/components/site/page-title";
@@ -8,13 +9,22 @@ import { ResourceRow } from "@/components/site/resource-row";
 import { CourseSkeleton } from "@/components/site/skeletons";
 import { StateBlock } from "@/components/site/state-block";
 import { RESOURCE_TYPE_LABELS } from "@/lib/labels";
+import { NOT_FOUND_TITLE, chapterTitle, pageMetadata } from "@/lib/page-title";
 import { yearCrumb } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
-import { getChapterPage } from "@/services/courses/courses";
+import { getChapterPage, getChapterTitle } from "@/services/courses/courses";
 import type { ChapterLink } from "@/services/courses/types";
 import { ShowingOnly, TaughtBy, pageHref } from "../../taught-by";
 
-export const metadata: Metadata = { title: "Chapter" };
+// The tab title is "CODE · Chapter N: Title"; an unknown course or chapter gets the not-found title.
+export async function generateMetadata({
+  params,
+}: PageProps<"/courses/[code]/chapters/[position]">): Promise<Metadata> {
+  const { code, position } = await params;
+  await connection();
+  const found = await getChapterTitle(code, position);
+  return found ? pageMetadata(chapterTitle(found.course, found.chapter)) : { title: NOT_FOUND_TITLE };
+}
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 const BUTTON = `inline-flex min-h-11 items-center gap-2 rounded-lg border bg-card px-4 py-2 text-sm font-medium text-heading transition-colors hover:border-primary/40 ${FOCUS}`;
@@ -23,7 +33,7 @@ const BUTTON = `inline-flex min-h-11 items-center gap-2 rounded-lg border bg-car
 // Suspense, behind a skeleton.
 export default function ChapterPage({ params, searchParams }: PageProps<"/courses/[code]/chapters/[position]">) {
   return (
-    <main className="page-container py-6 md:py-8">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-6 md:py-8">
       <Suspense fallback={<CourseSkeleton />}>
         {Promise.all([params, searchParams]).then(([{ code, position }, query]) => (
           <ChapterContent code={code} position={position} lecturer={query.lecturer} />

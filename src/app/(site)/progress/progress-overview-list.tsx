@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { groupCoursesByYear } from "./group-by-year";
 import { semesterLabel, yearLabel } from "@/lib/years";
 import type { ProgressOverview } from "@/services/progress/types";
+import { filesOf } from "@/lib/plural";
 
 type CourseEntry = ProgressOverview["courses"][number];
 
@@ -49,7 +50,7 @@ export function ProgressOverviewList({ courses }: { courses: CourseEntry[] }) {
 function CourseCard({ course }: { course: CourseEntry }) {
   const { code, title, course: files, exams } = course;
   const percent = files.total > 0 ? Math.floor((files.done / files.total) * 100) : 0;
-  const ringLabel = `${percent}% done, ${files.done} of ${files.total} files`;
+  const ringLabel = `${percent}% done, ${filesOf(files.done, files.total)}`;
   const rows = [
     ...course.chapters.filter((c) => c.total > 0).map((c) => ({ key: c.id, label: `${c.position} · ${c.title}`, ...c })),
     ...(course.general.total > 0 ? [{ key: "general", label: "General", ...course.general }] : []),
@@ -78,7 +79,7 @@ function CourseCard({ course }: { course: CourseEntry }) {
                 <strong className="font-semibold text-success">Finished</strong> ·{" "}
               </>
             )}
-            {files.done} of {files.total} files
+            {filesOf(files.done, files.total)}
             {exams.total > 0 && (
               <>
                 <span aria-hidden className="hidden md:inline">

@@ -67,7 +67,7 @@ function YearCard({ entry }: { entry: HomeStats["years"][number] }) {
       href={yearHref(entry.year)}
       className="group block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
     >
-      <div className="flex h-full min-h-44 flex-col rounded-2xl border bg-card p-5 transition-all group-hover:-translate-y-0.5 group-hover:border-primary/60 group-hover:shadow-md">
+      <div className="flex h-full min-h-44 flex-col rounded-2xl border bg-card p-5 transition-[transform,border-color,box-shadow] motion-safe:group-hover:-translate-y-0.5 group-hover:border-primary/60 group-hover:shadow-md">
         <span className="flex items-center gap-3">
           <span className="flex size-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
             {text.circle}
@@ -85,7 +85,7 @@ function YearCard({ entry }: { entry: HomeStats["years"][number] }) {
         <span className="mt-auto flex items-center justify-between pt-5 text-sm">
           <span className="text-muted-foreground">{text.counts}</span>
           <span className="flex items-center gap-1 font-medium text-link">
-            Browse <ArrowRight aria-hidden className="size-4 transition-transform group-hover:translate-x-1" />
+            Browse <ArrowRight aria-hidden className="size-4 transition-transform motion-safe:group-hover:translate-x-1" />
           </span>
         </span>
       </div>

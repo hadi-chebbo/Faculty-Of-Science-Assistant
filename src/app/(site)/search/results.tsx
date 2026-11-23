@@ -33,7 +33,7 @@ export function SearchHints() {
   return (
     <div className="space-y-5">
       <p className="text-sm leading-relaxed">
-        Try a course code (<b className="font-semibold text-heading">DEMO301</b>), a topic (<b className="font-semibold text-heading">graphs</b>), or an exam (
+        Try a course code, a topic (<b className="font-semibold text-heading">graphs</b>), or an exam (
         <b className="font-semibold text-heading">final 2024</b>). Accents don&apos;t matter.
       </p>
       <div>
@@ -345,7 +345,7 @@ function NoResults({ outcome, params }: { outcome: SearchOutcome; params: Search
       <div className="mt-3 space-y-1.5 text-sm">
         <p className="font-semibold text-heading">Search tips</p>
         <ul className="list-disc space-y-1 pl-5">
-          <li>Try a course code, like DEMO301</li>
+          <li>Try a course code, or a word from the course title</li>
           <li>Use fewer words, or check the spelling</li>
           <li>Accents and capitals don&apos;t matter</li>
         </ul>

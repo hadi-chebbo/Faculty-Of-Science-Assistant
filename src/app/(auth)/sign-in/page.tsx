@@ -1,7 +1,7 @@
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { BackToCourses } from "@/components/auth/back-to-courses";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { BrandPanel } from "@/components/auth/brand-panel";
 import { SignInReasonLine } from "@/components/auth/sign-in-reason-line";
@@ -29,10 +29,7 @@ export default function SignInPage({ searchParams }: { searchParams: Promise<{ n
             Create an account
           </Link>
         </p>
-        <Link href="/" className={`mt-2 ${linkClass}`}>
-          <ArrowLeft className="size-4" aria-hidden />
-          Back to courses
-        </Link>
+        <BackToCourses className="mt-2" />
       </AuthShell>
       {/* Reads the cookie, so it streams in; the form itself is part of the static shell. */}
       <Suspense fallback={null}>

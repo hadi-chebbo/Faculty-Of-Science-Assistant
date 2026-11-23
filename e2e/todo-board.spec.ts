@@ -238,3 +238,24 @@ test("a card with a linked file shows the file as a tile that opens the reader",
   await tile.click();
   await expect(page).toHaveURL(`/resources/${file.id}`);
 });
+
+test("phone: the last card's buttons can be tapped with the + button present", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "phone layout");
+  await signInOnBoard(page, isMobile);
+  for (let i = 1; i <= 8; i++) {
+    const created = await page.request.post("/api/v1/todos", {
+      data: { title: `Filler ${i}`, status: "todo" },
+      headers: { origin: new URL(page.url()).origin },
+    });
+    expect(created.status()).toBe(201);
+  }
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 3 })).toHaveCount(8);
+  await expect(page.getByRole("button", { name: "New card" })).toBeVisible();
+
+  // Scrolled to the very end, nothing of the last card is under the + button.
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const last = page.getByRole("button", { name: "Start" }).last();
+  await last.click({ timeout: 5000 });
+  await expect(page.getByRole("tab", { name: /^In progress/ })).toHaveText("In progress1");
+});

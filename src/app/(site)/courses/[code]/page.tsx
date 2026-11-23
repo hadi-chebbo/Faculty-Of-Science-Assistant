@@ -1,23 +1,31 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { Crumbs } from "@/components/site/crumbs";
 import { PageTitle } from "@/components/site/page-title";
 import { CourseSkeleton } from "@/components/site/skeletons";
+import { NOT_FOUND_TITLE, courseTitle, pageMetadata } from "@/lib/page-title";
 import { yearCrumb } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
-import { getCourseByCode } from "@/services/courses/courses";
+import { getCourseByCode, getCourseTitle } from "@/services/courses/courses";
 import { AreaSwitch, ChapterCards, ExamsArea, OtherArea, parseArea } from "./course-areas";
 import { CourseProgressBlock } from "./course-progress";
 import { ResourceTabs } from "./resource-tabs";
 import { ShowingOnly, TaughtBy } from "./taught-by";
 
-export const metadata: Metadata = { title: "Course" };
+// The tab title is the course, "CODE Title"; an unknown code keeps the generic title.
+export async function generateMetadata({ params }: PageProps<"/courses/[code]">): Promise<Metadata> {
+  const { code } = await params;
+  await connection();
+  const course = await getCourseTitle(code);
+  return course ? pageMetadata(courseTitle(course)) : { title: NOT_FOUND_TITLE };
+}
 
 // Course codes come from the database and are unknown at build time, so the code is runtime
 // data: reading it and the course happens inside Suspense, behind a skeleton.
 export default function CoursePage({ params, searchParams }: PageProps<"/courses/[code]">) {
   return (
-    <main className="page-container py-6 md:py-8">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-6 md:py-8">
       <Suspense fallback={<CourseSkeleton />}>
         {Promise.all([params, searchParams]).then(([{ code }, query]) => (
           <CourseContent code={code} tab={query.tab} lecturer={query.lecturer} />

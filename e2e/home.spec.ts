@@ -91,3 +91,28 @@ test("nothing scrolls sideways", async ({ page }) => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test("the course preview is a generic example with no course code", async ({ page }) => {
+  await page.goto("/");
+  const preview = page.getByTestId("course-preview");
+  await expect(preview).toContainText("Your course");
+  await expect(preview).toContainText("Chapter 1: Introduction");
+  await expect(preview).toContainText("Final exam 2024-2025");
+  await expect(preview).not.toContainText("DEMO");
+});
+
+test("on a phone the preview's tab labels are not cut off", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "phone layout");
+  await page.goto("/");
+  for (const name of ["Chapters", "Previous exams"]) {
+    const tab = page.getByTestId("course-preview").getByText(name, { exact: true });
+    expect(await tab.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  }
+});
+
+test("the account answer says which pages need an account", async ({ page }) => {
+  await page.goto("/");
+  const answer = page.locator("details", { hasText: "Do I need an account?" });
+  await answer.locator("summary").click();
+  await expect(answer.getByText("Saved, To-do and Progress need a free account")).toBeVisible();
+});

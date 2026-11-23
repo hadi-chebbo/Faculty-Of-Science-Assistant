@@ -251,7 +251,7 @@ function CardViewBody({
             />
             <p
               id="card-note-count"
-              className={`mt-1 text-right text-[11px] ${card.note.length >= NEAR_LIMIT ? "font-medium text-heading" : "text-muted-foreground"}`}
+              className={`mt-1 text-right text-xs ${card.note.length >= NEAR_LIMIT ? "font-medium text-heading" : "text-muted-foreground"}`}
             >
               {card.note.length} / {TODO_NOTE_MAX_LENGTH}
             </p>

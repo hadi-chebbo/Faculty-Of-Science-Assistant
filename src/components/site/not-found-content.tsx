@@ -5,14 +5,22 @@ import { Button } from "@/components/ui/button";
 
 export function NotFoundContent() {
   return (
-    <main className="page-container py-8 md:py-12">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-8 md:py-12">
       <StateBlock
         icon={FileQuestion}
         title="Page not found"
         actions={
-          <Button asChild className="h-11 md:h-9">
-            <Link href="/">Back to home</Link>
-          </Button>
+          <>
+            <Button asChild className="h-11 md:h-9">
+              <Link href="/">Back to home</Link>
+            </Button>
+            <Button asChild variant="outline" className="h-11 md:h-9">
+              <Link href="/#years">Browse courses</Link>
+            </Button>
+            <Button asChild variant="outline" className="h-11 md:h-9">
+              <Link href="/search">Search</Link>
+            </Button>
+          </>
         }
       >
         The page you are looking for does not exist or has moved.

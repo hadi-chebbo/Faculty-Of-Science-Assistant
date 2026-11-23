@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { BackToCourses } from "@/components/auth/back-to-courses";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { BrandPanel } from "@/components/auth/brand-panel";
 import { RedirectIfSignedIn } from "@/components/auth/redirect-if-signed-in";
@@ -24,6 +25,7 @@ export default function SignUpPage() {
             Sign in
           </Link>
         </p>
+        <BackToCourses className="mt-2" />
       </AuthShell>
       <Suspense fallback={null}>
         <RedirectIfSignedIn />

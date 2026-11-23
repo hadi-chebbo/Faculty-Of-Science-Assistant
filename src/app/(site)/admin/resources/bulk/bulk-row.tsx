@@ -263,7 +263,7 @@ function RowStatusLine({ row, onRetry }: { row: BulkRow; onRetry: () => void }) 
       </div>
     );
   }
-  if (row.status === "saving") return <p className="mt-1 text-xs text-muted-foreground">Saving...</p>;
+  if (row.status === "saving") return <p className="mt-1 text-xs text-muted-foreground">Saving…</p>;
   if (row.status === "failed") {
     return (
       <div className="mt-1 space-y-1.5">

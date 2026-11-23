@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "To-do", robots: { index: false, foll
 // session the page shows the in-page sign-in state (no personal data) instead of redirecting.
 export default function TodoPage() {
   return (
-    <main className="page-container py-6 md:py-8">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-6 md:py-8">
       <Crumbs items={[{ label: "Home", href: "/" }, { label: "To-do" }]} />
       <PageTitle>To-do</PageTitle>
       <Suspense fallback={<TodoSkeleton />}>

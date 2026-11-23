@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: "Your progress", robots: { index: fal
 // session the page shows the in-page sign-in state (no personal data) instead of redirecting.
 export default function ProgressPage() {
   return (
-    <main className="page-container py-6 md:py-8">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-6 md:py-8">
       <Crumbs items={[{ label: "Home", href: "/" }, { label: "Progress" }]} />
       <PageTitle description="Based only on the files you marked as done.">Your progress</PageTitle>
       <Suspense fallback={<ProgressSkeleton />}>
