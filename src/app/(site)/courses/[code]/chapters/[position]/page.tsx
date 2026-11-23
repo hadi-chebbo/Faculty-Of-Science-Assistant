@@ -33,7 +33,7 @@ const BUTTON = `inline-flex min-h-11 items-center gap-2 rounded-lg border bg-car
 // Suspense, behind a skeleton.
 export default function ChapterPage({ params, searchParams }: PageProps<"/courses/[code]/chapters/[position]">) {
   return (
-    <main className="page-container py-6 md:py-8">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-6 md:py-8">
       <Suspense fallback={<CourseSkeleton />}>
         {Promise.all([params, searchParams]).then(([{ code, position }, query]) => (
           <ChapterContent code={code} position={position} lecturer={query.lecturer} />

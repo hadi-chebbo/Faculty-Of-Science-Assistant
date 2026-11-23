@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Admin", robots: { index: false, foll
 // the server; there is no shared static shell with per-user data. Uncached (see next.config.ts).
 export default function AdminPage({ searchParams }: PageProps<"/admin">) {
   return (
-    <main className="page-container py-6 md:py-8">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-6 md:py-8">
       <Suspense fallback={<div className="space-y-4" aria-hidden>
           <Skeleton className="h-11 w-full max-w-sm md:h-9" />
           <Skeleton className="h-8 w-48" />

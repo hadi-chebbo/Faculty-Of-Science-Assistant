@@ -60,7 +60,7 @@ test("the Search nav item leads to /search and is the current page there", async
 
 test("before typing it shows hints and a link to every year", async ({ page }) => {
   await page.goto("/search");
-  await expect(page.getByText("Try a course code (DEMO301), a topic (graphs), or an exam (final 2024). Accents don't matter.")).toBeVisible();
+  await expect(page.getByText("Try a course code, a topic (graphs), or an exam (final 2024). Accents don't matter.")).toBeVisible();
   for (const [year, label] of [["1", "First year"], ["2", "Second year"], ["3", "Third year"], ["m1", "Master 1"]]) {
     await expect(page.getByRole("link", { name: label, exact: true })).toHaveAttribute("href", `/years/${year}`);
   }
@@ -406,7 +406,7 @@ test("no results: tips, a way to drop the chip, and two places to go on", async 
   await page.goto("/search?q=zzqqxx&type=exercise");
   await expect(page.getByRole("heading", { level: 2, name: "No results for “zzqqxx”" })).toBeVisible();
   await expect(page.getByText("Search tips")).toBeVisible();
-  await expect(page.getByText("Try a course code, like DEMO301")).toBeVisible();
+  await expect(page.getByText("Try a course code, or a word from the course title")).toBeVisible();
   await expect(page.getByText("Use fewer words, or check the spelling")).toBeVisible();
   await expect(page.getByText("Accents and capitals don't matter")).toBeVisible();
   await expect(page.getByRole("link", { name: "Browse courses" })).toHaveAttribute("href", "/");

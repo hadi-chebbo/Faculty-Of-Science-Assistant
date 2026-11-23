@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export function NotFoundContent() {
   return (
-    <main className="page-container py-8 md:py-12">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-8 md:py-12">
       <StateBlock
         icon={FileQuestion}
         title="Page not found"

@@ -21,7 +21,7 @@ const plural = (n: number, one: string) => `${n} ${one}${n === 1 ? "" : "s"}`;
 // Admin only, checked on the server before anything renders. Uncached (see next.config.ts).
 export default function AdminCoursesPage() {
   return (
-    <main className="page-container py-6 md:py-8">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-6 md:py-8">
       <Suspense fallback={<div className="space-y-4" aria-hidden>
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-40 w-full" />

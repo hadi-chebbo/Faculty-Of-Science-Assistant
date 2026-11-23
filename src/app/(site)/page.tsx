@@ -9,7 +9,7 @@ import { StatsAndYears } from "./home/stats-and-years";
 // inside one Suspense boundary (one service call feeds both).
 export default function Home() {
   return (
-    <main className="page-container flex flex-col gap-12 py-6 md:gap-14 md:py-8">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container flex flex-col gap-12 py-6 md:gap-14 md:py-8">
       <Hero />
       <ProgressBand />
       <Suspense fallback={<StatsAndYearsSkeleton />}>

@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps<"/courses/[code]">)
 // data: reading it and the course happens inside Suspense, behind a skeleton.
 export default function CoursePage({ params, searchParams }: PageProps<"/courses/[code]">) {
   return (
-    <main className="page-container py-6 md:py-8">
+    <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-6 md:py-8">
       <Suspense fallback={<CourseSkeleton />}>
         {Promise.all([params, searchParams]).then(([{ code }, query]) => (
           <CourseContent code={code} tab={query.tab} lecturer={query.lecturer} />
