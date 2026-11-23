@@ -44,7 +44,7 @@ const QUESTIONS = [
     q: "Is this an official university website?",
     a: "No. It is an independent project built by a student, for students. It is not run or endorsed by the Lebanese University.",
   },
-  { q: "Do I need an account?", a: "No. Browsing, opening and downloading files never require an account." },
+  { q: "Do I need an account?", a: "Not to study. Browsing, opening and downloading files never require an account. Saved, To-do and Progress need a free account." },
   {
     q: "Which courses are covered?",
     a: "Computer Science, the three years and Master 1, Faculty of Science, Hadath branch. A year with no material yet says so on its card.",

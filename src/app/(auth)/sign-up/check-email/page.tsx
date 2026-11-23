@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BackToCourses } from "@/components/auth/back-to-courses";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { BrandPanel } from "@/components/auth/brand-panel";
 import { PageTitle } from "@/components/site/page-title";
@@ -12,6 +13,7 @@ export default function CheckEmailPage() {
       <AuthShell panel={<BrandPanel />}>
         <PageTitle>Check your inbox</PageTitle>
         <CheckEmail />
+        <BackToCourses className="mt-2" />
       </AuthShell>
     </>
   );
