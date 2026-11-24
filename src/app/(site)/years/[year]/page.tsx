@@ -76,29 +76,43 @@ function SemesterSection({ entry }: { entry: YearSemester }) {
         <p className="text-sm text-muted-foreground">No courses yet.</p>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2">
-          {entry.courses.map((course) => (
-            <li key={course.code} className="relative">
-              <Link
-                href={`/courses/${course.code}`}
-                className="group flex h-full min-h-20 items-center justify-between gap-3 rounded-xl border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/60 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-              >
-                <span className="min-w-0 pr-10">
-                  <span className="inline-block rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs font-medium text-link">
-                    {course.code}
+          {entry.courses.map((course) =>
+            course.resourceCount === 0 ? (
+              <li key={course.code}>
+                <div className="flex h-full min-h-20 items-start gap-3 rounded-xl border border-dashed bg-muted/40 p-4">
+                  <span className="min-w-0">
+                    <span className="inline-block rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs font-medium text-muted-foreground">
+                      {course.code}
+                    </span>
+                    <span className="mt-1.5 block text-base font-medium text-muted-foreground">{course.title}</span>
+                    <span className="mt-0.5 block text-sm text-muted-foreground">No files yet</span>
                   </span>
-                  <span className="mt-1.5 block text-base font-medium text-heading">{course.title}</span>
-                  <span className="mt-0.5 block text-sm text-muted-foreground">
-                    {course.resourceCount} {course.resourceCount === 1 ? "resource" : "resources"}
+                </div>
+              </li>
+            ) : (
+              <li key={course.code} className="relative">
+                <Link
+                  href={`/courses/${course.code}`}
+                  className="group flex h-full min-h-20 items-start justify-between gap-3 rounded-xl border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/60 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                >
+                  <span className="min-w-0 pr-10">
+                    <span className="inline-block rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs font-medium text-link">
+                      {course.code}
+                    </span>
+                    <span className="mt-1.5 block text-base font-medium text-heading">{course.title}</span>
+                    <span className="mt-0.5 block text-sm text-muted-foreground">
+                      {course.resourceCount} {course.resourceCount === 1 ? "resource" : "resources"}
+                    </span>
                   </span>
-                </span>
-                <ChevronRight
-                  aria-hidden
-                  className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-link"
-                />
-              </Link>
-              <CourseProgressRing code={course.code} />
-            </li>
-          ))}
+                  <ChevronRight
+                    aria-hidden
+                    className="mt-1 size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-link"
+                  />
+                </Link>
+                <CourseProgressRing code={course.code} />
+              </li>
+            ),
+          )}
         </ul>
       )}
     </section>

@@ -266,19 +266,36 @@ function Pager({ outcome, params }: { outcome: SearchOutcome; params: SearchPara
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 function CourseCard({ course, terms }: { course: CourseHit; terms: string[] }) {
-  const details = [courseYearSemesterLabel(course.semester), course.chapterCount > 0 && plural(course.chapterCount, "chapter"), plural(course.fileCount, "file")].filter(Boolean);
+  const empty = course.fileCount === 0;
+  const details = [
+    courseYearSemesterLabel(course.semester),
+    course.chapterCount > 0 && plural(course.chapterCount, "chapter"),
+    empty ? "No files yet" : plural(course.fileCount, "file"),
+  ].filter(Boolean);
+  const body = (
+    <>
+      <span className={`shrink-0 rounded-md bg-muted px-2 py-1 font-mono text-sm ${empty ? "text-muted-foreground" : "text-link"}`}>
+        <Highlighted marked={markText(course.code, terms)} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className={`block font-medium ${empty ? "text-muted-foreground" : "text-heading"}`}>
+          <Highlighted marked={markText(course.title, terms)} />
+        </span>
+        <span className="mt-0.5 block text-sm">{details.join(" · ")}</span>
+      </span>
+    </>
+  );
+  if (empty) {
+    return (
+      <li className="overflow-hidden rounded-xl border border-dashed bg-muted/40">
+        <div className="flex items-center gap-3.5 p-3.5">{body}</div>
+      </li>
+    );
+  }
   return (
     <li className="overflow-hidden rounded-xl border bg-card transition-colors hover:border-primary/40">
       <Link href={`/courses/${encodeURIComponent(course.code)}`} className={`group/hit flex items-center gap-3.5 p-3.5 hover:bg-muted/60 focus-visible:bg-muted/60 ${FOCUS}`}>
-        <span className="shrink-0 rounded-md bg-muted px-2 py-1 font-mono text-sm text-link">
-          <Highlighted marked={markText(course.code, terms)} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block font-medium text-heading">
-            <Highlighted marked={markText(course.title, terms)} />
-          </span>
-          <span className="mt-0.5 block text-sm">{details.join(" · ")}</span>
-        </span>
+        {body}
         <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground group-hover/hit:text-link" />
       </Link>
     </li>

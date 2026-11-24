@@ -130,7 +130,9 @@ test("the admin adds a first-year course and it is listed and browsable", async 
 
     await page.goto("/years/1");
     await expect(page.getByRole("heading", { name: "Semester 1" })).toBeVisible();
-    await expect(page.getByRole("link", { name: new RegExp(code) })).toBeVisible();
+    // A new course has no files yet, so its card is listed but is not a link.
+    await expect(page.getByRole("listitem").filter({ hasText: code })).toContainText("No files yet");
+    await expect(page.getByRole("link", { name: new RegExp(code) })).toHaveCount(0);
   } finally {
     await deleteCourses(`E2E${stamp}`);
   }
@@ -155,7 +157,8 @@ test("the admin adds a Master 1 course and it is listed and browsable", async ({
 
     await page.goto("/years/m1");
     const section = page.locator("section").filter({ has: page.getByRole("heading", { name: "Semester 2" }) });
-    await expect(section.getByRole("link", { name: new RegExp(code) })).toBeVisible();
+    await expect(section.getByRole("listitem").filter({ hasText: code })).toContainText("No files yet");
+    await expect(section.getByRole("link", { name: new RegExp(code) })).toHaveCount(0);
     await page.goto("/courses/" + code);
     await expect(page.getByRole("heading", { name: "E2E Master One" })).toBeVisible();
   } finally {

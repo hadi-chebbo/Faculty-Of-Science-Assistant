@@ -48,7 +48,7 @@ export function SavedList({ groups }: { groups: SavedCourseGroup[] }) {
             >
               {group.courseCode}
             </Link>
-            <span>{group.courseTitle}</span>
+            <span className="line-clamp-2 min-w-0">{group.courseTitle}</span>
             <span className="text-sm font-normal text-muted-foreground">{courseYearSemesterLabel(group.semester)}</span>
           </h2>
           <ul className="space-y-2">
