@@ -310,7 +310,7 @@ mock exam generation, personalization.
   chapter text and bars, `/api/v1/progress`) ignores the filter. The page still never reads the session.
 - Exams page (`/exams`): filters (semester, course, academic year, session, lecturer: a fifth dropdown, `?lecturer=SLUG`, "All" first, then lecturers with a visible exam by name; an unknown slug is ignored) live in the URL (`?semester=N` keeps the stored number; the Semester dropdown groups its options in native option groups "First year" / "Second year" / "Third year" / "Master 1" (one per entry of `YEARS`), each option "Semester 1" / "Semester 2", only semesters with a visible exam; the Course dropdown's groups read "Second year · Semester 1"), so
   views are shareable and Back works. A plain GET form with an Apply button works without
-  JavaScript; with JavaScript a dropdown change submits automatically. Below md the five dropdowns and Apply
+  JavaScript; with JavaScript a dropdown change submits automatically. The dropdowns are `PopoverSelect` (`src/components/ui/popover-select.tsx`, owner picked the simple popover look, 2026-11-24): a button that opens a small list under it (a search box above 8 options, group headings, the chosen value ticked), the value held in a hidden input; without JavaScript the button is hidden and a native select inside `<noscript>` is posted instead. Below md the five dropdowns and Apply
   fold into one native `<details>` disclosure (`filter-form.tsx`, `.filters-details` in `globals.css`) whose
   summary reads "Filters" or "Filters (2)" (`countActiveFilters` in `params.ts`, counted from the parsed and
   reconciled URL values, so unusable or dropped values do not count; the page number is not a filter); it

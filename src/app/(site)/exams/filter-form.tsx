@@ -4,25 +4,13 @@ import { ChevronDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-// The filters are a plain GET form, so Apply works without JavaScript. With JavaScript this
-// wrapper adds two things: a change in any dropdown submits the form, and the submit becomes a
-// client-side navigation that leaves out empty ("All") fields to keep the address short.
-// `values` are the filters the server settled on; they are copied into the dropdowns after each
-// navigation (Back button, or a course dropped because it does not fit the semester).
-export function FilterForm({ values, activeCount, children }: { values: Record<string, string>; activeCount: number; children: React.ReactNode }) {
+// The filters are a plain GET form, so Apply works without JavaScript (the dropdowns fall back to native selects).
+// With JavaScript the submit becomes a client-side navigation that leaves out empty ("All") fields to keep the
+// address short; choosing a value in a dropdown submits the form (see `PopoverSelect`). The dropdowns follow the
+// address themselves (their keys include the value the server settled on).
+export function FilterForm({ activeCount, children }: { activeCount: number; children: React.ReactNode }) {
   const router = useRouter();
-  const formRef = useRef<HTMLFormElement>(null);
   const detailsRef = useRef<HTMLDetailsElement>(null);
-  const synced = JSON.stringify(values);
-
-  useEffect(() => {
-    const form = formRef.current;
-    if (!form) return;
-    for (const [name, value] of Object.entries(JSON.parse(synced) as Record<string, string>)) {
-      const field = form.elements.namedItem(name);
-      if (field instanceof HTMLSelectElement && field.value !== value) field.value = value;
-    }
-  }, [synced]);
 
   // Below md the card is a disclosure: native <details>, so it opens without JavaScript. From md up
   // the CSS (`.filters-details`) shows the content whatever the state; this covers browsers without
@@ -33,10 +21,8 @@ export function FilterForm({ values, activeCount, children }: { values: Record<s
 
   return (
     <form
-      ref={formRef}
       action="/exams"
       method="get"
-      onChange={(event) => event.currentTarget.requestSubmit()}
       onSubmit={(event) => {
         event.preventDefault();
         const query = new URLSearchParams();
