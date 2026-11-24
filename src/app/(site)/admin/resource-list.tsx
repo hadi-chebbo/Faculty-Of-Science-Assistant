@@ -11,6 +11,7 @@ import { listCourses } from "@/services/courses/courses";
 import { listLecturerOptions } from "@/services/lecturers/admin";
 import { listResources } from "@/services/resources/resources";
 import type { Viewer } from "@/services/viewer";
+import { PrototypeFilters } from "./prototype-filters";
 import { adminHref, parseAdminParams, type AdminParams } from "./params";
 
 const PAGE_SIZE = 20;
@@ -60,6 +61,7 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
         </div>
       </div>
 
+      {raw.variant !== undefined ? <PrototypeFilters /> : (
       <form action="/admin" method="get" className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-end">
         <div className="sm:w-80">
           <label htmlFor="admin-course" className="mb-1.5 block text-sm font-medium text-heading">Course</label>
@@ -89,7 +91,7 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
           Scanned or partly scanned only
         </label>
         <Button type="submit" className="h-11 px-4 md:h-9 md:px-3">Apply</Button>
-      </form>
+      </form>)}
 
       {result.items.length === 0 ? (
         <p className="rounded-lg border bg-card p-4">No resources match.</p>
