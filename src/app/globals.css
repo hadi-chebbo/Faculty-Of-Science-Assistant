@@ -309,6 +309,49 @@
   @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
 }
 
+/* An edge fade for rows that scroll sideways (course type tabs, a long lecturer strip), so a cut-off
+   item reads as "more this way". Everywhere: a fade at the end. Where scroll-driven animations exist,
+   the fades follow the scroll: none at the start edge until scrolled, none at the end once there. */
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 24px;
+}
+@keyframes scroll-fade {
+  from {
+    --fade-start: 0px;
+    --fade-end: 24px;
+  }
+  10% {
+    --fade-start: 24px;
+  }
+  90% {
+    --fade-end: 24px;
+  }
+  to {
+    --fade-start: 24px;
+    --fade-end: 0px;
+  }
+}
+@utility scroll-fade {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--fade-start),
+    #000 calc(100% - var(--fade-end)),
+    transparent 100%
+  );
+  @supports (animation-timeline: scroll()) {
+    animation: scroll-fade linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+
 /* Home below md (phone): the order of <main>'s children. A visitor sees intro, years, the course
    preview, the numbers strip, then the rest. A signed-in student (html[data-signed-in], set before
    paint from the hint cookie and kept true by ProgressBand) sees the progress band first, the years,
