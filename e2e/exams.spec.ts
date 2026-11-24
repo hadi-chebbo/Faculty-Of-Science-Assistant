@@ -22,11 +22,16 @@ async function expectTitles(page: import("@playwright/test").Page, titles: strin
   }
 }
 
-// Picking a value submits the form once the page has hydrated; before that the change does
-// nothing (Apply still works), so the pick is repeated until the address changes.
-async function choose(page: import("@playwright/test").Page, label: string, value: string, url: RegExp) {
+// The value a dropdown holds, read from its hidden field (the dropdown itself is a button).
+const held = (page: import("@playwright/test").Page, name: string) => page.locator(`input[name="${name}"]`);
+
+// Picking an option submits the form once the page has hydrated; before that the button does
+// nothing (Apply still works), so the pick is repeated until the address changes. `nth` tells apart
+// options that repeat in the list (Semester 1 / Semester 2 of each year).
+async function choose(page: import("@playwright/test").Page, label: string, option: string | RegExp, url: RegExp, nth = 0) {
   await expect(async () => {
-    await page.getByLabel(label).selectOption(value);
+    await page.getByLabel(label).click();
+    await page.getByRole("option", typeof option === "string" ? { name: option, exact: true } : { name: option }).nth(nth).click({ timeout: 2000 });
     await expect(page).toHaveURL(url, { timeout: 1000 });
   }).toPass();
 }
@@ -63,24 +68,24 @@ test("the Exams nav item leads to the full list, newest year first", async ({ pa
 
 test("filters by course and session, and the URL carries them", async ({ page }) => {
   await page.goto("/exams");
-  await choose(page, "Course", "DEMO301", /\/exams\?course=DEMO301$/);
+  await choose(page, "Course", /^DEMO301 -/, /\/exams\?course=DEMO301$/);
   await expectTitles(page, ["Sample partial exam 2023", "Sample final exam 2022"]);
 
-  await choose(page, "Session", "final", /\/exams\?course=DEMO301&session=final$/);
+  await choose(page, "Session", "Final", /\/exams\?course=DEMO301&session=final$/);
   await expectTitles(page, ["Sample final exam 2022"]);
 
   // The same address, opened directly, shows the same result and the same selections.
   await page.goto("/exams?course=DEMO301&session=final");
   await expectTitles(page, ["Sample final exam 2022"]);
-  await expect(page.getByLabel("Course")).toHaveValue("DEMO301");
-  await expect(page.getByLabel("Session")).toHaveValue("final");
+  await expect(held(page, "course")).toHaveValue("DEMO301");
+  await expect(held(page, "session")).toHaveValue("final");
 
   // Back goes to the previous filter state, with the dropdowns following.
-  await choose(page, "Session", "", /\/exams\?course=DEMO301$/);
+  await choose(page, "Session", "All", /\/exams\?course=DEMO301$/);
   await expect(rows(page)).toHaveCount(2);
   await page.goBack();
   await expect(page).toHaveURL(/session=final$/);
-  await expect(page.getByLabel("Session")).toHaveValue("final");
+  await expect(held(page, "session")).toHaveValue("final");
   await expectTitles(page, ["Sample final exam 2022"]);
 });
 
@@ -106,7 +111,7 @@ test("filters by semester and academic year", async ({ page }) => {
   await page.goto("/exams?semester=4");
   await expect(rows(page)).toHaveCount(13);
   await expect(page.getByText("13 exams")).toBeVisible();
-  await choose(page, "Academic year", "2024", /\/exams\?semester=4&year=2024$/);
+  await choose(page, "Academic year", "2024-2025", /\/exams\?semester=4&year=2024$/);
   await expect(rows(page)).toHaveCount(3);
   await expect(rows(page).filter({ hasText: "DEMO401" })).toContainText("Sample final exam 2024");
 });
@@ -122,16 +127,20 @@ test("an exam row names its course by code and title", async ({ page }) => {
 test("a semester narrows the course dropdown", async ({ page }) => {
   await page.goto("/exams");
   // Without a semester all courses with an exam are offered, grouped by semester.
-  await expect(page.getByLabel("Course").locator("optgroup")).toHaveCount(6);
-  await expect(page.getByLabel("Course").locator("optgroup").nth(2)).toHaveAttribute("label", "Second year · Semester 1");
-  await choose(page, "Semester", "4", /\/exams\?semester=4$/);
-  const options = page.getByLabel("Course").locator("option");
+  await page.getByLabel("Course").click();
+  const headings = page.getByRole("listbox").locator("p");
+  await expect(headings).toHaveCount(6);
+  await expect(headings.nth(2)).toHaveText("Second year · Semester 1");
+  await page.keyboard.press("Escape");
+  await choose(page, "Semester", "Semester 2", /\/exams\?semester=4$/, 1);
+  await page.getByLabel("Course").click();
+  const options = page.getByRole("option");
   await expect(options).toHaveText(["All", "DEMO401 - Sample Course C", "DEMO402 - Sample Course D", "DEMO410 - Sample Full Course B"]);
 });
 
 test("a course that does not fit the semester is dropped from the filters", async ({ page }) => {
   await page.goto("/exams?semester=4&course=DEMO301");
-  await expect(page.getByLabel("Course")).toHaveValue("");
+  await expect(held(page, "course")).toHaveValue("");
   await expect(rows(page)).toHaveCount(13);
 });
 
@@ -193,19 +202,19 @@ test.describe("without JavaScript", () => {
   test("selecting a course and pressing Apply filters the list", async ({ page }) => {
     await page.goto("/exams");
     await expect(rows(page)).toHaveCount(PAGE_SIZE);
-    await page.getByLabel("Course").selectOption("DEMO301");
+    await page.locator('select[name="course"]').selectOption("DEMO301");
     await page.getByRole("button", { name: "Apply" }).click();
     await expect(page).toHaveURL(/\/exams\?.*course=DEMO301/);
     await expectTitles(page, ["Sample partial exam 2023", "Sample final exam 2022"]);
-    await expect(page.getByLabel("Course")).toHaveValue("DEMO301");
+    await expect(page.locator('select[name="course"]')).toHaveValue("DEMO301");
   });
 });
 
 // The demo data gives DEMO301 and DEMO510 exams to three fake lecturers in turn.
 test("choosing a lecturer narrows the list, updates the address and can be cleared", async ({ page }) => {
   await page.goto("/exams");
-  await expect(page.getByLabel("Lecturer")).toHaveValue("");
-  await choose(page, "Lecturer", "ada-example", /\/exams\?lecturer=ada-example$/);
+  await expect(held(page, "lecturer")).toHaveValue("");
+  await choose(page, "Lecturer", "Dr. Ada Example", /\/exams\?lecturer=ada-example$/);
   // The address changes before the filtered list arrives, and the old "45 exams" also matches a count, so wait
   // until the old rows are gone (every row shows the lecturer) before counting.
   await expect(rows(page).filter({ hasNotText: "Dr. Ada Example" })).toHaveCount(0);
@@ -216,19 +225,19 @@ test("choosing a lecturer narrows the list, updates the address and can be clear
   for (let i = 0; i < count; i++) await expect(rows(page).nth(i)).toContainText("Dr. Ada Example");
 
   // It combines with another filter, and the same address opened directly shows the same choice.
-  await choose(page, "Course", "DEMO301", /\/exams\?course=DEMO301&lecturer=ada-example$/);
+  await choose(page, "Course", /^DEMO301 -/, /\/exams\?course=DEMO301&lecturer=ada-example$/);
   await page.goto("/exams?lecturer=ada-example");
-  await expect(page.getByLabel("Lecturer")).toHaveValue("ada-example");
+  await expect(held(page, "lecturer")).toHaveValue("ada-example");
 
   await page.getByRole("link", { name: "Clear filters" }).first().click();
   await expect(page).toHaveURL(/\/exams$/);
-  await expect(page.getByLabel("Lecturer")).toHaveValue("");
+  await expect(held(page, "lecturer")).toHaveValue("");
   await expect(page.getByText(`${TOTAL_EXAMS} exams`)).toBeVisible();
 });
 
 test("an unknown lecturer in the address is ignored", async ({ page }) => {
   await page.goto("/exams?lecturer=nobody-here");
-  await expect(page.getByLabel("Lecturer")).toHaveValue("");
+  await expect(held(page, "lecturer")).toHaveValue("");
   await expect(page.getByText(`${TOTAL_EXAMS} exams`)).toBeVisible();
 });
 
@@ -237,7 +246,7 @@ test.describe("without JavaScript, the lecturer filter", () => {
 
   test("works with Apply", async ({ page }) => {
     await page.goto("/exams");
-    await page.getByLabel("Lecturer").selectOption("grace-placeholder");
+    await page.locator('select[name="lecturer"]').selectOption("grace-placeholder");
     await page.getByRole("button", { name: "Apply" }).click();
     await expect(page).toHaveURL(/\/exams\?.*lecturer=grace-placeholder/);
     await expect(rows(page).first()).toContainText("Pr. Grace Placeholder");
@@ -246,17 +255,15 @@ test.describe("without JavaScript, the lecturer filter", () => {
 
 test("the Semester filter groups its options by year and keeps the stored values", async ({ page }) => {
   await page.goto("/exams");
-  const groups = page.getByLabel("Semester").locator("optgroup");
-  await expect(groups).toHaveCount(3);
-  await expect(groups.nth(0)).toHaveAttribute("label", "First year");
-  await expect(groups.nth(1)).toHaveAttribute("label", "Second year");
-  await expect(groups.nth(2)).toHaveAttribute("label", "Third year");
-  await expect(groups.nth(1).locator("option")).toHaveText(["Semester 1", "Semester 2"]);
-  const texts = await page.getByLabel("Semester").locator("option").allTextContents();
-  expect(texts).toEqual(["All", "Semester 1", "Semester 2", "Semester 1", "Semester 2", "Semester 1", "Semester 2"]);
+  await page.getByLabel("Semester").click();
+  await expect(page.getByRole("listbox").locator("p")).toHaveText(["First year", "Second year", "Third year"]);
+  await expect(page.getByRole("option")).toHaveText(["All", "Semester 1", "Semester 2", "Semester 1", "Semester 2", "Semester 1", "Semester 2"]);
+  await page.keyboard.press("Escape");
   // A shared link with the stored number still selects its option.
   await page.goto("/exams?semester=3");
-  await expect(page.getByLabel("Semester")).toHaveValue("3");
-  await expect(page.getByLabel("Semester").locator("option:checked")).toHaveText("Semester 1");
-  await expect(page.getByLabel("Semester").locator("optgroup:has(option:checked)")).toHaveAttribute("label", "Second year");
+  await expect(held(page, "semester")).toHaveValue("3");
+  await expect(page.getByLabel("Semester")).toContainText("Semester 1");
+  await page.getByLabel("Semester").click();
+  await expect(page.getByRole("option", { selected: true })).toHaveText("Semester 1");
+  await expect(page.getByRole("listbox").locator("li:has(button[aria-selected=true]) p")).toHaveText("Second year");
 });

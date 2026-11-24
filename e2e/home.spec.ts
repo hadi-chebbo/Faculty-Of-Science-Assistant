@@ -62,7 +62,7 @@ test("each session link opens the exams page with that session selected", async 
     await page.goto("/");
     await page.getByRole("link", { name, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/exams\\?session=${value}$`));
-    await expect(page.getByLabel("Session", { exact: true })).toHaveValue(value);
+    await expect(page.locator('input[name="session"]')).toHaveValue(value);
   }
 });
 
