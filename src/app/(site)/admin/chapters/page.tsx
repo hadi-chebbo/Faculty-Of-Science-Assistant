@@ -5,7 +5,8 @@ import { AdminBar } from "@/components/admin/admin-bar";
 import { PageTitle } from "@/components/site/page-title";
 import { StateBlock } from "@/components/site/state-block";
 import { Button } from "@/components/ui/button";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { courseYearSemesterLabel } from "@/lib/years";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readForPage } from "@/lib/page-errors";
 import { listChaptersWithCounts } from "@/services/chapters/chapters";
@@ -58,14 +59,14 @@ async function ChaptersForCourse({ viewer, raw }: { viewer: Viewer; raw: Record<
       <form action="/admin/chapters" method="get" className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-end">
         <div className="sm:w-80">
           <label htmlFor="chapters-course" className="mb-1.5 block text-sm font-medium text-heading">Course</label>
-          <NativeSelect id="chapters-course" name="course" defaultValue={known?.code ?? ""} className="w-full [&_select]:h-11 md:[&_select]:h-9">
-            <NativeSelectOption value="">Choose a course</NativeSelectOption>
-            {courses.map((c) => (
-              <NativeSelectOption key={c.code} value={c.code}>
-                {c.code} - {c.title}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <SearchableSelect
+            id="chapters-course"
+            name="course"
+            noun="course"
+            emptyLabel="Choose a course"
+            defaultValue={known?.code ?? ""}
+            options={courses.map((c) => ({ value: c.code, label: `${c.code} - ${c.title}`, group: courseYearSemesterLabel(c.semester) }))}
+          />
         </div>
         <Button type="submit" className="h-11 px-4 md:h-9 md:px-3">Apply</Button>
       </form>

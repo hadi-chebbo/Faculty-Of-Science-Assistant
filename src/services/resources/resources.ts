@@ -87,7 +87,7 @@ export async function visibleSolutionsOf(viewer: Viewer, ids: string[]): Promise
 }
 
 export async function listResources(viewer: Viewer, filters: ResourceFilters = {}): Promise<Page<ResourceListItem>> {
-  const { courseCode, lecturer, semester, type, academicYearStart, examSession, language, text, page, pageSize } = parseInput(
+  const { courseCode, lecturer, semester, type, academicYearStart, examSession, language, text, status, page, pageSize } = parseInput(
     resourceFiltersSchema,
     filters,
   );
@@ -99,6 +99,7 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
   if (examSession) where.push({ examSession });
   if (language) where.push({ language });
   if (lecturer) where.push({ "$lecturer.slug$": lecturer });
+  if (status && isAdmin(viewer)) where.push({ isPublished: status === "published" });
   // Admin only. The columns are unqualified because the count query aliases the table differently. Both columns are null when not checked, and a comparison with null is never true.
   if (text === "scanned" && isAdmin(viewer)) where.push(Sequelize.literal("text_page_count < page_count"));
 

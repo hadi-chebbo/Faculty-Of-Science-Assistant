@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { Client } from "pg";
 import { samplePdf, scannedPdf } from "../src/lib/storage/sample-pdf";
+import { choose } from "./searchable-select";
 
 // Needs the demo data and an admin, like e2e/admin-resource-form.spec.ts. Every resource created
 // here is titled "E2E text ..." and removed again in a finally block. DEMO502 is shared with the
@@ -73,7 +74,7 @@ async function createWithFile(page: Page, title: string, file: ReturnType<typeof
   await page.goto("/admin/resources/new");
   // The file input only works once the page has loaded its scripts.
   await page.waitForLoadState("networkidle");
-  await page.locator("#courseId").selectOption({ label: COURSE_LABEL });
+  await choose(page.locator("#courseId"), COURSE_LABEL);
   await page.getByLabel("Title", { exact: true }).fill(title);
   await fileInput(page).setInputFiles(file);
   await expect(page.getByText("Ready. It is saved with the resource.")).toBeVisible();

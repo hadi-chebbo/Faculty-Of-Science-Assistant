@@ -3,8 +3,9 @@ import Link from "next/link";
 import { TextLayerBadge } from "@/components/admin/text-layer-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { courseYearSemesterLabel } from "@/lib/years";
 import { EXAM_SESSION_LABELS, formatAcademicYear, RESOURCE_TYPE_LABELS } from "@/lib/labels";
 import { readForPage } from "@/lib/page-errors";
 import { listCourses } from "@/services/courses/courses";
@@ -14,6 +15,11 @@ import type { Viewer } from "@/services/viewer";
 import { adminHref, parseAdminParams, type AdminParams } from "./params";
 
 const PAGE_SIZE = 20;
+const STATUS_OPTIONS = [
+  { value: "", label: "All" },
+  { value: "published", label: "Published" },
+  { value: "draft", label: "Drafts" },
+];
 
 // Phone: a card per row. md+: the same four parts as grid columns, matching the header row.
 const COLUMNS = "md:grid-cols-[minmax(0,2fr)_minmax(0,2fr)_6rem_12rem]";
@@ -26,10 +32,10 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
   // A code that matches no course is ignored; a known one is written with its real letter case.
   const known = courses.find((c) => c.code.toLowerCase() === parsed.course?.toLowerCase());
   const knownLecturer = lecturers.find((l) => l.slug === parsed.lecturer);
-  const params: AdminParams = { course: known?.code, lecturer: knownLecturer?.slug, text: parsed.text, page: parsed.page };
+  const params: AdminParams = { course: known?.code, lecturer: knownLecturer?.slug, text: parsed.text, status: parsed.status, page: parsed.page };
 
   const result = await readForPage(() =>
-    listResources(viewer, { courseCode: params.course, lecturer: params.lecturer, text: params.text, page: params.page, pageSize: PAGE_SIZE }),
+    listResources(viewer, { courseCode: params.course, lecturer: params.lecturer, text: params.text, status: params.status, page: params.page, pageSize: PAGE_SIZE }),
   );
   const pages = Math.max(1, Math.ceil(result.total / result.pageSize));
   const previous = params.page > 1 ? adminHref({ ...params, page: params.page - 1 }) : null;
@@ -63,26 +69,40 @@ export async function ResourceList({ viewer, raw }: { viewer: Viewer; raw: Recor
       <form action="/admin" method="get" className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-end">
         <div className="sm:w-80">
           <label htmlFor="admin-course" className="mb-1.5 block text-sm font-medium text-heading">Course</label>
-          <NativeSelect id="admin-course" name="course" defaultValue={params.course ?? ""} className="w-full [&_select]:h-11 md:[&_select]:h-9">
-            <NativeSelectOption value="">All courses</NativeSelectOption>
-            {courses.map((c) => (
-              <NativeSelectOption key={c.code} value={c.code}>
-                {c.code} - {c.title}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <SearchableSelect
+            id="admin-course"
+            name="course"
+            noun="course"
+            emptyLabel="All courses"
+            defaultValue={params.course ?? ""}
+            options={courses.map((c) => ({ value: c.code, label: `${c.code} - ${c.title}`, group: courseYearSemesterLabel(c.semester) }))}
+          />
         </div>
         <div className="sm:w-64">
           <label htmlFor="admin-lecturer" className="mb-1.5 block text-sm font-medium text-heading">Lecturer</label>
-          <NativeSelect id="admin-lecturer" name="lecturer" defaultValue={params.lecturer ?? ""} className="w-full [&_select]:h-11 md:[&_select]:h-9">
-            <NativeSelectOption value="">All lecturers</NativeSelectOption>
-            {lecturers.map((l) => (
-              <NativeSelectOption key={l.slug} value={l.slug}>
-                {l.name}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <SearchableSelect
+            id="admin-lecturer"
+            name="lecturer"
+            noun="lecturer"
+            emptyLabel="All lecturers"
+            defaultValue={params.lecturer ?? ""}
+            options={lecturers.map((l) => ({ value: l.slug, label: l.name }))}
+          />
         </div>
+        <fieldset>
+          <legend className="mb-1.5 text-sm font-medium text-heading">Status</legend>
+          {/* Plain radios, so the form still works without JavaScript; styled as one segmented control. */}
+          <div className="inline-flex overflow-hidden rounded-md border border-input">
+            {STATUS_OPTIONS.map((o) => (
+              <label key={o.value} className="relative cursor-pointer border-r border-input last:border-r-0">
+                <input type="radio" name="status" value={o.value} defaultChecked={(params.status ?? "") === o.value} className="peer sr-only" />
+                <span className="flex h-11 items-center px-3 text-sm peer-checked:bg-primary peer-checked:text-primary-foreground peer-focus-visible:ring-3 peer-focus-visible:ring-ring/50 md:h-9">
+                  {o.label}
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         {/* A checkbox, not a select: unchecked it adds nothing to the address. */}
         <label htmlFor="admin-text" className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-heading md:min-h-9">
           <input id="admin-text" type="checkbox" name="text" value="scanned" defaultChecked={params.text === "scanned"} className="size-4 accent-primary" />

@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
+import { choose } from "./searchable-select";
 
 // Needs the demo data and an admin, like e2e/auth.spec.ts.
 try {
@@ -53,12 +54,40 @@ test("the admin sees drafts and published rows, filtered by course", async ({ pa
 test("choosing a course and applying updates the URL and the list", async ({ page }) => {
   await signInAsAdmin(page);
   await page.goto("/admin");
-  await page.getByLabel("Course").selectOption("DEMO601");
+  await choose(page.getByLabel("Course"), /^DEMO601 -/);
   await page.getByRole("button", { name: "Apply" }).click();
 
-  await expect(page).toHaveURL(/\/admin\?course=DEMO601(&lecturer=)?$/);
+  await expect(page).toHaveURL(/\/admin\?course=DEMO601(&lecturer=)?(&status=)?$/);
   await expect(page.getByText("Sample draft notes with no source")).toBeVisible();
   await expect(page.getByText("Sample draft lecture", { exact: true })).toHaveCount(0);
+});
+
+test("the Status filter shows only drafts or only published files", async ({ page }) => {
+  await signInAsAdmin(page);
+  await page.goto("/admin");
+  await page.getByText("Drafts", { exact: true }).click();
+  await page.getByRole("button", { name: "Apply" }).click();
+  await expect(page).toHaveURL(/status=draft/);
+  await expect(page.getByRole("listitem").getByText("Published", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("listitem").getByText("Draft", { exact: true }).first()).toBeVisible();
+
+  await page.goto("/admin?status=published");
+  await expect(page.getByRole("listitem").getByText("Draft", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("listitem").getByText("Published", { exact: true }).first()).toBeVisible();
+});
+
+test("the course picker searches and says when nothing matches", async ({ page }) => {
+  await signInAsAdmin(page);
+  await page.goto("/admin");
+  await page.getByLabel("Course").click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("combobox").fill("zzzz");
+  await expect(dialog.getByText("No course matches")).toBeVisible();
+  await dialog.getByRole("combobox").fill("DEMO601");
+  await expect(dialog.getByRole("option")).toHaveCount(1);
+  await page.keyboard.press("Enter");
+  await expect(dialog).toBeHidden();
+  await expect(page.getByLabel("Course")).toContainText("DEMO601");
 });
 
 // Titles repeat across the demo courses, so the pages are told apart by their number, not by text.
