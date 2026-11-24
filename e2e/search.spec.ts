@@ -389,6 +389,7 @@ test("a section shows its top five and Show all expands it, 20 to a page", async
 test("a file row shows its course, chapter, type, year and language and opens the reader", async ({ page }) => {
   await page.goto("/search?q=sample+exercise+sheet+1");
   const row = fileRows(page).filter({ hasText: "DEMO302" }).first();
+  await expect(row.locator("[data-course]")).toContainText("DEMO302 Sample Course B");
   await expect(row).toContainText("Sample exercise sheet 1");
   await expect(row).toContainText("Chapter 1 · Exercise");
   await expect(row).toContainText("EN");

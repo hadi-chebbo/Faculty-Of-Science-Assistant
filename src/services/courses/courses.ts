@@ -123,7 +123,7 @@ function buildContent(data: CourseData, lecturer: LecturerRef | null) {
   const { course, resources, solutions, chapters } = data;
   const kept = lecturer ? resources.filter((r) => r.lecturer?.slug === lecturer.slug) : resources;
   const keptIds = new Set(kept.map((r) => r.id));
-  const item = (r: LoadedResource) => toResourceListItem(r, course.code, solutions.get(r.id) ?? []);
+  const item = (r: LoadedResource) => toResourceListItem(r, course, solutions.get(r.id) ?? []);
 
   const groups = RESOURCE_TYPES.map((type) => ({
     type,
