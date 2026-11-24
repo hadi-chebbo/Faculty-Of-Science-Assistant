@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { Client } from "pg";
+import { choose } from "./searchable-select";
 
 // Needs the demo data and an admin. The writing tests all use DEMO402: it has no chapters and no
 // other spec opens its course page (a course that gains a chapter switches its public layout).
@@ -116,7 +117,7 @@ test("the admin bar leads to the chapters page, which asks for a course", async 
   // An unknown course code is ignored, not an error.
   await page.goto("/admin/chapters?course=NOPE999");
   await expect(page.getByText("Choose a course to manage its chapters.")).toBeVisible();
-  await expect(page.getByLabel("Course")).toHaveValue("");
+  await expect(page.getByLabel("Course")).toContainText("Choose a course");
 });
 
 test("a course with chapters lists them with their item counts", async ({ page }) => {
@@ -157,7 +158,7 @@ test.describe("managing chapters", () => {
   test("add, rename and reorder chapters", async ({ page }) => {
     try {
       await page.goto("/admin/chapters");
-      await page.getByLabel("Course").selectOption("DEMO402");
+      await choose(page.getByLabel("Course"), /^DEMO402 -/);
       await page.getByRole("button", { name: "Apply" }).click();
       await expect(page).toHaveURL(/course=DEMO402/);
       await expect(page.getByText("This course has no chapters yet.")).toBeVisible();

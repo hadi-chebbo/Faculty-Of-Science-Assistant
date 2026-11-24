@@ -34,6 +34,8 @@ export const resourceFiltersSchema = z.object({
   lecturer: optional(lecturerSlugSchema),
   // Admin only: "scanned" lists resources whose file has no text on some or all pages. Ignored for students.
   text: optional(z.enum(["scanned"])),
+  // Admin only: only published files or only drafts. Ignored for students, who only ever see published ones.
+  status: optional(z.enum(["published", "draft"])),
   page: z.preprocess(blankToUndefined, z.coerce.number().int().min(1).max(10_000).default(1)),
   pageSize: z.preprocess(
     blankToUndefined,
@@ -43,6 +45,7 @@ export const resourceFiltersSchema = z.object({
 
 // What a typed caller passes. Everything is optional; the schema fills in the paging defaults.
 export interface ResourceFilters {
+  status?: "published" | "draft";
   courseCode?: string;
   // The semester of the resource's course.
   semester?: number;
