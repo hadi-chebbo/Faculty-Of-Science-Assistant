@@ -2,19 +2,83 @@
 
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
+import { hasSignedInHint, BAND_HEIGHT_KEY, SIGNED_IN_MARKER, saneBandHeight } from "@/lib/auth/signed-in-hint";
+import { SESSION_CHANGED_EVENT } from "@/lib/auth/session-events";
 import { ProgressRing } from "@/components/site/progress-ring";
-import { useProgressOverview } from "@/lib/progress-overview-client";
+import { useProgressOverviewState } from "@/lib/progress-overview-client";
 import { activeDaysText, courseLabel, percentOf, topCourses, type BandCourse } from "./progress-band-logic";
 import { filesOf } from "@/lib/plural";
+import type { ProgressOverview } from "@/services/progress/types";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
-// "Your progress" on Home, for a signed-in student only. Home stays static: the browser loads the
-// overview after the page shows, and nothing renders for a visitor or before the answer. Marked
-// `data-personal` (e2e/auth.spec.ts leaves it out when comparing signed in and signed out).
+const MARKER = SIGNED_IN_MARKER;
+// How long the reserved space waits for the progress answer before it is given back.
+const LOADING_GIVE_UP_MS = 8000;
+
+// The slot at the top of Home's phone order. A pre-paint script marks <html data-signed-in> when the
+// readable hint cookie is there; CSS (globals.css, `.home-band-slot`) then reserves the band's last
+// measured height below md and shows the short hero. This component keeps that marker true: it is
+// removed when the session check answers signed out or there is nothing to show (the visitor layout
+// returns and the space is released), and set when a band is about to show. On a phone it also stores
+// the band's height (`home:band-h`) so the next visit reserves exactly that much. The slot is empty
+// for a visitor and takes no space (see the CSS). Marked `data-personal`.
 export function ProgressBand() {
-  const overview = useProgressOverview();
-  if (!overview) return null;
+  const { status, data } = useProgressOverviewState();
+  const slot = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (status === "ready") root.setAttribute(MARKER, "1");
+    else if (status === "none") root.removeAttribute(MARKER);
+    else {
+      // Still loading: if the answer never comes (a failed session or ids request leaves the viewer
+      // unknown), release the reserved space rather than keep an empty gap at the top of Home.
+      const timer = window.setTimeout(() => root.removeAttribute(MARKER), LOADING_GIVE_UP_MS);
+      return () => window.clearTimeout(timer);
+    }
+  }, [status]);
+
+  // Signing in or out in this tab: follow the cookie, which the response has already changed.
+  useEffect(() => {
+    const follow = () => {
+      if (hasSignedInHint(document.cookie)) document.documentElement.setAttribute(MARKER, "1");
+      else document.documentElement.removeAttribute(MARKER);
+    };
+    window.addEventListener(SESSION_CHANGED_EVENT, follow);
+    return () => window.removeEventListener(SESSION_CHANGED_EVENT, follow);
+  }, []);
+
+  useEffect(() => {
+    const band = slot.current?.firstElementChild;
+    if (status !== "ready" || !band || !(band instanceof HTMLElement)) return;
+    const phone = window.matchMedia("(max-width: 767px)");
+    const measure = () => {
+      if (!phone.matches) return;
+      const height = Math.round(band.getBoundingClientRect().height);
+      try {
+        if (saneBandHeight(String(height)) !== null && localStorage.getItem(BAND_HEIGHT_KEY) !== String(height)) {
+          localStorage.setItem(BAND_HEIGHT_KEY, String(height));
+        }
+      } catch {
+        // Storage blocked: the next visit just uses the default height.
+      }
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(band);
+    return () => observer.disconnect();
+  }, [status]);
+
+  return (
+    <div ref={slot} data-personal data-testid="home-band-slot" className="home-band-slot">
+      {data && <Band overview={data} />}
+    </div>
+  );
+}
+
+function Band({ overview }: { overview: ProgressOverview }) {
   const courses = topCourses(overview.courses);
   const empty = overview.courses.length === 0;
   return (

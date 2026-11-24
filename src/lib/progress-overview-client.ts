@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { requestWithRenew, useKnownSignedIn } from "@/lib/completions-client";
+import { requestWithRenew, useViewerStatus } from "@/lib/completions-client";
 import type { ProgressOverview } from "@/services/progress/types";
 
 // A signed-in student's progress over all their courses, loaded by the browser after the page shows
@@ -26,21 +26,39 @@ function release(own: NonNullable<typeof entry>) {
   if (own.users === 0 && entry === own) entry = null;
 }
 
-// null until loaded, and for a visitor or a failed request.
-export function useProgressOverview(): ProgressOverview | null {
-  const signedIn = useKnownSignedIn();
-  const [data, setData] = useState<ProgressOverview | null>(null);
+export type OverviewState =
+  | { status: "loading"; data: null }
+  | { status: "ready"; data: ProgressOverview }
+  // A visitor or a failed request: there is no overview to show. (An account with no completions is `ready`.)
+  | { status: "none"; data: null };
+
+const LOADING: OverviewState = { status: "loading", data: null };
+const NONE: OverviewState = { status: "none", data: null };
+
+// Tells "still loading" from "nothing to show".
+export function useProgressOverviewState(): OverviewState {
+  const viewer = useViewerStatus();
+  const signedIn = viewer === "signed-in" || viewer === "ready";
+  const [answer, setAnswer] = useState<ProgressOverview | null | undefined>(undefined);
   useEffect(() => {
     if (!signedIn) return;
     const own = acquire();
     let current = true;
-    void own.promise.then((answer) => {
-      if (current && answer) setData(answer);
+    void own.promise.then((result) => {
+      if (current) setAnswer(result);
     });
     return () => {
       current = false;
       release(own);
     };
   }, [signedIn]);
-  return signedIn ? data : null;
+  if (viewer === "signed-out") return NONE;
+  if (!signedIn) return LOADING;
+  if (answer === undefined) return LOADING;
+  return answer ? { status: "ready", data: answer } : NONE;
+}
+
+// null until loaded, and for a visitor or a failed request.
+export function useProgressOverview(): ProgressOverview | null {
+  return useProgressOverviewState().data;
 }

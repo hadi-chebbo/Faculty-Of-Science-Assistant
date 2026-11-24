@@ -165,6 +165,10 @@ mock exam generation, personalization.
   as SHA-256 hashes in `refresh_tokens`, rotated on every use, and grouped by
   `family_id` so a reused token revokes its whole chain. Our own tables and
   code; no auth framework.
+- A readable hint cookie `ua_signed_in=1` (not httpOnly, SameSite=Lax, path `/`, the refresh token's lifetime) is set and cleared inside
+  `setSessionCookies` / `clearSessionCookies`, so sign-in, refresh, restore, sign-out and a failed refresh keep it in step. It holds nothing
+  personal and is never trusted: no server code reads it for authorization. It exists only so Home can reserve the progress band's space
+  before paint (see Home); a stale one is harmless.
 - Access tokens are HS256 JWTs signed with `jose` (the one auth dependency),
   secret in `AUTH_SECRET` (32+ characters, read lazily so the build and public
   pages work without it). Lifetimes: access 15 minutes, refresh 30 days. Both
@@ -224,7 +228,20 @@ mock exam generation, personalization.
   without a name), labelled with the name (never the email). Its menu holds the account only: the name,
   Admin (admins only) and Sign out; pages never go in it.
 - Page width: every site page, the header and the footer use the `page-container` utility (`globals.css`): content up to 1280px (`max-w-7xl`), centred, side padding 16px on a phone, 24px from sm, 32px from lg, so the edges never move between pages; the reader follows it too. The account pages keep their full-screen split.
-- Home is a landing page: a hero (headline, description, "Browse courses" and "Previous exams"
+- Home is a landing page (phone order, below md only; desktop keeps the DOM order below): on a phone a visitor sees the intro (eyebrow,
+  headline, description, buttons, facts), "Choose your year", the course preview card, the numbers strip, then the rest; a signed-in student
+  sees the "Your progress" band first, "Choose your year", a short hero (the headline and its two buttons only; no eyebrow, description,
+  facts or preview) and the strip, then the rest. It is CSS `order` on the children of `<main>` (`.home-*` rules in `globals.css`; the hero
+  is `display: contents` below md so intro and preview are separate items); no content is rendered twice. Home stays static and never reads
+  the session on the server: a readable hint cookie (`ua_signed_in`, see Stack, Auth) is read by an inline script in the root layout's
+  `<head>` before paint (`SIGNED_IN_SCRIPT`, `src/lib/auth/signed-in-hint.ts`, same test as `hasSignedInHint`), which sets
+  `html[data-signed-in]` and `--home-band-h` from `localStorage["home:band-h"]` (the band's last measured phone height, kept when 80 to
+  600). Below md CSS then reserves a band slot of that height (default 16.375rem) so the band fills it without moving the year cards. The
+  slot (`ProgressBand`, `data-personal`) removes the marker when the session check answers signed out or the progress request fails, or after 8 s
+  without an answer (`LOADING_GIVE_UP_MS`; a band arriving later then moves the years once) (a stale
+  hint falls back to the visitor layout and releases the space), sets it when a band shows, follows sign-in and sign-out events, and stores
+  the measured height on a phone. A visitor without the hint gets the static page and no extra request. The hint only drives CSS.
+- Home hero and sections: a hero (headline, description, "Browse courses" and "Previous exams"
   buttons, three facts, and a decorative course preview that is a generic example with no course code: "Your course", tabs Chapters / Previous exams, rows "Chapter 1: Introduction", "Chapter 2: Fundamentals", "Final exam 2024-2025"; `data-testid="course-preview"`), a numbers strip (only from 5 courses), the
   "Choose your year" cards (`#years`; one per entry of `YEARS`, four cards: one column on a phone, two from sm, four from lg: a filled primary circle with the
   year badge ("1", "2", "3", "M1"), "Second year", up to four course-code chips and "+N more", "7 courses · 101 files" and "Browse →", lift and
@@ -233,7 +250,7 @@ mock exam generation, personalization.
   how it works, what you will find,
   an "Exams coming up?" band with a link per session, and four questions (the account answer says Saved, To-do and Progress need a free account; browsing, opening and downloading never do). Only the strip and the
   cards read the database. The texts cover the three years and Master 1 (never claiming Master 1 material exists); no semester numbers are shown. For a signed-in student a "Your progress" band (`ProgressBand`, `data-personal`)
-  follows the hero: loaded by the browser from `GET /api/v1/progress` after the page shows (Home stays static;
+  follows the hero on desktop (on a phone it comes first, see above): loaded by the browser from `GET /api/v1/progress` after the page shows (Home stays static;
   a visitor gets no band and no request), "N active days this week", up to three of My courses by latest
   completion (ring, code, title, "x of y files · P%" or "✓ Finished", or "Exams: x of y done" for an
   exams-only course) and "See all ›" to `/progress`; with no My courses it says "Mark files as done in the

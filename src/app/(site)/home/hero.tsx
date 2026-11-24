@@ -13,15 +13,18 @@ const PREVIEW_ROWS = [
 
 export function Hero() {
   return (
-    <section className="grid gap-7 rounded-2xl border bg-card px-5 py-7 md:grid-cols-[1.05fr_0.95fr] md:items-center md:gap-10 md:px-10 md:py-12">
-      <div className="min-w-0">
-        <p className="text-[0.8125rem] font-medium uppercase tracking-wide text-link">
+    // From md up this is the hero card (intro and preview side by side). Below md it is `contents`, so
+    // the intro and the preview are separate items of <main>'s flex column and `.home-*` rules in
+    // globals.css order them (years between them; for a signed-in student a short hero).
+    <section className="contents md:grid md:grid-cols-[1.05fr_0.95fr] md:items-center md:gap-10 md:rounded-2xl md:border md:bg-card md:px-10 md:py-12">
+      <div className="home-intro min-w-0 rounded-2xl border bg-card px-5 py-7 md:rounded-none md:border-0 md:bg-transparent md:p-0">
+        <p className="home-long text-[0.8125rem] font-medium uppercase tracking-wide text-link">
           Computer Science · Faculty of Science · Hadath
         </p>
         <h1 className="mt-3 text-balance text-[2rem] font-bold leading-[1.08] tracking-tight md:text-5xl">
           Every course, chapter and past exam in one place.
         </h1>
-        <p className="mt-4 max-w-[46ch] text-[1.0625rem]">
+        <p className="home-long mt-4 max-w-[46ch] text-[1.0625rem]">
           Lectures, notes, exercises and previous exams for Computer Science, organised the way your courses are taught.
           Stop digging through Drive links.
         </p>
@@ -33,7 +36,7 @@ export function Hero() {
             <Link href="/exams">Previous exams</Link>
           </Button>
         </div>
-        <ul className="mt-5 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+        <ul className="home-long mt-5 flex flex-wrap gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
           {FACTS.map((fact) => (
             <li key={fact} className="flex items-center gap-1.5">
               <span className="size-1.5 rounded-full bg-highlight" aria-hidden />
@@ -54,7 +57,7 @@ function CoursePreview() {
     <div
       aria-hidden="true"
       data-testid="course-preview"
-      className="min-w-0 select-none rounded-xl border bg-background p-4 shadow-xl shadow-primary/10"
+      className="home-preview home-long min-w-0 select-none rounded-xl border bg-background p-4 shadow-xl shadow-primary/10"
     >
       <p className="mb-2.5 text-xs text-muted-foreground">What a course looks like</p>
       <p className="text-[1.0625rem] font-semibold text-heading">Your course</p>
