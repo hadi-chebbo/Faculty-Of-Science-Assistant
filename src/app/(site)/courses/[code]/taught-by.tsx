@@ -6,9 +6,10 @@ import type { LecturerScope } from "@/services/courses/types";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
-// The address of a course or chapter page with its `tab` and `lecturer` keys (either may be left out).
+// From this many lecturers the strip is one sideways-scrolling row at every width.
 export const SCROLL_ROW_FROM = 5;
 
+// The address of a course or chapter page with its `tab` and `lecturer` keys (either may be left out).
 export function pageHref(path: string, { tab, lecturer }: { tab?: string | null; lecturer?: string | null }): string {
   const query = new URLSearchParams();
   if (tab) query.set("tab", tab);

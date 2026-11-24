@@ -11,7 +11,6 @@ export function BackLink({ href, label, children }: { href: string; label: strin
     <Link
       href={href}
       aria-label={label}
-      data-testid="back-link"
       className={`-ml-2 mb-2 inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-link md:hidden ${FOCUS}`}
     >
       <ArrowLeft aria-hidden className="size-4" />

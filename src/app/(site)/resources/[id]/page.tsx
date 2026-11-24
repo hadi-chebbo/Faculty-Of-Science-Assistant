@@ -15,7 +15,6 @@ import { PdfViewer } from "./pdf-viewer-loader";
 import { ReaderDetails } from "./reader-details";
 import { ViewerSkeleton } from "./viewer-skeleton";
 
-
 // One read per request, shared by the page and its metadata. Public page: it reads as an anonymous
 // viewer and never looks at the session, so only published resources are found.
 const readResource = cache((id: string) => readForPage(() => getResourceForReader(id)));

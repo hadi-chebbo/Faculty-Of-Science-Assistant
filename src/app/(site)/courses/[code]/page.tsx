@@ -56,17 +56,17 @@ async function CourseContent({
   const path = `/courses/${encodeURIComponent(course.code)}`;
   const applied = course.lecturer?.slug ?? null;
 
-  const yearBack = yearCrumb(course.semester);
+  const yearLink = yearCrumb(course.semester);
 
   return (
     <>
-      <BackLink href={yearBack.href} label={`Back to ${yearBack.label}`}>
-        {yearBack.label}
+      <BackLink href={yearLink.href} label={`Back to ${yearLink.label}`}>
+        {yearLink.label}
       </BackLink>
       <Crumbs
         items={[
           { label: "Home", href: "/" },
-          yearBack,
+          yearLink,
           { label: course.code },
         ]}
       />

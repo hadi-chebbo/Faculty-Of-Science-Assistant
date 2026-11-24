@@ -277,7 +277,8 @@ mock exam generation, personalization.
   lecturer by name (40px initials circle, name, "N files", solutions counted). The chosen card has a primary border and tint, a filled
   circle and `aria-current="true"`. Below 5 lecturers: from sm up a 4-column grid, on a phone a sideways scroll row of 160px cards;
   from 5 lecturers (`SCROLL_ROW_FROM`) one sideways-scrolling row of 192px cards at every width, with the `scroll-fade` edge fade
-  (`globals.css`; also on the type tabs of a course without chapters: a fade at the end, and where scroll-driven animations
+  (`globals.css`; also on the type tabs of a course without chapters, which keep 24px of end padding so the fade only covers
+  empty space: a fade at the end, and where scroll-driven animations
   exist the fades follow the scroll). The key is
   `?lecturer=SLUG` (`getCourseByCode` / `getChapterPage` take `{ lecturer }`; an unknown, malformed or draft-only slug is ignored). It
   narrows chapter cards (chapters left with none are left out, and cards describe only the kept files), previous exams, other material
