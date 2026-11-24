@@ -72,14 +72,14 @@ export function reconcileLecturer(params: ExamParams, lecturers: { slug: string 
   return { ...params, lecturer: undefined };
 }
 
+// How many of the five filters are set (the page is not a filter). Works on the parsed and
+// reconciled values, so a value the page dropped does not count.
+export function countActiveFilters(params: ExamParams): number {
+  return [params.semester, params.course, params.year, params.session, params.lecturer].filter((v) => v !== undefined).length;
+}
+
 export function hasActiveFilters(params: ExamParams): boolean {
-  return (
-    params.semester !== undefined ||
-    params.course !== undefined ||
-    params.year !== undefined ||
-    params.session !== undefined ||
-    params.lecturer !== undefined
-  );
+  return countActiveFilters(params) > 0;
 }
 
 // The URL for a set of parameters. The page is left out when it is 1, so the first page and

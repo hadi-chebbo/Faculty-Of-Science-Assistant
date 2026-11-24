@@ -46,7 +46,7 @@ export async function ExamResults({ params }: { params: ExamParams }) {
     <>
       <p className="mb-3 text-sm font-medium" aria-live="polite">
         {result.total} {result.total === 1 ? "exam" : "exams"}
-        {pages > 1 && ` - page ${result.page} of ${pages}`}
+        {pages > 1 && ` · page ${result.page} of ${pages}`}
       </p>
       <ul className="space-y-2">
         {result.items.map((exam) => (

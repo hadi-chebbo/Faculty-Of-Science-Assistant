@@ -6,7 +6,7 @@ import { courseYearSemesterLabel, groupSemestersByYear, semesterLabel, yearLabel
 import { EXAM_SESSION_LABELS, formatAcademicYear } from "@/lib/labels";
 import type { ExamFilterOptions } from "@/services/resources/types";
 import { FilterForm } from "./filter-form";
-import { hasActiveFilters, type ExamParams } from "./params";
+import { countActiveFilters, hasActiveFilters, type ExamParams } from "./params";
 
 const LABEL = "mb-1.5 block text-sm font-medium text-heading";
 
@@ -59,7 +59,7 @@ export function ExamFilters({ options, params }: { options: ExamFilterOptions; p
     .map((c) => ({ value: c.code, label: courseLabel(c), group: params.semester === undefined ? courseYearSemesterLabel(c.semester) : undefined }));
 
   return (
-    <FilterForm>
+    <FilterForm activeCount={countActiveFilters(params)}>
       <div className="rounded-xl border bg-card p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Field id="exam-semester" label="Semester" name="semester" noun="semester" value={values.semester} options={semesterOptions} />

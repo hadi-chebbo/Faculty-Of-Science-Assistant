@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EXAMS_PAGE_SIZE, examsHref, hasActiveFilters, pagerLinks, parseExamParams, reconcileCourse, reconcileLecturer, totalPages } from "./params";
+import { EXAMS_PAGE_SIZE, examsHref, countActiveFilters, hasActiveFilters, pagerLinks, parseExamParams, reconcileCourse, reconcileLecturer, totalPages } from "./params";
 
 describe("parseExamParams", () => {
   it("reads valid values", () => {
@@ -171,5 +171,31 @@ describe("pagerLinks", () => {
       previous: "/exams?semester=3&session=final&page=2",
       next: null,
     });
+  });
+});
+
+describe("countActiveFilters", () => {
+  it("is 0 with no filter and ignores the page", () => {
+    expect(countActiveFilters(parseExamParams({}))).toBe(0);
+    expect(countActiveFilters(parseExamParams({ page: "3" }))).toBe(0);
+  });
+
+  it("counts each usable filter once", () => {
+    expect(countActiveFilters(parseExamParams({ semester: "3", year: "2024" }))).toBe(2);
+    expect(
+      countActiveFilters(parseExamParams({ semester: "3", course: "DEMO301", year: "2024", session: "final", lecturer: "ada-example" })),
+    ).toBe(5);
+  });
+
+  it("does not count unusable values", () => {
+    expect(countActiveFilters(parseExamParams({ semester: "9", year: "abc", session: "bogus", lecturer: "Dr. Ada!", course: "" }))).toBe(0);
+  });
+
+  it("does not count a course or lecturer the page dropped", () => {
+    const params = reconcileLecturer(
+      reconcileCourse(parseExamParams({ semester: "1", course: "DEMO301", lecturer: "nobody" }), [{ code: "DEMO301", semester: 3 }]),
+      [],
+    );
+    expect(countActiveFilters(params)).toBe(1);
   });
 });

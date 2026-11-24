@@ -394,3 +394,11 @@
     display: contents;
   }
 }
+
+/* Exams filters: a disclosure below md; from md up the content is always shown (the summary is hidden). */
+@media (min-width: 48rem) {
+  .filters-details::details-content {
+    content-visibility: visible;
+    display: block;
+  }
+}
