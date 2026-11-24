@@ -3,7 +3,7 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { hasSignedInHint, BAND_HEIGHT_KEY, saneBandHeight } from "@/lib/auth/signed-in-hint";
+import { hasSignedInHint, BAND_HEIGHT_KEY, SIGNED_IN_MARKER, saneBandHeight } from "@/lib/auth/signed-in-hint";
 import { SESSION_CHANGED_EVENT } from "@/lib/auth/session-events";
 import { ProgressRing } from "@/components/site/progress-ring";
 import { useProgressOverviewState } from "@/lib/progress-overview-client";
@@ -13,7 +13,7 @@ import type { ProgressOverview } from "@/services/progress/types";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
-const MARKER = "data-signed-in";
+const MARKER = SIGNED_IN_MARKER;
 // How long the reserved space waits for the progress answer before it is given back.
 const LOADING_GIVE_UP_MS = 8000;
 

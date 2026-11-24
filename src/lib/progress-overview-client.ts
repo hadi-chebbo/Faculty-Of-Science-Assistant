@@ -29,7 +29,7 @@ function release(own: NonNullable<typeof entry>) {
 export type OverviewState =
   | { status: "loading"; data: null }
   | { status: "ready"; data: ProgressOverview }
-  // A visitor, a failed request or an account with nothing to show: the answer is known and empty.
+  // A visitor or a failed request: there is no overview to show. (An account with no completions is `ready`.)
   | { status: "none"; data: null };
 
 const LOADING: OverviewState = { status: "loading", data: null };

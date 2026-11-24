@@ -237,7 +237,8 @@ mock exam generation, personalization.
   `<head>` before paint (`SIGNED_IN_SCRIPT`, `src/lib/auth/signed-in-hint.ts`, same test as `hasSignedInHint`), which sets
   `html[data-signed-in]` and `--home-band-h` from `localStorage["home:band-h"]` (the band's last measured phone height, kept when 80 to
   600). Below md CSS then reserves a band slot of that height (default 16.375rem) so the band fills it without moving the year cards. The
-  slot (`ProgressBand`, `data-personal`) removes the marker when the session check answers signed out or there is nothing to show (a stale
+  slot (`ProgressBand`, `data-personal`) removes the marker when the session check answers signed out or the progress request fails, or after 8 s
+  without an answer (`LOADING_GIVE_UP_MS`; a band arriving later then moves the years once) (a stale
   hint falls back to the visitor layout and releases the space), sets it when a band shows, follows sign-in and sign-out events, and stores
   the measured height on a phone. A visitor without the hint gets the static page and no extra request. The hint only drives CSS.
 - Home hero and sections: a hero (headline, description, "Browse courses" and "Previous exams"
@@ -249,7 +250,7 @@ mock exam generation, personalization.
   how it works, what you will find,
   an "Exams coming up?" band with a link per session, and four questions (the account answer says Saved, To-do and Progress need a free account; browsing, opening and downloading never do). Only the strip and the
   cards read the database. The texts cover the three years and Master 1 (never claiming Master 1 material exists); no semester numbers are shown. For a signed-in student a "Your progress" band (`ProgressBand`, `data-personal`)
-  follows the hero: loaded by the browser from `GET /api/v1/progress` after the page shows (Home stays static;
+  follows the hero on desktop (on a phone it comes first, see above): loaded by the browser from `GET /api/v1/progress` after the page shows (Home stays static;
   a visitor gets no band and no request), "N active days this week", up to three of My courses by latest
   completion (ring, code, title, "x of y files · P%" or "✓ Finished", or "Exams: x of y done" for an
   exams-only course) and "See all ›" to `/progress`; with no My courses it says "Mark files as done in the
