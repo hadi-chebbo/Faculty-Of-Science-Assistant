@@ -158,7 +158,6 @@ export async function getResource(viewer: Viewer, id: string): Promise<ResourceD
   const visible = (r: Resource) => isAdmin(viewer) || r.isPublished;
   return {
     ...toResourceListItem(row, row.course!, (row.solutions ?? []).filter(visible).map(toRef)),
-    courseTitle: row.course!.title,
     solutionOf: row.solutionOf && visible(row.solutionOf) ? toRef(row.solutionOf) : null,
   };
 }

@@ -32,7 +32,6 @@ export interface ResourceRef {
 }
 
 export interface ResourceDetail extends ResourceListItem {
-  courseTitle: string;
   solutionOf: ResourceRef | null;
 }
 

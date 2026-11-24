@@ -75,8 +75,8 @@ export function ResourceRow({
             // Rows that list several courses (exams, search) name the course by code and title: "DEMO521 Algorithms · Final".
             <span data-course>
               <span className="font-mono text-xs font-medium text-link">{resource.courseCode}</span>{" "}
-              {resource.courseTitle}
-              <span aria-hidden className="text-muted-foreground"> · </span>
+              {resource.courseTitle}{" "}
+              <span aria-hidden className="text-muted-foreground">·</span>{" "}
             </span>
           )}
           {lead ?? title ?? resource.title}

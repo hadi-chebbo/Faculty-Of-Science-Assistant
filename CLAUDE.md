@@ -288,7 +288,7 @@ mock exam generation, personalization.
   views are shareable and Back works. A plain GET form with an Apply button works without
   JavaScript; with JavaScript a dropdown change submits automatically. Unusable URL values are
   ignored, not errors. Results are one flat list (newest year first), 20 per page, reusing the
-  course-page resource row, which here names the course by code and title ("DEMO521 Algorithms · Final"; `showCourse`,
+  course-page resource row, which here names the course by code and title before the file's title ("DEMO521 Algorithms · Final exam 2025"; `showCourse`,
   `courseTitle` on `ResourceListItem`, loaded in the same query as the rows). Course and chapter pages never repeat it. Dropdowns only offer values that have a visible exam.
 - Search page (`/search?q=…&type=…`, public, never reads the session; opened by the Search nav
   item; there is no other search box). A course result says "Second year · Semester 1" before its chapter and file counts. It searches course codes and titles, chapter titles and
@@ -447,6 +447,8 @@ mock exam generation, personalization.
   static: the browser asks `GET /api/v1/saved/ids` once per page load (never for a visitor) and all
   icons share the answer; toasts are the reader's. The row's `action` slot is for extra controls
   beside the bookmark.
+- Course on rows: a `ResourceRow` with `showCourse` (Exams and Search only) starts its title line with the course code and
+  title, then a " · " hidden from screen readers (the link reads "DEMO401 Sample Course C Sample final exam 2024").
 - Done status cell on rows: for a signed-in student every `ResourceRow` also has a read-only cell at the
   left (`DoneStatusCell`, outside the row link, `pl-3`, a 22px circle; not a button, not focusable).
   A completed file shows a filled success-green circle with a check (`role="img"`, label "Done"); a
