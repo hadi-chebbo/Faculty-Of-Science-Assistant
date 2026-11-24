@@ -4,6 +4,8 @@ import type { ExamSession, Language, ResourceType } from "@/db/constants";
 export interface ResourceListItem {
   id: string;
   courseCode: string;
+  // The course's title, shown beside the code where rows list several courses (exams, search).
+  courseTitle: string;
   type: ResourceType;
   title: string;
   description: string | null;

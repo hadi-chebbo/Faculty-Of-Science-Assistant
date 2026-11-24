@@ -279,7 +279,7 @@ async function listFiles(plan: Plan, limit: number, offset: number): Promise<Fil
     Resource.findAll({
       where: { id: ids },
       include: [
-        { model: Course, as: "course", attributes: ["id", "code"], required: true },
+        { model: Course, as: "course", attributes: ["id", "code", "title"], required: true },
         { model: Chapter, as: "chapter", attributes: ["position"], required: false },
         lecturerInclude(),
       ],
@@ -297,7 +297,7 @@ async function listFiles(plan: Plan, limit: number, offset: number): Promise<Fil
     if (!resource) return [];
     return [
       {
-        resource: toResourceListItem(resource, resource.course!.code, solutions.get(id) ?? []),
+        resource: toResourceListItem(resource, resource.course!, solutions.get(id) ?? []),
         chapterPosition: resource.chapter?.position ?? null,
         courseHasChapters: withChapters.has(String(resource.courseId)),
       },

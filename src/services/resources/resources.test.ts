@@ -94,6 +94,7 @@ describe("listResources", () => {
     await seed();
     const { items: result } = await listResources(null, { courseCode: "TEST301", type: "exam", academicYearStart: 2024, examSession: "final" });
     expect(result.map((r) => r.title)).toEqual(["Final 2024"]);
+    expect(result[0]).toMatchObject({ courseCode: "TEST301", courseTitle: "Course A" });
     expect((await listResources(null, { courseCode: "TEST302", type: "exam" })).items).toEqual([]);
   });
 

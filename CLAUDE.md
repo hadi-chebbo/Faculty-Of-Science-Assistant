@@ -288,7 +288,8 @@ mock exam generation, personalization.
   views are shareable and Back works. A plain GET form with an Apply button works without
   JavaScript; with JavaScript a dropdown change submits automatically. Unusable URL values are
   ignored, not errors. Results are one flat list (newest year first), 20 per page, reusing the
-  course-page resource row. Dropdowns only offer values that have a visible exam.
+  course-page resource row, which here names the course by code and title ("DEMO521 Algorithms · Final"; `showCourse`,
+  `courseTitle` on `ResourceListItem`, loaded in the same query as the rows). Course and chapter pages never repeat it. Dropdowns only offer values that have a visible exam.
 - Search page (`/search?q=…&type=…`, public, never reads the session; opened by the Search nav
   item; there is no other search box). A course result says "Second year · Semester 1" before its chapter and file counts. It searches course codes and titles, chapter titles and
   the title, description and lecturer name of published files (the name is matched like the title
@@ -298,7 +299,7 @@ mock exam generation, personalization.
   the URL; results follow the typing after about 300 ms (`router.replace`, no history entry per
   keystroke), and without JavaScript it is a plain GET form with a Search button. Under 2
   characters it shows hints ("Try a course code, a topic (graphs), or an exam (final 2024).", no fake code) and "Or browse a year" with one link per year. Results are Courses, Chapters and Files
-  (the course-page resource row), each with its count and its top 5 plus "Show all N files"
+  (the course-page resource row, with the course's code and title as on Exams), each with its count and its top 5 plus "Show all N files"
   (`&show=files`, 20 per page); empty sections are hidden. Words that name a type, session or year
   ("exam", "cours", "final", "partiel", "2024", "2024-2025"; a session word only with a year or
   type word, or alone: "partial derivatives" is text) also filter Files, are not searched

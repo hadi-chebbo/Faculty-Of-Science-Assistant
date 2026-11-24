@@ -28,10 +28,15 @@ export function resourceOrder(): Order {
   ];
 }
 
-export function toResourceListItem(resource: Resource, courseCode: string, solutions: ResourceRef[]): ResourceListItem {
+export function toResourceListItem(
+  resource: Resource,
+  course: { code: string; title: string },
+  solutions: ResourceRef[],
+): ResourceListItem {
   return {
     id: resource.id,
-    courseCode,
+    courseCode: course.code,
+    courseTitle: course.title,
     type: resource.type,
     title: resource.title,
     description: resource.description ?? null,
@@ -110,7 +115,7 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
       {
         model: Course,
         as: "course",
-        attributes: ["code"],
+        attributes: ["code", "title"],
         required: true,
         where: courseWhere.length > 0 ? { [Op.and]: courseWhere } : undefined,
       },
@@ -125,7 +130,7 @@ export async function listResources(viewer: Viewer, filters: ResourceFilters = {
   const admin = isAdmin(viewer);
   return {
     items: rows.map((row) => {
-      const item = toResourceListItem(row, row.course!.code, solutions.get(row.id) ?? []);
+      const item = toResourceListItem(row, row.course!, solutions.get(row.id) ?? []);
       return admin ? { ...item, textCheck: toTextCheck(row) } : item;
     }),
     total: count,
@@ -152,7 +157,7 @@ export async function getResource(viewer: Viewer, id: string): Promise<ResourceD
 
   const visible = (r: Resource) => isAdmin(viewer) || r.isPublished;
   return {
-    ...toResourceListItem(row, row.course!.code, (row.solutions ?? []).filter(visible).map(toRef)),
+    ...toResourceListItem(row, row.course!, (row.solutions ?? []).filter(visible).map(toRef)),
     courseTitle: row.course!.title,
     solutionOf: row.solutionOf && visible(row.solutionOf) ? toRef(row.solutionOf) : null,
   };

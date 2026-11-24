@@ -189,7 +189,7 @@ describe("sections", () => {
     await seed();
     const outcome = await searchCatalog("algorithm exercises");
     const hit = outcome.files!.items.find((f) => f.resource.title === "Algorithm exercises")!;
-    expect(hit.resource).toMatchObject({ courseCode: "DEMO302", type: "exercise", language: "en" });
+    expect(hit.resource).toMatchObject({ courseCode: "DEMO302", courseTitle: "Algorithms", type: "exercise", language: "en" });
     expect(hit.chapterPosition).toBe(1);
     expect(hit.courseHasChapters).toBe(true);
     expect(hit.resource.solutions.map((s) => s.title)).toEqual(["Algorithm exercises solution"]);
