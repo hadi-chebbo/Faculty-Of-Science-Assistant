@@ -258,7 +258,7 @@ mock exam generation, personalization.
 - Year page (`/years/1`, `/2`, `/3`, `/m1`, prerendered, any other value is the 404 page; `src/app/(site)/years/[year]/page.tsx`): breadcrumb
   Home › Second year, title "Second year", then an `h2` "Semester 1" (`id="semester-1"`, scroll margin) and "Semester 2"
   (`semester-2`), each with the course cards (code, title, "N resources", the signed-in progress ring from the one shared
-  `GET /api/v1/progress` request) or "No courses yet.". Students never see the stored semester number: `semesterInYear`,
+  `GET /api/v1/progress` request) or "No courses yet.". Card content aligns to the top. A course with no visible file is a muted dashed card that is not a link, with "No files yet" instead of the count and no ring (#167). Students never see the stored semester number: `semesterInYear`,
   `semesterLabel` and `yearHref(year, semester?)` in `src/lib/years.ts` (the one place year URLs are built; anything
   that lists years iterates `YEARS`, so a fourth year can be added). Backed by `listCoursesByYear(viewer, year)`
   (`src/services/courses/courses.ts`; both semesters always present). The page never reads the session. Old
@@ -315,7 +315,7 @@ mock exam generation, personalization.
   course-page resource row, which here names the course by code and title before the file's title ("DEMO521 Algorithms · Final exam 2025"; `showCourse`,
   `courseTitle` on `ResourceListItem`, loaded in the same query as the rows). Course and chapter pages never repeat it. Dropdowns only offer values that have a visible exam.
 - Search page (`/search?q=…&type=…`, public, never reads the session; opened by the Search nav
-  item; there is no other search box). A course result says "Second year · Semester 1" before its chapter and file counts. It searches course codes and titles, chapter titles and
+  item; there is no other search box). A course result says "Second year · Semester 1" before its chapter and file counts; a course with no files is the same muted, non-link card and says "No files yet". The chips row has the `scroll-fade` edge fade. It searches course codes and titles, chapter titles and
   the title, description and lecturer name of published files (the name is matched like the title
   but not highlighted, and adds no section), not the text inside PDFs. Matching ignores case
   and accents, treats every word as a prefix ("algo" finds "Algorithms") and finds a course code
@@ -423,7 +423,7 @@ mock exam generation, personalization.
   `next.config.ts`), reached from "Saved" in the main navigation (also in the phone sidebar).
   `getSignedInPageViewer` (`src/lib/auth/page-guard.ts`) returns null without a valid access token, and the
   page then shows the in-page sign-in state (see "In-page sign-in state") instead of redirecting. Saved files are grouped by course (semester, then
-  course code; "DEMO301 Title" with "Second year · Semester 1" muted), newest save first inside a course, published
+  course code; "DEMO301 Title", the title limited to two lines, with "Second year · Semester 1" muted), newest save first inside a course, published
   files only (a withdrawn file simply disappears). Each item is the shared resource row (opens the
   reader in the same tab, solutions below) with its filled bookmark icon (see "Save bookmark on rows") and
   an "Add to to-do" icon beside it (`ListPlus`, label "Add TITLE to to-do", same action as in the reader). The icon
