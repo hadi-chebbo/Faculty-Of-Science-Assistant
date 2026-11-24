@@ -351,3 +351,46 @@
     animation-timeline: scroll(self inline);
   }
 }
+
+/* Home below md (phone): the order of <main>'s children. A visitor sees intro, years, the course
+   preview, the numbers strip, then the rest. A signed-in student (html[data-signed-in], set before
+   paint from the hint cookie and kept true by ProgressBand) sees the progress band first, the years,
+   a short hero (headline and buttons only), the strip, then the rest. Desktop keeps the DOM order. */
+@media (max-width: 767px) {
+  .home-band-slot {
+    display: none;
+    order: 1;
+  }
+  html[data-signed-in] .home-band-slot {
+    display: block;
+    min-height: var(--home-band-h, 16.375rem);
+  }
+  .home-intro {
+    order: 2;
+  }
+  .home-years {
+    order: 3;
+  }
+  .home-preview {
+    order: 4;
+  }
+  .home-strip {
+    order: 5;
+  }
+  .home-rest {
+    order: 6;
+  }
+  html[data-signed-in] .home-intro {
+    order: 4;
+    padding-block: 1.25rem;
+  }
+  html[data-signed-in] .home-long {
+    display: none;
+  }
+}
+@media (min-width: 768px) {
+  /* The slot adds no box: the band (when there is one) is a plain child of <main>. */
+  .home-band-slot {
+    display: contents;
+  }
+}

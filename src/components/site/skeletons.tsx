@@ -111,10 +111,10 @@ export function ExamsListSkeleton() {
 export function StatsAndYearsSkeleton() {
   return (
     <div className="contents" role="status" aria-label="Loading years">
-      <Skeleton className="-mt-4 h-[7.5rem] w-full rounded-lg sm:h-[4.75rem] md:-mt-8" />
+      <Skeleton className="home-strip -mt-4 h-[7.5rem] w-full rounded-lg sm:h-[4.75rem] md:-mt-8" />
       {/* Same id as the real section: "Browse courses" (#years) can be clicked while the
           years are still loading, and must land here rather than nowhere. */}
-      <div id="years" className="scroll-mt-20">
+      <div id="years" className="home-years scroll-mt-20">
         <div className="mb-4">
           <Skeleton className="h-8 w-56" />
           <Skeleton className="mt-2.5 h-1 w-12" />

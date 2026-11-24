@@ -71,7 +71,14 @@ export function ResourceRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium text-heading">
-          {showCourse && <span className="mr-2 font-mono text-xs font-medium text-link">{resource.courseCode}</span>}
+          {showCourse && (
+            // Rows that list several courses (exams, search) name the course by code and title: "DEMO521 Algorithms · Final".
+            <span data-course>
+              <span className="font-mono text-xs font-medium text-link">{resource.courseCode}</span>{" "}
+              {resource.courseTitle}{" "}
+              <span aria-hidden className="text-muted-foreground">·</span>{" "}
+            </span>
+          )}
           {lead ?? title ?? resource.title}
         </span>
         {lead !== undefined && <span className="mt-0.5 block text-xs text-muted-foreground">{resource.title}</span>}

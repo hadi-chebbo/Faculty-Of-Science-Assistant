@@ -21,7 +21,7 @@ export async function StatsAndYears() {
   return (
     <>
       {showStats(totals.courses) && (
-        <dl className="-mt-4 grid grid-cols-2 rounded-lg border bg-card sm:grid-cols-4 md:-mt-8">
+        <dl className="home-strip -mt-4 grid grid-cols-2 rounded-lg border bg-card sm:grid-cols-4 md:-mt-8">
           {numbers.map(({ label, value }, i) => (
             <div
               key={label}
@@ -33,7 +33,7 @@ export async function StatsAndYears() {
           ))}
         </dl>
       )}
-      <section id="years" className="scroll-mt-20">
+      <section id="years" className="home-years scroll-mt-20">
         <SectionTitle>Choose your year</SectionTitle>
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.years.map((entry) => (

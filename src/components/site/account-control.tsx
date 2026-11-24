@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { findAccount, type Account } from "@/lib/auth/client-session";
-import { SESSION_CHANGED_EVENT } from "@/lib/auth/session-events";
+import { announceSessionChange, SESSION_CHANGED_EVENT } from "@/lib/auth/session-events";
 
 // undefined: still asking. null: signed out (or the request failed).
 type State = Account | null | undefined;
@@ -61,6 +61,8 @@ export function AccountControl() {
       await fetch("/api/v1/auth/sign-out", { method: "POST" });
     } finally {
       setAccount(null);
+      // The browser stores (done, saved, Home's progress band) drop what they know about the old session.
+      announceSessionChange();
       if (pathname.startsWith("/admin")) router.replace("/sign-in");
     }
   }

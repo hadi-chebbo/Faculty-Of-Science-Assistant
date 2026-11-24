@@ -14,9 +14,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@/components/ui/native-select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { EXAM_SESSIONS, RESOURCE_TITLE_MAX_LENGTH } from "@/db/constants";
 import type { ExamSession, Language, ResourceType } from "@/db/constants";
+import { courseYearSemesterLabel } from "@/lib/years";
 import { adminFetch } from "@/lib/admin-fetch";
 import type { TextCheck } from "@/lib/pdf-text-check";
 import { MAX_SIZE_LABEL } from "@/lib/upload-file";
@@ -208,71 +210,50 @@ export function ResourceForm({
         <FormCard title="Where does it belong?" description="Students find it under this course and chapter.">
           <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
             <Field id="courseId" label="Course" error={errors.courseId}>
-              <NativeSelect
+              <SearchableSelect
                 id="courseId"
                 name="courseId"
+                noun="course"
                 required
                 value={courseId}
-                onChange={(e) => {
-                  setCourseId(e.target.value);
+                onValueChange={(v) => {
+                  setCourseId(v);
                   setChapterId("");
                   setSolutionOfId("");
                 }}
                 aria-invalid={invalid("courseId")}
-                className={selectClass}
-              >
-                {!resource && <NativeSelectOption value="" disabled>Choose a course</NativeSelectOption>}
-                {courses.map((c) => (
-                  <NativeSelectOption key={c.id} value={c.id}>
-                    {c.code} - {c.title}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                options={courses.map((c) => ({ value: c.id, label: `${c.code} - ${c.title}`, group: courseYearSemesterLabel(c.semester) }))}
+              />
             </Field>
 
             {type !== "exam" && (
               <Field id="chapterId" label="Chapter" hint="With no chapter it is listed under Other material." error={errors.chapterId}>
-                <NativeSelect
+                <SearchableSelect
                   id="chapterId"
                   name="chapterId"
+                  noun="chapter"
                   value={chapterId}
-                  onChange={(e) => setChapterId(e.target.value)}
+                  onValueChange={setChapterId}
                   disabled={courseChapters.length === 0}
                   aria-invalid={invalid("chapterId")}
-                  className={selectClass}
-                >
-                  {courseChapters.length === 0 ? (
-                    <NativeSelectOption value="">{courseId ? "No chapters in this course" : "Choose a course first"}</NativeSelectOption>
-                  ) : (
-                    <>
-                      <NativeSelectOption value="">No chapter</NativeSelectOption>
-                      {courseChapters.map((c) => (
-                        <NativeSelectOption key={c.id} value={c.id}>
-                          {c.position}. {c.title}
-                        </NativeSelectOption>
-                      ))}
-                    </>
-                  )}
-                </NativeSelect>
+                  placeholder={courseChapters.length === 0 ? (courseId ? "No chapters in this course" : "Choose a course first") : undefined}
+                  emptyLabel={courseChapters.length === 0 ? undefined : "No chapter"}
+                  options={courseChapters.map((c) => ({ value: c.id, label: `${c.position}. ${c.title}` }))}
+                />
               </Field>
             )}
 
             <Field id="lecturerId" label="Lecturer" optional hint="Shown to students beside the file." error={errors.lecturerId}>
-              <NativeSelect
+              <SearchableSelect
                 id="lecturerId"
                 name="lecturerId"
+                noun="lecturer"
+                emptyLabel="None"
                 value={lecturerId}
-                onChange={(e) => setLecturerId(e.target.value)}
+                onValueChange={setLecturerId}
                 aria-invalid={invalid("lecturerId")}
-                className={selectClass}
-              >
-                <NativeSelectOption value="">None</NativeSelectOption>
-                {lecturers.map((l) => (
-                  <NativeSelectOption key={l.id} value={l.id}>
-                    {l.name}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                options={lecturers.map((l) => ({ value: l.id, label: l.name }))}
+              />
             </Field>
           </div>
 

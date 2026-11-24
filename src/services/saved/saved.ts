@@ -84,7 +84,7 @@ export async function listSavedResources(viewer: NonNullable<Viewer>): Promise<S
       group = { courseId: course.id, courseCode: course.code, courseTitle: course.title, semester: course.semester, items: [] };
       groups.set(course.id, group);
     }
-    group.items.push(toResourceListItem(resource, course.code, solutions.get(resource.id) ?? []));
+    group.items.push(toResourceListItem(resource, course, solutions.get(resource.id) ?? []));
   }
   return [...groups.values()].sort(
     (a, b) => a.semester - b.semester || (a.courseCode < b.courseCode ? -1 : a.courseCode > b.courseCode ? 1 : 0),

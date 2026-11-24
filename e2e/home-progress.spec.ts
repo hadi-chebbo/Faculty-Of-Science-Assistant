@@ -88,3 +88,82 @@ test("on a phone the page does not overflow sideways with the band shown", async
     await page.context().clearCookies();
   }
 });
+
+async function top(locator: import("@playwright/test").Locator): Promise<number> {
+  return locator.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+}
+
+test("on a phone a signed-in student sees progress, the years, then a short hero", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "phone layout");
+  await signIn(page, DEMO_EMAIL);
+  const band = page.getByRole("heading", { name: "Your progress" });
+  await expect(band).toBeVisible();
+  const years = page.getByRole("heading", { name: "Choose your year" });
+  const headline = page.getByRole("heading", { level: 1 });
+  const strip = page.locator("dl").first();
+  expect(await top(band)).toBeLessThan(await top(years));
+  expect(await top(years)).toBeLessThan(await top(headline));
+  expect(await top(headline)).toBeLessThan(await top(strip));
+  // The short hero: the headline and its two buttons only.
+  await expect(page.getByText("Stop digging through Drive links.")).toBeHidden();
+  await expect(page.getByText("No account needed")).toBeHidden();
+  await expect(page.getByTestId("course-preview")).toBeHidden();
+  await expect(page.getByRole("link", { name: "Browse courses" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Previous exams" }).first()).toBeVisible();
+  await expect(headline).toBeVisible();
+});
+
+test("on desktop a signed-in student keeps the order: hero, progress, numbers, years", async ({ page, isMobile }) => {
+  test.skip(isMobile, "desktop layout");
+  await signIn(page, DEMO_EMAIL);
+  const band = page.getByRole("heading", { name: "Your progress" });
+  await expect(band).toBeVisible();
+  const headline = await top(page.getByRole("heading", { level: 1 }));
+  const strip = await top(page.locator("dl").first());
+  const years = await top(page.getByRole("heading", { name: "Choose your year" }));
+  expect(headline).toBeLessThan(await top(band));
+  expect(await top(band)).toBeLessThan(strip);
+  expect(strip).toBeLessThan(years);
+  await expect(page.getByText("Stop digging through Drive links.")).toBeVisible();
+  await expect(page.getByTestId("course-preview")).toBeVisible();
+});
+
+test("on a phone the years do not move when the band loads", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "phone layout");
+  await signIn(page, DEMO_EMAIL);
+  await expect(page.getByRole("heading", { name: "Your progress" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("home:band-h"))).not.toBeNull();
+
+  // A later visit: the overview is held back, so the first paint has only the reserved space.
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route("**/api/v1/progress", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  const years = page.getByRole("heading", { name: "Choose your year" });
+  await expect(years).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your progress" })).toHaveCount(0);
+  const before = await top(years);
+  release();
+  await expect(page.getByRole("heading", { name: "Your progress" })).toBeVisible();
+  expect(await top(years)).toBe(before);
+});
+
+test("the hint cookie is readable and set on sign-in, and cleared on sign-out", async ({ page, context }) => {
+  await signIn(page, DEMO_EMAIL);
+  const hint = (await context.cookies()).find((cookie) => cookie.name === "ua_signed_in");
+  expect(hint).toMatchObject({ value: "1", httpOnly: false, sameSite: "Lax", path: "/" });
+  expect(await page.evaluate(() => document.cookie)).toContain("ua_signed_in=1");
+  const refresh = (await context.cookies()).find((cookie) => cookie.name === "ua_refresh");
+  expect(hint!.expires).toBeCloseTo(refresh!.expires, -2);
+
+  await page.locator('header button[aria-haspopup="menu"]').click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  // Signing out on Home returns the visitor layout in place (marker removed, band gone).
+  await expect(page.getByRole("heading", { name: "Your progress" })).toHaveCount(0);
+  await expect(page.locator("html")).not.toHaveAttribute("data-signed-in", /.*/);
+  await expect(page.getByText("Stop digging through Drive links.")).toBeVisible();
+  expect((await context.cookies()).find((cookie) => cookie.name === "ua_signed_in")).toBeUndefined();
+});

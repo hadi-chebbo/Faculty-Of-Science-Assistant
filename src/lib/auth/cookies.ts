@@ -1,6 +1,7 @@
 import type { NextRequest, NextResponse } from "next/server";
 import { ACCESS_TOKEN_TTL_SECONDS, REFRESH_TOKEN_TTL_SECONDS } from "@/services/auth/constants";
 import type { SessionTokens } from "@/services/auth/types";
+import { SIGNED_IN_HINT_COOKIE } from "@/lib/auth/signed-in-hint";
 
 export const ACCESS_COOKIE = "ua_access";
 export const REFRESH_COOKIE = "ua_refresh";
@@ -32,11 +33,20 @@ export function setSessionCookies(response: NextResponse, request: Request, toke
     path: REFRESH_COOKIE_PATH,
     maxAge: REFRESH_TOKEN_TTL_SECONDS,
   });
+  response.cookies.set(SIGNED_IN_HINT_COOKIE, "1", { ...hintOptions(request), maxAge: REFRESH_TOKEN_TTL_SECONDS });
+}
+
+// The hint cookie (`ua_signed_in=1`) is readable by scripts on purpose, holds nothing personal and is
+// never read on the server for authorization: it only lets Home reserve space before the browser
+// knows who is signed in. It lives as long as the refresh token and is set and cleared with the session.
+function hintOptions(request: Request) {
+  return { httpOnly: false, sameSite: "lax", secure: isSecure(request), path: "/" } as const;
 }
 
 export function clearSessionCookies(response: NextResponse, request: Request): void {
   response.cookies.set(ACCESS_COOKIE, "", { ...base(request), path: ACCESS_COOKIE_PATH, maxAge: 0 });
   response.cookies.set(REFRESH_COOKIE, "", { ...base(request), path: REFRESH_COOKIE_PATH, maxAge: 0 });
+  response.cookies.set(SIGNED_IN_HINT_COOKIE, "", { ...hintOptions(request), maxAge: 0 });
 }
 
 export function readRefreshCookie(request: NextRequest): string {

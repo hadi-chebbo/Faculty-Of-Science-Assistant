@@ -15,10 +15,12 @@ export default function Home() {
       <Suspense fallback={<StatsAndYearsSkeleton />}>
         <StatsAndYears />
       </Suspense>
-      <HowItWorks />
-      <WhatYouWillFind />
-      <ExamBand />
-      <Questions />
+      <div className="home-rest flex flex-col gap-12 md:gap-14">
+        <HowItWorks />
+        <WhatYouWillFind />
+        <ExamBand />
+        <Questions />
+      </div>
     </main>
   );
 }

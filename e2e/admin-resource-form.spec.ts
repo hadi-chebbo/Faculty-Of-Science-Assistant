@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { Client } from "pg";
+import { choose } from "./searchable-select";
 
 // Needs the demo data and an admin, like e2e/auth.spec.ts. Every resource created here is titled
 // "E2E form ..." and removed again in a finally block. DEMO502 is used by no other spec.
@@ -133,7 +134,7 @@ async function cleanup(request: APIRequestContext, origin: string, title: string
 }
 
 async function fillBasics(page: Page, title: string) {
-  await page.locator("#courseId").selectOption({ label: COURSE_LABEL });
+  await choose(page.locator("#courseId"), COURSE_LABEL);
   await page.getByLabel("Title", { exact: true }).fill(title);
 }
 
@@ -257,10 +258,10 @@ test.describe("admin resource form", () => {
       await expect(page.getByLabel("Chapter")).toBeDisabled();
       await expect(page.getByLabel("Chapter")).toContainText("Choose a course first");
 
-      await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
+      await choose(page.locator("#courseId"), CHAPTER_COURSE_LABEL);
       await page.getByLabel("Title", { exact: true }).fill(title);
       await expect(page.getByLabel("Chapter")).toBeEnabled();
-      await page.getByLabel("Chapter").selectOption({ label: "2. Sample chapter 2" });
+      await choose(page.getByLabel("Chapter"), "2. Sample chapter 2");
       await save(page);
       await page.waitForURL(/\/admin$/);
       expect(await chapterPositionOf(title)).toBe(2);
@@ -268,16 +269,16 @@ test.describe("admin resource form", () => {
       const [id] = await idsByTitle(title);
       await page.goto(`/admin/resources/${id}/edit`);
       const chapter = page.getByLabel("Chapter");
-      await expect(chapter.locator("option:checked")).toHaveText("2. Sample chapter 2");
+      await expect(chapter).toHaveText("2. Sample chapter 2");
 
-      await chapter.selectOption({ label: "No chapter" });
+      await choose(chapter, "No chapter");
       await save(page);
       await page.waitForURL(/\/admin$/);
       expect(await chapterPositionOf(title)).toBeNull();
 
       await page.goto(`/admin/resources/${id}/edit`);
-      await expect(chapter.locator("option:checked")).toHaveText("No chapter");
-      await chapter.selectOption({ label: "3. Sample chapter 3" });
+      await expect(chapter).toHaveText("No chapter");
+      await choose(chapter, "3. Sample chapter 3");
       await save(page);
       await page.waitForURL(/\/admin$/);
       expect(await chapterPositionOf(title)).toBe(3);
@@ -291,11 +292,11 @@ test.describe("admin resource form", () => {
     try {
       await signInAsAdmin(page);
       await page.goto("/admin/resources/new");
-      await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
+      await choose(page.locator("#courseId"), CHAPTER_COURSE_LABEL);
       await page.getByLabel("Title", { exact: true }).fill(title);
-      await page.getByLabel("Chapter").selectOption({ label: "4. Sample chapter 4" });
+      await choose(page.getByLabel("Chapter"), "4. Sample chapter 4");
 
-      await page.locator("#courseId").selectOption({ label: COURSE_LABEL });
+      await choose(page.locator("#courseId"), COURSE_LABEL);
       await expect(page.getByLabel("Chapter")).toBeDisabled();
       await expect(page.getByLabel("Chapter")).toContainText("No chapters in this course");
       await save(page);
@@ -309,7 +310,7 @@ test.describe("admin resource form", () => {
   test("the Chapter field is hidden for exams", async ({ page }) => {
     await signInAsAdmin(page);
     await page.goto("/admin/resources/new");
-    await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
+    await choose(page.locator("#courseId"), CHAPTER_COURSE_LABEL);
     await expect(page.getByLabel("Chapter")).toBeVisible();
     await chooseType(page, "Exam");
     await expect(page.getByLabel("Chapter")).toHaveCount(0);
@@ -333,7 +334,7 @@ test.describe("admin resource form", () => {
     try {
       await signInAsAdmin(page);
       await page.goto("/admin/resources/new");
-      await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
+      await choose(page.locator("#courseId"), CHAPTER_COURSE_LABEL);
       await chooseType(page, "Solution");
       await page.getByLabel("Title", { exact: true }).fill(title);
       const solutionOf = page.getByLabel("Solution of", { exact: true });
@@ -371,13 +372,13 @@ test.describe("admin resource form", () => {
     try {
       await signInAsAdmin(page);
       await page.goto("/admin/resources/new");
-      await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
+      await choose(page.locator("#courseId"), CHAPTER_COURSE_LABEL);
       await chooseType(page, "Solution");
       await page.getByLabel("Title", { exact: true }).fill(title);
       const solutionOf = page.getByLabel("Solution of", { exact: true });
       await solutionOf.selectOption({ label: LINKED_EXERCISE });
 
-      await page.locator("#courseId").selectOption({ label: COURSE_LABEL });
+      await choose(page.locator("#courseId"), COURSE_LABEL);
       await expect(solutionOf.locator("option:checked")).toHaveText("Not linked");
       await expect(solutionOf.locator("option", { hasText: LINKED_EXERCISE })).toHaveCount(0);
       await expect(solutionOf.locator("option", { hasText: "Sample exercise sheet 1" })).toHaveCount(1);
@@ -467,7 +468,7 @@ test.describe("admin resource form", () => {
     try {
       await signInAsAdmin(page);
       await page.goto("/admin/resources/new");
-      await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
+      await choose(page.locator("#courseId"), CHAPTER_COURSE_LABEL);
       await chooseType(page, "Solution");
       await page.getByLabel("Title", { exact: true }).fill(title);
       await page.getByLabel("Solution of", { exact: true }).selectOption({ label: LINKED_EXERCISE });
@@ -510,8 +511,8 @@ test.describe("admin resource form", () => {
     await expect(preview).toContainText("Untitled");
     await expect(where).toHaveText("Choose a course to see where it will appear.");
 
-    await page.locator("#courseId").selectOption({ label: CHAPTER_COURSE_LABEL });
-    await page.getByLabel("Chapter").selectOption({ label: "2. Sample chapter 2" });
+    await choose(page.locator("#courseId"), CHAPTER_COURSE_LABEL);
+    await choose(page.getByLabel("Chapter"), "2. Sample chapter 2");
     await page.getByLabel("Title", { exact: true }).fill("Preview lecture");
     await page.getByLabel("Academic year").selectOption({ label: "2024-2025" });
     await page.getByRole("radio", { name: "French" }).check();
@@ -520,7 +521,7 @@ test.describe("admin resource form", () => {
     await expect(preview).toContainText("2024-2025");
     await expect(where).toHaveText("In DEMO510 › Chapter 2 › Lectures");
 
-    await page.getByLabel("Chapter").selectOption({ label: "No chapter" });
+    await choose(page.getByLabel("Chapter"), "No chapter");
     await expect(where).toHaveText("In DEMO510 › Other material › Lectures");
 
     await chooseType(page, "Exam");
@@ -845,8 +846,8 @@ test.describe("admin resource form: lecturer", () => {
       await page.goto("/admin/resources/new");
       await fillBasics(page, title);
       const select = page.locator("#lecturerId");
-      await expect(select).toHaveValue("");
-      await select.selectOption({ label: name });
+      await expect(select).toContainText("None");
+      await choose(select, name);
       await fileInput(page).setInputFiles(pdfFile());
       await expect(page.getByText("Ready. It is saved with the resource.")).toBeVisible();
       await setVisibility(page, "Published");
@@ -855,10 +856,10 @@ test.describe("admin resource form: lecturer", () => {
 
       // Admin list: the filter is in the address.
       await page.goto(`/admin?lecturer=${slug}`);
-      await expect(page.locator("#admin-lecturer")).toHaveValue(slug);
+      await expect(page.locator('input[name="lecturer"]')).toHaveValue(slug);
       await expect(page.getByRole("listitem").filter({ hasText: title })).toContainText(name);
       await page.goto("/admin?lecturer=not-a-known-one");
-      await expect(page.locator("#admin-lecturer")).toHaveValue("");
+      await expect(page.locator('input[name="lecturer"]')).toHaveValue("");
 
       // Students see the name on the row and in the reader.
       const anonymous = await browser.newContext();
@@ -885,8 +886,8 @@ test.describe("admin resource form: lecturer", () => {
       // Clear it in the edit form.
       const [{ id }] = (await client.query("SELECT id FROM resources WHERE title = $1", [title])).rows;
       await page.goto(`/admin/resources/${id}/edit`);
-      await expect(page.locator("#lecturerId")).toHaveValue(/.+/);
-      await page.locator("#lecturerId").selectOption({ label: "None" });
+      await expect(page.locator('input[name="lecturerId"]')).toHaveValue(/.+/);
+      await choose(page.locator("#lecturerId"), "None");
       await save(page);
       await page.waitForURL(/\/admin$/);
       const after = await client.query("SELECT lecturer_id FROM resources WHERE title = $1", [title]);

@@ -85,8 +85,8 @@ test("correct credentials reach /admin; the cookies are httpOnly and Lax", async
   const { access, refresh } = await sessionCookies(page);
   expect(access).toMatchObject({ httpOnly: true, sameSite: "Lax", secure: false, path: "/" });
   expect(refresh).toMatchObject({ httpOnly: true, sameSite: "Lax", secure: false, path: "/api/v1/auth" });
-  // Not readable by scripts.
-  expect(await page.evaluate(() => document.cookie)).toBe("");
+  // The tokens are not readable by scripts; the only readable cookie is the "signed in" hint, which holds nothing.
+  expect(await page.evaluate(() => document.cookie)).toBe("ua_signed_in=1");
 
   // Visiting /sign-in while signed in goes straight to /admin.
   await page.goto("/sign-in");
@@ -201,10 +201,12 @@ test("a successful sign-in never puts a token in the response body", async ({ pa
   expect(response.status()).toBe(200);
   expect(await response.json()).toEqual({ user: { email: ADMIN_EMAIL, role: "admin" } });
   const setCookie = response.headersArray().filter((h) => h.name.toLowerCase() === "set-cookie");
-  expect(setCookie).toHaveLength(2);
+  // Access and refresh cookies, plus the readable hint.
+  expect(setCookie).toHaveLength(3);
   for (const { value } of setCookie) {
-    expect(value).toMatch(/HttpOnly/i);
     expect(value).toMatch(/SameSite=Lax/i);
+    if (value.startsWith("ua_signed_in=")) expect(value).not.toMatch(/HttpOnly/i);
+    else expect(value).toMatch(/HttpOnly/i);
   }
 });
 
@@ -232,6 +234,8 @@ test("public pages render the same signed in and signed out", async ({ page }) =
       // runs. That figure depends on the moment, not on who is looking, so it is left out.
       // Parts that differ by viewer on purpose (a student's progress) are marked `data-personal`
       // and hidden before reading, so everything else must still match exactly.
+      // The signed-in marker (short hero on a phone) is personal too, so it is cleared the same way.
+      await page.evaluate(() => document.documentElement.removeAttribute("data-signed-in"));
       await page.locator("main [data-personal]").evaluateAll((elements) =>
         elements.forEach((element) => ((element as HTMLElement).style.display = "none")),
       );

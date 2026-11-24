@@ -111,6 +111,14 @@ test("filters by semester and academic year", async ({ page }) => {
   await expect(rows(page).filter({ hasText: "DEMO401" })).toContainText("Sample final exam 2024");
 });
 
+test("an exam row names its course by code and title", async ({ page }) => {
+  await page.goto("/exams?semester=4&year=2024");
+  const row = rows(page).filter({ hasText: "DEMO401" }).first();
+  await expect(row.locator("[data-course]")).toContainText("DEMO401 Sample Course C");
+  // The separator is hidden from screen readers, but the words stay apart.
+  await expect(row.getByRole("link").first()).toHaveAccessibleName(/^DEMO401 Sample Course C Sample final exam 2024/);
+});
+
 test("a semester narrows the course dropdown", async ({ page }) => {
   await page.goto("/exams");
   // Without a semester all courses with an exam are offered, grouped by semester.

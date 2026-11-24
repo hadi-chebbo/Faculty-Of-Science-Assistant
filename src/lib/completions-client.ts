@@ -230,6 +230,15 @@ export function useDoneCell(resourceId: string): DoneCell {
   return "none";
 }
 
+// The store's status, for callers that must tell "not asked yet" from "signed out".
+export function useViewerStatus(): Store["status"] {
+  const snapshot = useSyncExternalStore(subscribe, () => store, () => UNKNOWN);
+  useEffect(() => {
+    ensureLoaded();
+  }, []);
+  return snapshot.status;
+}
+
 // Whether the viewer is known to be signed in (the ids may still be on their way). Other browser
 // stores wait on this instead of asking who is signed in again.
 export function useKnownSignedIn(): boolean {

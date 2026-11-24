@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { getAppUrl } from "@/lib/app-url";
+import { SIGNED_IN_SCRIPT } from "@/lib/auth/signed-in-hint";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -63,6 +64,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Before paint: marks <html data-signed-in> from the readable hint cookie so Home can reserve its
+            progress band on a phone. Only CSS reads it, so nothing differs between server and client. */}
+        <script dangerouslySetInnerHTML={{ __html: SIGNED_IN_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}
