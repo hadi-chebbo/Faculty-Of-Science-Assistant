@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { BackLink } from "@/components/site/back-link";
 import { Crumbs } from "@/components/site/crumbs";
 import { PageTitle } from "@/components/site/page-title";
 import { ResourceRow } from "@/components/site/resource-row";
@@ -66,6 +67,9 @@ async function ChapterContent({
 
   return (
     <>
+      <BackLink href={courseHref} label={`Back to ${course.code}`}>
+        <span className="font-mono">{course.code}</span>
+      </BackLink>
       <Crumbs
         items={[
           { label: "Home", href: "/" },

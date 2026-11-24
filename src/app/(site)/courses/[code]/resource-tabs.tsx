@@ -6,7 +6,7 @@ import type { ResourceGroup } from "@/services/courses/types";
 export function ResourceTabs({ groups }: { groups: ResourceGroup[] }) {
   return (
     <Tabs defaultValue={groups[0].type}>
-      <div className="max-w-full overflow-x-auto pb-1">
+      <div className="scroll-fade max-w-full overflow-x-auto pb-1">
         <TabsList className="w-max">
           {groups.map((group) => (
             <TabsTrigger key={group.type} value={group.type} className="px-3">

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { BackLink } from "@/components/site/back-link";
 import { Crumbs } from "@/components/site/crumbs";
 import { PageTitle } from "@/components/site/page-title";
 import { CourseSkeleton } from "@/components/site/skeletons";
@@ -55,12 +56,17 @@ async function CourseContent({
   const path = `/courses/${encodeURIComponent(course.code)}`;
   const applied = course.lecturer?.slug ?? null;
 
+  const yearBack = yearCrumb(course.semester);
+
   return (
     <>
+      <BackLink href={yearBack.href} label={`Back to ${yearBack.label}`}>
+        {yearBack.label}
+      </BackLink>
       <Crumbs
         items={[
           { label: "Home", href: "/" },
-          yearCrumb(course.semester),
+          yearBack,
           { label: course.code },
         ]}
       />

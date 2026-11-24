@@ -1,7 +1,7 @@
-import { ArrowLeft, FileQuestion } from "lucide-react";
+import { FileQuestion } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense, cache } from "react";
+import { BackLink } from "@/components/site/back-link";
 import { Crumbs, type Crumb } from "@/components/site/crumbs";
 import { StateBlock } from "@/components/site/state-block";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +15,6 @@ import { PdfViewer } from "./pdf-viewer-loader";
 import { ReaderDetails } from "./reader-details";
 import { ViewerSkeleton } from "./viewer-skeleton";
 
-const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 // One read per request, shared by the page and its metadata. Public page: it reads as an anonymous
 // viewer and never looks at the session, so only published resources are found.
@@ -92,14 +91,12 @@ async function ReaderContent({ id }: { id: string }) {
 
   return (
     <>
-      <Link
+      <BackLink
         href={back}
-        aria-label={`Back to ${area ? `${resource.courseCode}, ${area.label.toLowerCase()}` : resource.courseCode}`}
-        className={`-ml-2 mb-2 inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-link md:hidden ${FOCUS}`}
+        label={`Back to ${area ? `${resource.courseCode}, ${area.label.toLowerCase()}` : resource.courseCode}`}
       >
-        <ArrowLeft aria-hidden className="size-4" />
         <span className="font-mono">{resource.courseCode}</span>
-      </Link>
+      </BackLink>
       <Crumbs items={crumbs} />
 
       {/* Compact title: type and language beside the title from md up, below it on a phone. */}

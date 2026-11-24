@@ -248,6 +248,9 @@ mock exam generation, personalization.
   `/semesters/1..8` links redirect permanently to `/years/Y#semester-K` (K = 1 for odd, 2 for even); other values are
   the 404 page. The Browse nav item is active on `/years/…`. Breadcrumbs of the course page, chapter page and reader read
   Home › Second year › …, the year crumb linking to `/years/Y#semester-K`.
+- Back links on a phone (`BackLink`, `src/components/site/back-link.tsx`, below md only, 44px, ArrowLeft and the label): the course
+  page shows "‹ Second year" (the year crumb's label and address, `yearCrumb`), the chapter page "‹ CODE" to the course (keeping
+  `?lecturer`), the reader "‹ CODE" to its Back target. Desktop keeps the breadcrumbs (hidden below md).
 - Course page: for a course with chapters, three areas, one visible at a time and chosen by
   links that live in the URL: Chapters (default), Previous exams (`?tab=exams`) and Other
   material (`?tab=other`, only when there is material with no chapter). Chapters are cards, each
@@ -272,7 +275,10 @@ mock exam generation, personalization.
   files in scope (the course; the chapter on a chapter page), a "TAUGHT BY" strip (a list labelled "Lecturer") sits above the area tabs
   (above the lists on a chapter page): "All lecturers" (every published file in scope, files with no lecturer included) then one card per
   lecturer by name (40px initials circle, name, "N files", solutions counted). The chosen card has a primary border and tint, a filled
-  circle and `aria-current="true"`. From sm up a 4-column grid; on a phone a sideways scroll row of 160px cards. The key is
+  circle and `aria-current="true"`. Below 5 lecturers: from sm up a 4-column grid, on a phone a sideways scroll row of 160px cards;
+  from 5 lecturers (`SCROLL_ROW_FROM`) one sideways-scrolling row of 192px cards at every width, with the `scroll-fade` edge fade
+  (`globals.css`; also on the type tabs of a course without chapters: a fade at the end, and where scroll-driven animations
+  exist the fades follow the scroll). The key is
   `?lecturer=SLUG` (`getCourseByCode` / `getChapterPage` take `{ lecturer }`; an unknown, malformed or draft-only slug is ignored). It
   narrows chapter cards (chapters left with none are left out, and cards describe only the kept files), previous exams, other material
   and the type tabs of a course without chapters; a kept row keeps its solution links; files with no lecturer show only with none chosen.
