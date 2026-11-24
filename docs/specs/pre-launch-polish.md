@@ -185,6 +185,8 @@ Home (S5):
 - Home stays static and never reads the session on the server.
 - A tiny inline script, run before paint, reads the hint and marks the document as probably signed in. CSS then reserves
   the progress band's space at the top on a phone and shows the short hero (one line plus buttons).
+  Signed-in phone order (owner, 2026-11-24): Your progress, "Choose your year", the short hero (headline and its
+  buttons), then the numbers strip.
 - When `GET /api/v1/auth/me` answers signed out, the marker is removed and the visitor layout returns. When the progress
   band loads, it fills the reserved space.
 - A visitor without the hint gets exactly today's static page and makes no new request.
