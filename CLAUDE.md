@@ -303,7 +303,12 @@ mock exam generation, personalization.
   chapter text and bars, `/api/v1/progress`) ignores the filter. The page still never reads the session.
 - Exams page (`/exams`): filters (semester, course, academic year, session, lecturer: a fifth dropdown, `?lecturer=SLUG`, "All" first, then lecturers with a visible exam by name; an unknown slug is ignored) live in the URL (`?semester=N` keeps the stored number; the Semester dropdown groups its options in native option groups "First year" / "Second year" / "Third year" / "Master 1" (one per entry of `YEARS`), each option "Semester 1" / "Semester 2", only semesters with a visible exam; the Course dropdown's groups read "Second year · Semester 1"), so
   views are shareable and Back works. A plain GET form with an Apply button works without
-  JavaScript; with JavaScript a dropdown change submits automatically. Unusable URL values are
+  JavaScript; with JavaScript a dropdown change submits automatically. Below md the five dropdowns and Apply
+  fold into one native `<details>` disclosure (`filter-form.tsx`, `.filters-details` in `globals.css`) whose
+  summary reads "Filters" or "Filters (2)" (`countActiveFilters` in `params.ts`, counted from the parsed and
+  reconciled URL values, so unusable or dropped values do not count; the page number is not a filter); it
+  starts closed, opens without JavaScript and stays open after an automatic submit. From md up the summary is
+  hidden and the filters are always shown. The count line reads "117 exams · page 1 of 6". Unusable URL values are
   ignored, not errors. Results are one flat list (newest year first), 20 per page, reusing the
   course-page resource row, which here names the course by code and title before the file's title ("DEMO521 Algorithms · Final exam 2025"; `showCourse`,
   `courseTitle` on `ResourceListItem`, loaded in the same query as the rows). Course and chapter pages never repeat it. Dropdowns only offer values that have a visible exam.

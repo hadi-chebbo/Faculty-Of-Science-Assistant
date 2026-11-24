@@ -5,7 +5,7 @@ import { courseYearSemesterLabel, groupSemestersByYear, semesterLabel, yearLabel
 import { EXAM_SESSION_LABELS, formatAcademicYear } from "@/lib/labels";
 import type { ExamFilterOptions } from "@/services/resources/types";
 import { FilterForm } from "./filter-form";
-import { hasActiveFilters, type ExamParams } from "./params";
+import { countActiveFilters, hasActiveFilters, type ExamParams } from "./params";
 
 // Phones get taller selects (comfortable tap targets); from md up they match the other inputs.
 const SELECT = "w-full [&_select]:h-11 md:[&_select]:h-9";
@@ -30,7 +30,7 @@ export function ExamFilters({ options, params }: { options: ExamFilterOptions; p
       : null;
 
   return (
-    <FilterForm values={values}>
+    <FilterForm values={values} activeCount={countActiveFilters(params)}>
       <div className="rounded-xl border bg-card p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div>
