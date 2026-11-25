@@ -23,7 +23,7 @@ for (const path of [
     ).toHaveCount(0);
     // The brand links home: in the panel on desktop, in the bar on a phone.
     await expect(
-      page.getByRole("link", { name: "Unimate" }).filter({ visible: true }),
+      page.getByRole("link", { name: "UniMate" }).filter({ visible: true }),
     ).toHaveAttribute("href", "/");
     await expect(
       page.getByRole("banner").getByRole("button", { name: /theme/i }),

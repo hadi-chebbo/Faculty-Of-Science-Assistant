@@ -14,7 +14,7 @@ test("the brand panel shows on desktop; a phone shows the brand in the bar and t
   await expect(page.getByLabel("Email")).toBeVisible();
   if (isMobile) {
     await expect(panel).toBeHidden();
-    await expect(page.getByRole("banner").getByRole("link", { name: "Unimate" })).toBeVisible();
+    await expect(page.getByRole("banner").getByRole("link", { name: "UniMate" })).toBeVisible();
   } else {
     await expect(panel).toBeVisible();
     await expect(panel.getByText("Every course, chapter and past exam in one place.")).toBeVisible();

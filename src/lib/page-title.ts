@@ -1,4 +1,4 @@
-export const SITE_NAME = "Unimate";
+export const SITE_NAME = "UniMate";
 export const SITE_DESCRIPTION =
   "Study resources and previous exams for Computer Science, Faculty of Science, Lebanese University.";
 

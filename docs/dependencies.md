@@ -132,3 +132,7 @@ Each item says what was found, how it was checked, and a suggested action. Nothi
    - Never run `npm audit fix --force`.
 7. **Duplicates.** No true duplicate. `cn` overlaps in purpose with `clsx` + `tailwind-merge`, but those are not direct dependencies (items 1 and 2). `eslint-config-next` and `shadcn` each pull a separate copy of `fast-glob` (3.3.1 and 3.3.3), which is harmless.
 8. **Reasons not recorded** in CLAUDE.md or commit messages for `@tailwindcss/turbopack`, `eslint`, `eslint-config-next`, and the choice of Argon2. Action: add a sentence here if you remember one.
+9. **`sharp` and the Geist fonts are used by `scripts/generate-brand-images.mjs` but are not dependencies** (2026-11-25, #207).
+   - Found: the script imports `sharp` (an optional dependency of `next`, installed with it on the platforms we use) and `next/og`, and reads Geist TTF files from a folder given in `GEIST_FONTS` (from the `geist` npm package, installed by hand when needed).
+   - Reason: the script is run by hand only when the brand mark changes, and its output images are committed. Nothing in the app, the build or the tests runs it, so adding `sharp` or `geist` to `package.json` would add install weight for no runtime use.
+   - Action: if `sharp` is missing when the script is run, install it temporarily (`npm i --no-save sharp`).

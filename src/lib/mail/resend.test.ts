@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createResendMailer, resendFrom } from "./resend";
 
-const config = { apiKey: "re_key-123", fromEmail: "noreply@mail.example.com", fromName: "Unimate" };
+const config = { apiKey: "re_key-123", fromEmail: "noreply@mail.example.com", fromName: "UniMate" };
 const message = { to: "a@example.com", subject: "Hi", text: "plain", html: "<p>html</p>" };
 
 describe("Resend mailer", () => {
@@ -14,7 +14,7 @@ describe("Resend mailer", () => {
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer re_key-123");
     expect((init.headers as Record<string, string>)["content-type"]).toBe("application/json");
     expect(JSON.parse(init.body as string)).toEqual({
-      from: '"Unimate" <noreply@mail.example.com>',
+      from: '"UniMate" <noreply@mail.example.com>',
       to: ["a@example.com"],
       subject: "Hi",
       html: "<p>html</p>",
@@ -41,7 +41,7 @@ describe("Resend mailer", () => {
 
 describe("resendFrom", () => {
   it("writes the sender as a quoted display name and an address", () => {
-    expect(resendFrom("Unimate", "noreply@mail.example.com")).toBe('"Unimate" <noreply@mail.example.com>');
+    expect(resendFrom("UniMate", "noreply@mail.example.com")).toBe('"UniMate" <noreply@mail.example.com>');
   });
 
   it("escapes quotes and backslashes in the name so it cannot end the name early", () => {

@@ -15,7 +15,7 @@ describe("pageMetadata", () => {
     const meta = pageMetadata("I3305 GUI");
     expect(meta.title).toBe("I3305 GUI");
     expect(meta.openGraph.title).toBe("I3305 GUI");
-    expect(meta.openGraph.siteName).toBe("Unimate");
+    expect(meta.openGraph.siteName).toBe("UniMate");
     expect(meta.twitter.card).toBe("summary_large_image");
   });
 });
