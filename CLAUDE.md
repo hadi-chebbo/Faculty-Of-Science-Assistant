@@ -242,33 +242,38 @@ mock exam generation, personalization.
   without a name), labelled with the name (never the email). Its menu holds the account only: the name,
   Admin (admins only) and Sign out; pages never go in it.
 - Page width: every site page, the header and the footer use the `page-container` utility (`globals.css`): content up to 1280px (`max-w-7xl`), centred, side padding 16px on a phone, 24px from sm, 32px from lg, so the edges never move between pages; the reader follows it too. The account pages keep their full-screen split.
-- Home is a landing page (phone order, below md only; desktop keeps the DOM order below): on a phone a visitor sees the intro (eyebrow,
-  headline, description, buttons, facts), "Choose your year", the course preview card, the numbers strip, then the rest; a signed-in student
-  sees the "Your progress" band first, "Choose your year", a short hero (the headline and its two buttons only; no eyebrow, description,
-  facts or preview) and the strip, then the rest. It is CSS `order` on the children of `<main>` (`.home-*` rules in `globals.css`; the hero
-  is `display: contents` below md so intro and preview are separate items); no content is rendered twice. Home stays static and never reads
-  the session on the server: a readable hint cookie (`ua_signed_in`, see Stack, Auth) is read by an inline script in the root layout's
-  `<head>` before paint (`SIGNED_IN_SCRIPT`, `src/lib/auth/signed-in-hint.ts`, same test as `hasSignedInHint`), which sets
-  `html[data-signed-in]` and `--home-band-h` from `localStorage["home:band-h"]` (the band's last measured phone height, kept when 80 to
-  600). Below md CSS then reserves a band slot of that height (default 16.375rem) so the band fills it without moving the year cards. The
-  slot (`ProgressBand`, `data-personal`) removes the marker when the session check answers signed out or the progress request fails, or after 8 s
-  without an answer (`LOADING_GIVE_UP_MS`; a band arriving later then moves the years once) (a stale
-  hint falls back to the visitor layout and releases the space), sets it when a band shows, follows sign-in and sign-out events, and stores
-  the measured height on a phone. A visitor without the hint gets the static page and no extra request. The hint only drives CSS.
-- Home hero and sections: a hero (headline, description, "Browse courses" and "Previous exams"
-  buttons, three facts, and a decorative course preview that is a generic example with no course code: "Your course", tabs Chapters / Previous exams, rows "Chapter 1: Introduction", "Chapter 2: Fundamentals", "Final exam 2024-2025"; `data-testid="course-preview"`), a numbers strip (only from 5 courses), the
-  "Choose your year" cards (`#years`; one per entry of `YEARS`, four cards: one column on a phone, two from sm, four from lg: a filled primary circle with the
-  year badge ("1", "2", "3", "M1"), "Second year", up to four course-code chips and "+N more", "7 courses · 101 files" and "Browse →", lift and
-  primary border on hover; a year with no course is a muted dashed card, not a link, "No courses yet"; wording in
-  `year-card.ts`, data from `getHomeStats().years`: year, course count, visible-file count, codes by semester then code),
-  how it works, what you will find,
-  an "Exams coming up?" band with a link per session, and four questions (the account answer says Saved, To-do and Progress need a free account; browsing, opening and downloading never do). Only the strip and the
-  cards read the database. The texts cover the three years and Master 1 (never claiming Master 1 material exists); no semester numbers are shown. For a signed-in student a "Your progress" band (`ProgressBand`, `data-personal`)
-  follows the hero on desktop (on a phone it comes first, see above): loaded by the browser from `GET /api/v1/progress` after the page shows (Home stays static;
-  a visitor gets no band and no request), "N active days this week", up to three of My courses by latest
-  completion (ring, code, title, "x of y files · P%" or "✓ Finished", or "Exams: x of y done" for an
-  exams-only course) and "See all ›" to `/progress`; with no My courses it says "Mark files as done in the
-  reader to track your progress here." and leaves "See all" out. No claims about features that do not exist.
+- Home (spec #179, ticket #181; more sections arrive with #182 to #184): a hero card, then "Choose your year". The hero
+  (`hero.tsx`) says "Computer Science · Faculty of Science · Hadath", the headline "Find any course, exam or lecture.", one
+  plain line, a real search field and two buttons, "Previous exams" (to `/exams`) and "Choose your year" (to `#years`). The
+  field (`home-search.tsx`, `role="search"`, label "Search courses, chapters and files") is a plain GET form to
+  `/search` with `q`, so it works without JavaScript: typing stays on the page, Enter or the "Search" button opens
+  `/search?q=WORDS`. A rotating hint (`.hint-cycle`, "Course code or topic", "Try: final 2025", "Try: graphs", "Try:
+  partial") shows only while the field is empty and is `aria-hidden`; under reduced motion it shows its first line.
+  A soft coloured background (three blurred blobs, `.hero-blob`) drifts behind the hero only and stops under reduced
+  motion. The long "How it works", "What you will find", "Exams coming up?" and FAQ sections, the numbers strip and the
+  decorative course preview are gone (the independent-project statement stays in the footer). Home stays static and
+  never reads the session on the server: a readable hint cookie (`ua_signed_in`, see Stack, Auth) is read by an inline
+  script in the root layout's `<head>` before paint (`SIGNED_IN_SCRIPT`, `src/lib/auth/signed-in-hint.ts`, same test as
+  `hasSignedInHint`), which sets `html[data-signed-in]` and `--home-band-h` from `localStorage["home:band-h"]` (the
+  band's last measured phone height, kept when 80 to 600). Below md CSS then reserves a band slot of that height
+  (default 16.375rem) so the band fills it without moving the years (the slot, `ProgressBand`, `data-personal`, removes
+  the marker when the session check answers signed out or the progress request fails, or after 8 s without an answer
+  (`LOADING_GIVE_UP_MS`; a band arriving later then moves the years once); it sets it when a band shows, follows sign-in
+  and sign-out events and stores the measured height on a phone). A visitor without the hint gets the static page and no
+  extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years; a
+  signed-in student band, hero, years (`.home-*` rules in `globals.css`; no content is rendered twice).
+- Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats().years`, inside one
+  Suspense boundary with `YearCardsSkeleton`): "Choose your year", one card per entry of `YEARS` (four: one column on a
+  phone, two from sm, four from lg): the year circle (`YearCircle`, year colour) and "Second year", up to four
+  course-code chips in the year's tint and "+N more", "7 courses · 101 files" and "Open →", lift and the year's border
+  on hover, rising in as the page loads; a year with no course is a muted dashed card, not a link, "No courses yet";
+  wording in `year-card.ts`. A signed-in student also gets the "Your progress" band (`ProgressBand`, `data-personal`)
+  after the hero on desktop and first on a phone: loaded by the browser from `GET /api/v1/progress` after the page shows
+  (Home stays static; a visitor gets no band and no request), "N active days this week", up to three of My courses by
+  latest completion (ring, code, title, "x of y files · P%" or "✓ Finished", or "Exams: x of y done" for an exams-only
+  course) and "See all ›" to `/progress`; with no My courses it says "Mark files as done in the reader to track your
+  progress here." and leaves "See all" out. The continue card replaces or merges with it in #184. No claims about
+  features that do not exist.
 - Year page (`/years/1`, `/2`, `/3`, `/m1`, prerendered, any other value is the 404 page; `src/app/(site)/years/[year]/page.tsx`): breadcrumb
   Home › Second year, title "Second year", then an `h2` "Semester 1" (`id="semester-1"`, scroll margin) and "Semester 2"
   (`semester-2`), each with the course cards (code, title, "N resources", the signed-in progress ring from the one shared
@@ -334,7 +339,7 @@ mock exam generation, personalization.
   course-page resource row, which here names the course by code and title before the file's title ("DEMO521 Algorithms · Final exam 2025"; `showCourse`,
   `courseTitle` on `ResourceListItem`, loaded in the same query as the rows). Course and chapter pages never repeat it. Dropdowns only offer values that have a visible exam.
 - Search page (`/search?q=…&type=…`, public, never reads the session; opened by the Search nav
-  item; there is no other search box). A course result says "Second year · Semester 1" before its chapter and file counts; a course with no files is the same muted, non-link card and says "No files yet". The chips row has the `scroll-fade` edge fade. It searches course codes and titles, chapter titles and
+  item; the home hero also has a field that opens it with `?q=`). A course result says "Second year · Semester 1" before its chapter and file counts; a course with no files is the same muted, non-link card and says "No files yet". The chips row has the `scroll-fade` edge fade. It searches course codes and titles, chapter titles and
   the title, description and lecturer name of published files (the name is matched like the title
   but not highlighted, and adds no section), not the text inside PDFs. Matching ignores case
   and accents, treats every word as a prefix ("algo" finds "Algorithms") and finds a course code

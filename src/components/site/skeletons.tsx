@@ -107,21 +107,20 @@ export function ExamsListSkeleton() {
   );
 }
 
-// Home page: the numbers strip and the year cards, which are read together.
-export function StatsAndYearsSkeleton() {
+// Home page: the year cards.
+export function YearCardsSkeleton() {
   return (
     <div className="contents" role="status" aria-label="Loading years">
-      <Skeleton className="home-strip -mt-4 h-[7.5rem] w-full rounded-lg sm:h-[4.75rem] md:-mt-8" />
-      {/* Same id as the real section: "Browse courses" (#years) can be clicked while the
+      {/* Same id as the real section: "Choose your year" (#years) can be clicked while the
           years are still loading, and must land here rather than nowhere. */}
       <div id="years" className="home-years scroll-mt-20">
         <div className="mb-4">
           <Skeleton className="h-8 w-56" />
           <Skeleton className="mt-2.5 h-1 w-12" />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {YEARS.map((year) => (
-            <Skeleton key={year} className="h-44 w-full rounded-2xl" />
+            <Skeleton key={year} className="h-44 w-full rounded-3xl" />
           ))}
         </div>
       </div>

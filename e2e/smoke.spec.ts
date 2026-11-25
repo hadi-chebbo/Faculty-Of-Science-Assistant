@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("home page renders", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Every course, chapter and past exam in one place." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Find any course, exam or lecture." })).toBeVisible();
 });
 
 test("health endpoint reports the database is reachable", async ({ request }) => {
