@@ -2,7 +2,7 @@ import Link from "next/link";
 import { HomeSearch } from "./home-search";
 
 // The home hero: one headline, a real search field and two ways in. A soft coloured background drifts behind
-// it (`.hero-blob`, decorative, still under reduced motion). Static: it never reads the session.
+// it (`.hero-blob`, decorative; it stops moving under reduced motion). Static: it never reads the session.
 export function Hero() {
   return (
     <section className="home-hero rise-in relative isolate overflow-hidden rounded-3xl border bg-card px-5 py-12 text-center md:py-20">

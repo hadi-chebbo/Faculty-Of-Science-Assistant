@@ -262,7 +262,7 @@ mock exam generation, personalization.
   and sign-out events and stores the measured height on a phone). A visitor without the hint gets the static page and no
   extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years; a
   signed-in student band, hero, years (`.home-*` rules in `globals.css`; no content is rendered twice).
-- Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats().years`, inside one
+- Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats().years`; its `totals` are still computed, for #182 to #183; inside one
   Suspense boundary with `YearCardsSkeleton`): "Choose your year", one card per entry of `YEARS` (four: one column on a
   phone, two from sm, four from lg): the year circle (`YearCircle`, year colour) and "Second year", up to four
   course-code chips in the year's tint and "+N more", "7 courses · 101 files" and "Open →", lift and the year's border

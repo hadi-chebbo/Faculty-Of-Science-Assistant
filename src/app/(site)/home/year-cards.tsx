@@ -29,11 +29,11 @@ export async function YearCards() {
 function YearCard({ entry, delay }: { entry: HomeStats["years"][number]; delay: number }) {
   const text = yearCardText(entry);
   const style = YEAR_STYLES[entry.year];
-  const rise = { "--rise-delay": `${delay}ms` } as React.CSSProperties;
+  const riseDelay = { "--rise-delay": `${delay}ms` } as React.CSSProperties;
   if (text.counts === null) {
     return (
       <div
-        style={rise}
+        style={riseDelay}
         className="rise-in flex h-full min-h-44 flex-col rounded-3xl border border-dashed bg-muted/40 p-5 text-muted-foreground"
       >
         <span className="flex items-center gap-3">
@@ -52,7 +52,7 @@ function YearCard({ entry, delay }: { entry: HomeStats["years"][number]; delay: 
       className="group block h-full rounded-3xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
     >
       <div
-        style={rise}
+        style={riseDelay}
         className={`rise-in flex h-full min-h-44 flex-col rounded-3xl border bg-card p-5 transition-[transform,border-color,box-shadow] motion-safe:group-hover:-translate-y-1 group-hover:shadow-md ${style.border}`}
       >
         <span className="flex items-center gap-3">

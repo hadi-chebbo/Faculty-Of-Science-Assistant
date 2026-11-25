@@ -4,6 +4,8 @@ import { Search } from "lucide-react";
 import { useState } from "react";
 
 // What the field hints at, one after another while it is empty (decoration only; see `.hint-cycle`).
+// Keep HINTS.length * HINT_SECONDS equal to the 10s `hint-cycle` animation in globals.css.
+const HINT_SECONDS = 2.5;
 const HINTS = ["Course code or topic", "Try: final 2025", "Try: graphs", "Try: partial"];
 
 // The home page's search field. It is a plain GET form to the search page (`q`), so it works without
@@ -38,7 +40,7 @@ export function HomeSearch() {
               <span
                 key={hint}
                 className="absolute inset-0 flex items-center overflow-hidden whitespace-nowrap"
-                style={{ animationDelay: `${index * 2.5}s` }}
+                style={{ animationDelay: `${index * HINT_SECONDS}s` }}
               >
                 {hint}
               </span>

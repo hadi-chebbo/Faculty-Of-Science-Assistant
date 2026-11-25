@@ -74,11 +74,16 @@ test("four year cards, the second links to its page and shows counts", async ({ 
   }
 });
 
-test("a year with no courses is not a link", async ({ page }) => {
+test("Master 1 is a muted card that is not a link until it has courses", async ({ page }) => {
   await page.goto("/");
-  const empty = page.locator("#years li").filter({ hasText: "No courses yet" });
-  // Only years without courses say so; they are never links.
-  for (const card of await empty.all()) await expect(card.getByRole("link")).toHaveCount(0);
+  const master = page.locator("#years li").nth(3);
+  await expect(master).toContainText("Master 1");
+  if ((await master.innerText()).includes("No courses yet")) {
+    // The demo data has no Master 1 courses: the card says so and is not clickable.
+    await expect(master.getByRole("link")).toHaveCount(0);
+  } else {
+    await expect(master.getByRole("link")).toHaveAttribute("href", "/years/m1");
+  }
 });
 
 test("the long text sections and the decorative preview are gone, the footer statement stays", async ({ page }) => {
