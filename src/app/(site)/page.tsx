@@ -3,11 +3,38 @@ import { StatsAndYearsSkeleton } from "@/components/site/skeletons";
 import { Hero } from "./home/hero";
 import { ExamBand, HowItWorks, Questions, WhatYouWillFind } from "./home/sections";
 import { ProgressBand } from "./home/progress-band";
+import { PrototypeSwitcher } from "./home/prototype/switcher";
+import { VariantA } from "./home/prototype/variant-a";
+import { VariantB } from "./home/prototype/variant-b";
+import { VariantC } from "./home/prototype/variant-c";
 import { StatsAndYears } from "./home/stats-and-years";
 
-// Everything is static except the numbers strip and the year cards, which read the database
-// inside one Suspense boundary (one service call feeds both).
-export default function Home() {
+// PROTOTYPE: ?variant=A|B|C swaps the whole page; no variant is the current home. Remove before merging.
+export default async function Home({ searchParams }: { searchParams: Promise<{ variant?: string }> }) {
+  const { variant } = await searchParams;
+  const proto =
+    variant === "A" ? <VariantA /> : variant === "B" ? <VariantB /> : variant === "C" ? <VariantC /> : null;
+  if (proto) {
+    return (
+      <>
+        {proto}
+        <Suspense>
+          <PrototypeSwitcher />
+        </Suspense>
+      </>
+    );
+  }
+  return (
+    <>
+      <Current />
+      <Suspense>
+        <PrototypeSwitcher />
+      </Suspense>
+    </>
+  );
+}
+
+function Current() {
   return (
     <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container flex flex-col gap-12 py-6 md:gap-14 md:py-8">
       <Hero />
