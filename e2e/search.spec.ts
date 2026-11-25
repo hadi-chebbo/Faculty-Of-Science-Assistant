@@ -51,7 +51,7 @@ test("the Search nav item leads to /search and is the current page there", async
   await page.goto("/");
   await (await mainNav(page)).getByRole("link", { name: "Search", exact: true }).click();
   await expect(page).toHaveURL(/\/search$/);
-  await expect(page).toHaveTitle(/^Search \| University Assistant$/);
+  await expect(page).toHaveTitle(/^Search \| Unimate$/);
   await expect(page.getByRole("heading", { name: "Search", level: 1 })).toBeVisible();
   const nav = await mainNav(page);
   await expect(nav.getByRole("link", { name: "Search", exact: true })).toHaveAttribute("aria-current", "page");

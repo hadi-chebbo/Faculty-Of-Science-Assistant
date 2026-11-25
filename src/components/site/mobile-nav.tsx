@@ -68,7 +68,7 @@ export function MobileNav() {
           <SheetTitle className="text-base">
             <SheetClose asChild>
               <Link href="/" className="font-semibold tracking-tight text-heading">
-                University Assistant
+                Unimate
               </Link>
             </SheetClose>
           </SheetTitle>

@@ -17,7 +17,7 @@ test("phone: the hamburger opens the sidebar with two groups and the six links i
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 1000 });
   }).toPass();
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByRole("link", { name: "University Assistant" })).toBeVisible();
+  await expect(dialog.getByRole("link", { name: "Unimate" })).toBeVisible();
   const nav = dialog.getByRole("navigation", { name: "Main" });
   await expect(nav.getByText("Study", { exact: true })).toBeVisible();
   await expect(nav.getByText("Your pages", { exact: true })).toBeVisible();

@@ -107,7 +107,7 @@ test.describe("the reader page", () => {
   test("shows the title, a drawn page and the page counter", async ({ page, isMobile }) => {
     const id = await resourceId("DEMO301", "Sample lecture 1");
     await page.goto(`/resources/${id}`);
-    await expect(page).toHaveTitle("Sample lecture 1 (DEMO301) | University Assistant");
+    await expect(page).toHaveTitle("Sample lecture 1 (DEMO301) | Unimate");
     await expect(page.getByRole("heading", { level: 1, name: "Sample lecture 1" })).toBeVisible();
     await expect(page.getByText("Lecture · English")).toBeVisible();
 

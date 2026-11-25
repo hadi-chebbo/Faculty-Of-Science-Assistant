@@ -35,7 +35,7 @@ describe("parseMailConfig", () => {
   it("builds the resend config with the default sender name", () => {
     expect(parseMailConfig({ VERCEL: "1", MAIL_DRIVER: "resend", RESEND_API_KEY: "k", MAIL_FROM: "a@b.co" })).toEqual({
       driver: "resend",
-      resend: { apiKey: "k", fromEmail: "a@b.co", fromName: "University Assistant" },
+      resend: { apiKey: "k", fromEmail: "a@b.co", fromName: "Unimate" },
     });
   });
 

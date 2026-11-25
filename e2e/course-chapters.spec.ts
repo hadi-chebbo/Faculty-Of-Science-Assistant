@@ -92,12 +92,12 @@ test("previous exams are grouped by academic year, each row led by its session",
 
 test("the course tab is titled with the code and the course title", async ({ page }) => {
   await page.goto("/courses/DEMO301");
-  await expect(page).toHaveTitle("DEMO301 Sample Course A | University Assistant");
+  await expect(page).toHaveTitle("DEMO301 Sample Course A | Unimate");
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "DEMO301 Sample Course A");
-  await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "University Assistant");
+  await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "Unimate");
 });
 
 test("an unknown course gets the not-found title", async ({ page }) => {
   await page.goto("/courses/NOPE999");
-  await expect(page).toHaveTitle("Page not found | University Assistant");
+  await expect(page).toHaveTitle("Page not found | Unimate");
 });

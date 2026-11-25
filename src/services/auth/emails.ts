@@ -20,7 +20,7 @@ function page(paragraphs: string[], button: { label: string; href: string }): st
     body +
     `<p style="margin:0 0 16px"><a href="${href}" style="display:inline-block;padding:12px 20px;background:#3e4eb8;color:#ffffff;text-decoration:none;border-radius:6px;font-size:16px">${escapeHtml(button.label)}</a></p>` +
     `<p style="margin:0 0 16px;font-size:14px;line-height:1.5;color:#575757">Or copy this link into your browser:<br>${href}</p>` +
-    `<p style="margin:0;font-size:14px;color:#575757">University Assistant</p>` +
+    `<p style="margin:0;font-size:14px;color:#575757">Unimate</p>` +
     `</div>`
   );
 }
@@ -45,7 +45,7 @@ export const confirmEmailHandler = async (job: EmailJobView, now: Date = new Dat
 
   const link = `${getAppUrl()}/confirm-email?token=${token}`;
   const lines = [
-    "Welcome to University Assistant.",
+    "Welcome to Unimate.",
     "Please confirm your email address to finish creating your account. The link works for 24 hours and only once.",
   ];
   const ignore = "If you did not sign up, you can ignore this email and no account will be kept.";
@@ -59,7 +59,7 @@ export const confirmEmailHandler = async (job: EmailJobView, now: Date = new Dat
 export const alreadyRegisteredHandler: EmailHandler = (): EmailContent => {
   const link = `${getAppUrl()}/sign-in`;
   const lines = [
-    "Someone, probably you, tried to sign up to University Assistant with this email address.",
+    "Someone, probably you, tried to sign up to Unimate with this email address.",
     "You already have an account, so there is nothing to confirm. You can sign in instead.",
   ];
   const ignore = "If it was not you, you can ignore this email. Your account has not been changed.";
