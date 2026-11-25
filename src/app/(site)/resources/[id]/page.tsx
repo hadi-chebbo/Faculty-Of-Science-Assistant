@@ -13,6 +13,7 @@ import { isMarkable } from "@/services/progress/markable";
 import { getResourceForReader } from "@/services/resources/reader";
 import { PdfViewer } from "./pdf-viewer-loader";
 import { ReaderDetails } from "./reader-details";
+import { RememberLastRead } from "./remember-last-read";
 import { ViewerSkeleton } from "./viewer-skeleton";
 
 // One read per request, shared by the page and its metadata. Public page: it reads as an anonymous
@@ -109,7 +110,10 @@ async function ReaderContent({ id }: { id: string }) {
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-[minmax(0,1fr)_14rem] md:items-start md:gap-4">
         {resource.hasFile ? (
-          <PdfViewer resourceId={resource.id} markable={isMarkable(resource.type)} />
+          <>
+            <RememberLastRead id={resource.id} title={resource.title} courseCode={resource.courseCode} type={resource.type} />
+            <PdfViewer resourceId={resource.id} markable={isMarkable(resource.type)} />
+          </>
         ) : (
           <StateBlock icon={FileQuestion}>There is no file to show for this resource.</StateBlock>
         )}
