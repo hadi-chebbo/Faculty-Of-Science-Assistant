@@ -21,6 +21,11 @@ resource type (lecture blue, notes teal, exercise orange, exam rose; solutions a
 the design language and always accompanied by the year's name or the type's name, never used alone.
 _Avoid_: Theme colour, category colour
 
+**Course browser**:
+The "Jump straight to a course" section of Home: tabs by year, and under the chosen tab that year's courses as cards
+(code, title, "Semester 1" or "Semester 2", file count). A shortcut to a course page, not a new way to organise courses.
+_Avoid_: Course picker, course finder (the Search page finds)
+
 **Lecturer**:
 The person who taught or wrote a resource, named as written (e.g. "Dr. Ali Ghorayeb"). A resource
 has at most one lecturer, or none when unknown; a course's lecturers are those of its resources.
