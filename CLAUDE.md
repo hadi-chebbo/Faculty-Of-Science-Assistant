@@ -185,7 +185,7 @@ mock exam generation, personalization.
   checks that need a function or compare columns; `up` in a transaction;
   timestamps default with `Sequelize.fn('now')`, never `Sequelize.NOW`.
 - Email: a Postgres `email_jobs` queue processed with `after()` and a daily Vercel Cron sweep
-  (`/api/cron/email-jobs`, `CRON_SECRET`); Brevo in production, a log driver off Vercel; payloads never
+  (`/api/cron/email-jobs`, `CRON_SECRET`); Resend in production (sending from a verified subdomain such as `mail.unimate-fs.online`), a log driver off Vercel; payloads never
   hold secrets. See `docs/backend-architecture.md`.
 - Error tracking: Sentry (`@sentry/nextjs`), errors only, nothing personal attached, browser SDK loaded lazily; enabled only when a DSN is set (production on Vercel), a no-op everywhere else.
 
