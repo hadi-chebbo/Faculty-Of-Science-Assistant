@@ -9,7 +9,7 @@ import {
   readLastRead,
   writeLastPage,
   writeLastRead,
-} from "./reader-position";
+} from "@/lib/reader-position";
 
 function memoryStore(initial: Record<string, string> = {}) {
   const data = new Map(Object.entries(initial));

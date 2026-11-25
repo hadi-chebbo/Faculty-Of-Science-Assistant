@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import type { ResourceType } from "@/db/constants";
-import { writeLastRead } from "./reader-position";
+import { writeLastRead } from "@/lib/reader-position";
 
 // Remembers in this browser that this file was opened, so Home can offer "Continue where you left off".
 // A place to continue from only: opening a file is never progress. Renders nothing.

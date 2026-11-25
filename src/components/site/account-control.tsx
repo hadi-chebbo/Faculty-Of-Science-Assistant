@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { clearLastRead } from "@/app/(site)/resources/[id]/reader-position";
+import { clearLastRead } from "@/lib/reader-position";
 import { findAccount, type Account } from "@/lib/auth/client-session";
 import { announceSessionChange, SESSION_CHANGED_EVENT } from "@/lib/auth/session-events";
 

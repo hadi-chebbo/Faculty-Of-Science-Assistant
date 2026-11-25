@@ -417,7 +417,8 @@ mock exam generation, personalization.
   offer and removes the hash with `history.replaceState`; Home's Resume link uses it. The page also records the file
   itself in `localStorage` (`reader:last-read`: `{ id, title, courseCode, type, at }`, validated on read, written by
   `RememberLastRead` when a file with a stored file is shown; position only, never progress) for Home's card, and
-  both sign-out buttons clear it so the next person on a shared browser does not see it. Desktop (md and up): breadcrumb ending at
+  signing in (`SignInFields`) and both sign-out buttons clear it (`clearLastRead`, `src/lib/reader-position.ts`) so the
+  next person on a shared browser does not see it. Desktop (md and up): breadcrumb ending at
   the course area that lists the resource, the title with its type and language on one line, the
   card at a fixed height with the pages scrolling inside it, and a narrow details column (plain text
   under small headings) beside it, with a full-width "Save for later" button at its top that becomes

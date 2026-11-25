@@ -239,11 +239,7 @@ test("public pages render the same signed in and signed out", async ({ page }) =
       await page.locator("main [data-personal]").evaluateAll((elements) =>
         elements.forEach((element) => ((element as HTMLElement).style.display = "none")),
       );
-      // File counts (the year cards and the course browser) are live too: the reader and home-progress specs
-      // add a published file to DEMO302 while they run, so those figures are left out the same way.
-      texts.push(
-        (await page.locator("main").innerText()).replace(/(Chapters\s+)\d+/, "$1#").replace(/\b\d+ (files?)\b/g, "# $1"),
-      );
+      texts.push((await page.locator("main").innerText()).replace(/(Chapters\s+)\d+/, "$1#"));
     }
     return texts;
   };

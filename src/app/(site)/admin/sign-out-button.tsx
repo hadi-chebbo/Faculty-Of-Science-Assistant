@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { clearLastRead } from "@/app/(site)/resources/[id]/reader-position";
+import { clearLastRead } from "@/lib/reader-position";
 import { announceSessionChange } from "@/lib/auth/session-events";
 
 export function SignOutButton() {

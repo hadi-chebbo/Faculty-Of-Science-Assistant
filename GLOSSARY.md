@@ -99,5 +99,5 @@ _Avoid_: Badge, trophy, achievement, reward
 The file a student opened in the reader most recently, remembered only in that browser
 (`reader:last-read`), with the page from the reader's remembered position. It exists so Home can offer
 "Continue where you left off". It is a place to continue from: opening a file is never progress, so it is
-never counted, shown as a percentage or merged with completions. Forgotten on sign-out.
+never counted, shown as a percentage or merged with completions. Forgotten on sign-in and sign-out.
 _Avoid_: Recently viewed, history, progress

@@ -1,7 +1,7 @@
 import type { ProgressOverview } from "@/services/progress/types";
 import { filesOf } from "@/lib/plural";
 import { RESOURCE_TYPE_SINGULAR_LABELS } from "@/lib/labels";
-import type { LastRead } from "../resources/[id]/reader-position";
+import type { LastRead } from "@/lib/reader-position";
 
 export type BandCourse = ProgressOverview["courses"][number];
 

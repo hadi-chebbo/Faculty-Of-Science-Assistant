@@ -8,7 +8,7 @@ import { SESSION_CHANGED_EVENT } from "@/lib/auth/session-events";
 import { ProgressRing } from "@/components/site/progress-ring";
 import { useProgressOverviewState } from "@/lib/progress-overview-client";
 import { WeekDots } from "@/components/site/week-dots";
-import { LAST_READ_KEY, readLastPage, readLastRead } from "../resources/[id]/reader-position";
+import { LAST_READ_KEY, parseLastRead, readLastPage } from "@/lib/reader-position";
 import { activeDaysText, continueMeta, courseLabel, percentOf, resumeHref, resumeLabel, topCourses, type BandCourse } from "./progress-band-logic";
 import { filesOf } from "@/lib/plural";
 import type { ProgressOverview } from "@/services/progress/types";
@@ -103,8 +103,7 @@ function lastReadSnapshot(): string | null {
 // a rule, the courses with files marked as done. Nothing here is derived from opening a file.
 function Band({ overview }: { overview: ProgressOverview }) {
   const raw = useSyncExternalStore(subscribeLastRead, lastReadSnapshot, () => null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- `raw` is the change signal for the stored record.
-  const last = useMemo(() => readLastRead(), [raw]);
+  const last = useMemo(() => parseLastRead(raw), [raw]);
   const page = last ? readLastPage(last.id) : null;
   const courses = topCourses(overview.courses);
   const empty = overview.courses.length === 0;
@@ -142,7 +141,7 @@ function Band({ overview }: { overview: ProgressOverview }) {
 
       <div className="mt-4 border-t pt-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 id="home-progress-title" className="text-base font-semibold text-heading">
+          <h2 className="text-base font-semibold text-heading">
             Your progress
           </h2>
           {!empty && (

@@ -15,7 +15,7 @@ import { useDoneResource } from "@/lib/completions-client";
 import { useSavedResource } from "@/lib/saved-client";
 import { ReaderMenu } from "./reader-menu";
 import { readContentsOpen, writeContentsOpen } from "./reader-panel";
-import { pageFromHash, pageToOffer, readLastPage, writeLastPage } from "./reader-position";
+import { pageFromHash, pageToOffer, readLastPage, writeLastPage } from "@/lib/reader-position";
 import { ReaderSearchBar } from "./reader-search-bar";
 import { createTapTracker } from "./reader-tap";
 import {
@@ -138,7 +138,7 @@ export function ReaderCard({
   // A "#page=N" address (Home's Resume link) opens that page itself, so the offer is not shown.
   const [hashPage] = useState<number | null>(() => pageFromHash(window.location.hash, total));
   const [offer, setOffer] = useState<number | null>(() =>
-    pageFromHash(window.location.hash, total) !== null ? null : pageToOffer(readLastPage(resourceId), total),
+    hashPage !== null ? null : pageToOffer(readLastPage(resourceId), total),
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const menuOpenRef = useRef(false);

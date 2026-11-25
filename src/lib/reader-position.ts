@@ -2,16 +2,16 @@
 // to continue from: opening or reading a file is never progress. Every access can throw (private
 // mode, blocked storage), and none of that may break the reader.
 
+import { RESOURCE_TYPES, type ResourceType } from "@/db/constants";
+
 export function lastPageKey(resourceId: string): string {
   return `reader:last-page:${resourceId}`;
 }
 
-import { RESOURCE_TYPES, type ResourceType } from "@/db/constants";
-
 type Store = Pick<Storage, "getItem" | "setItem">;
-type RemovableStore = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+type RemovableStore = Pick<Storage, "removeItem">;
 
-function browserStore(): Store | null {
+function browserStore(): Storage | null {
   try {
     return window.localStorage;
   } catch {
@@ -73,7 +73,15 @@ export function writeLastRead(entry: LastRead, store: Store | null = browserStor
 
 export function readLastRead(store: Store | null = browserStore()): LastRead | null {
   try {
-    const raw = store?.getItem(LAST_READ_KEY);
+    return parseLastRead(store?.getItem(LAST_READ_KEY) ?? null);
+  } catch {
+    return null;
+  }
+}
+
+// The stored text checked field by field (anyone can edit localStorage); anything unexpected is null.
+export function parseLastRead(raw: string | null): LastRead | null {
+  try {
     if (!raw) return null;
     const value: unknown = JSON.parse(raw);
     if (typeof value !== "object" || value === null) return null;
@@ -86,18 +94,11 @@ export function readLastRead(store: Store | null = browserStore()): LastRead | n
   }
 }
 
-export function clearLastRead(store: RemovableStore | null = browserStoreRemovable()): void {
+// Called when someone signs in or out, so a shared browser never shows one person's file to the next.
+export function clearLastRead(store: RemovableStore | null = browserStore()): void {
   try {
     store?.removeItem(LAST_READ_KEY);
   } catch {
     // Nothing to clear.
-  }
-}
-
-function browserStoreRemovable(): RemovableStore | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
   }
 }

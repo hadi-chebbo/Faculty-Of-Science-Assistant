@@ -297,6 +297,14 @@ test.describe("continuing where the student left off", () => {
     await expect.poll(() => page.evaluate(() => localStorage.getItem("reader:last-read"))).toBeNull();
   });
 
+  test("signing in forgets a file read before, so a shared browser never shows it to the next person", async ({ page }) => {
+    await readTo(page, 4);
+    await signIn(page, DEMO_EMAIL);
+    const card = cardOf(page);
+    await expect(card.getByText("Open any file and you can pick it up here next time.")).toBeVisible();
+    await expect(card.getByText(title)).toHaveCount(0);
+  });
+
   test("on a phone nothing overflows and every target and text in the card is big enough", async ({ page, isMobile }) => {
     test.skip(!isMobile, "phone layout");
     await page.setViewportSize({ width: 390, height: 844 });
