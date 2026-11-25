@@ -7,9 +7,10 @@ import { ResendLink } from "@/components/auth/resend-link";
 import { PageTitle } from "@/components/site/page-title";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { announceSessionChange } from "@/lib/auth/session-events";
 import { clearSignupEmail } from "@/lib/auth/signup-storage";
 
-type State = "confirming" | "confirmed" | "invalid" | "network";
+type State = "confirming" | "signed-in" | "confirmed" | "invalid" | "network";
 
 // The token is used only here, from the browser: a mail scanner that fetches the URL gets this
 // HTML but never runs the script, so it cannot use the link up.
@@ -32,7 +33,11 @@ export function ConfirmEmail() {
       });
       if (response.ok) {
         clearSignupEmail();
-        setState("confirmed");
+        const body = (await response.json().catch(() => null)) as { signedIn?: unknown } | null;
+        if (body?.signedIn === true) {
+          announceSessionChange();
+          setState("signed-in");
+        } else setState("confirmed");
       } else if (response.status === 400) setState("invalid");
       else setState("network");
     } catch {
@@ -58,6 +63,18 @@ export function ConfirmEmail() {
     );
   }
 
+  if (state === "signed-in") {
+    return (
+      <>
+        <PageTitle description="You're signed in. Your account is ready.">Email confirmed</PageTitle>
+        <Button asChild className="h-11 w-full text-base">
+          <Link href="/">Start browsing</Link>
+        </Button>
+      </>
+    );
+  }
+
+  // Confirmed but not signed in (a blocked account): sign-in explains why.
   if (state === "confirmed") {
     return (
       <>
