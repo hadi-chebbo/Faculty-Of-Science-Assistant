@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { RESOURCE_TYPES } from "@/db/constants";
-import { TYPE_STYLES, YEAR_STYLES } from "./design-language";
+import { TYPE_ICONS, TYPE_STYLES, YEAR_STYLES } from "./design-language";
 import { YEARS } from "./years";
 
 describe("year styles", () => {
@@ -22,6 +22,13 @@ describe("year styles", () => {
 describe("file-type styles", () => {
   it("has a chip style for every resource type", () => {
     for (const type of RESOURCE_TYPES) expect(TYPE_STYLES[type].chip, type).toBeTruthy();
+  });
+
+  it("has an icon for every resource type, and the icons are the ones the rows use", () => {
+    for (const type of RESOURCE_TYPES) {
+      expect(TYPE_STYLES[type].icon, type).toBeTruthy();
+      expect(TYPE_ICONS[type], type).toBe(TYPE_STYLES[type].icon);
+    }
   });
 
   it("gives lectures, notes, exercises and exams their own colour, and keeps solutions and other neutral", () => {

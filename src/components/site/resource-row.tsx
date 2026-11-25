@@ -1,19 +1,9 @@
-import {
-  CheckCircle2,
-  ChevronRight,
-  ClipboardCheck,
-  FileText,
-  NotebookText,
-  PencilLine,
-  Presentation,
-  type LucideIcon,
-} from "lucide-react";
+import { CheckCircle2, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { DoneStatusCell } from "@/components/site/done-status-cell";
 import { SaveIconButton } from "@/components/site/save-icon-button";
 import { Badge } from "@/components/ui/badge";
-import type { ResourceType } from "@/db/constants";
-import { TYPE_STYLES } from "@/lib/design-language";
+import { TYPE_ICONS, TYPE_STYLES } from "@/lib/design-language";
 import { EXAM_SESSION_LABELS, LANGUAGE_LABELS, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
 import type { ResourceListItem } from "@/services/resources/types";
 
@@ -23,14 +13,8 @@ function readerHref(id: string): string {
   return `/resources/${id}`;
 }
 
-export const TYPE_ICONS: Record<ResourceType, LucideIcon> = {
-  lecture: Presentation,
-  notes: NotebookText,
-  exercise: PencilLine,
-  exam: ClipboardCheck,
-  solution: CheckCircle2,
-  other: FileText,
-};
+// Re-exported so existing imports keep working; the icons are defined in the shared design language.
+export { TYPE_ICONS };
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
@@ -62,12 +46,13 @@ export function ResourceRow({
   action?: React.ReactNode;
 }) {
   const TypeIcon = TYPE_ICONS[resource.type];
+  const typeChip = TYPE_STYLES[resource.type].chip;
   const link = (
     <Link
       href={readerHref(resource.id)}
       className={`flex items-start gap-3 p-3 hover:bg-muted/60 focus-visible:bg-muted/60 ${FOCUS} min-w-0 flex-1`}
     >
-      <span className={`flex size-9 shrink-0 items-center justify-center rounded-md ${TYPE_STYLES[resource.type].chip}`}>
+      <span className={`flex size-9 shrink-0 items-center justify-center rounded-md ${typeChip}`}>
         <TypeIcon aria-hidden className="size-[18px]" />
       </span>
       <span className="min-w-0 flex-1">
@@ -88,7 +73,7 @@ export function ResourceRow({
         {snippet && <span className="mt-0.5 block text-xs text-muted-foreground">{snippet}</span>}
         <span className="mt-1.5 flex flex-wrap gap-1.5">
           {/* The type is named, not only coloured: the icon box and this chip share the type colour. */}
-          <Badge variant="secondary" className={TYPE_STYLES[resource.type].chip}>
+          <Badge variant="secondary" className={typeChip}>
             {RESOURCE_TYPE_SINGULAR_LABELS[resource.type]}
           </Badge>
           <Badge variant="outline">{LANGUAGE_LABELS[resource.language]}</Badge>

@@ -1,3 +1,4 @@
+import { BookOpen, CheckCircle2, ClipboardCheck, File, FileText, PencilLine, type LucideIcon } from "lucide-react";
 import type { ResourceType } from "@/db/constants";
 import type { Year } from "./years";
 
@@ -39,17 +40,29 @@ export const YEAR_STYLES: Record<Year, YearStyle> = {
   },
 };
 
+// `chip` is the tint shared by the icon box and the type-name chip of a row; `icon` is the type's icon.
 export interface TypeStyle {
   chip: string;
+  icon: LucideIcon;
 }
 
-const NEUTRAL_TYPE: TypeStyle = { chip: "bg-muted text-link" };
+const NEUTRAL_CHIP = "bg-muted text-link";
 
 export const TYPE_STYLES: Record<ResourceType, TypeStyle> = {
-  lecture: { chip: "bg-blue-500/15 text-blue-800 dark:text-blue-300" },
-  notes: { chip: "bg-teal-500/15 text-teal-800 dark:text-teal-300" },
-  exercise: { chip: "bg-orange-500/15 text-orange-800 dark:text-orange-300" },
-  exam: { chip: "bg-rose-500/15 text-rose-800 dark:text-rose-300" },
-  solution: NEUTRAL_TYPE,
-  other: NEUTRAL_TYPE,
+  lecture: { chip: "bg-blue-500/15 text-blue-800 dark:text-blue-300", icon: BookOpen },
+  notes: { chip: "bg-teal-500/15 text-teal-800 dark:text-teal-300", icon: FileText },
+  exercise: { chip: "bg-orange-500/15 text-orange-800 dark:text-orange-300", icon: PencilLine },
+  exam: { chip: "bg-rose-500/15 text-rose-800 dark:text-rose-300", icon: ClipboardCheck },
+  solution: { chip: NEUTRAL_CHIP, icon: CheckCircle2 },
+  other: { chip: NEUTRAL_CHIP, icon: File },
+};
+
+// The icon of each type on its own, for the places that only need the icon (admin forms, the to-do board).
+export const TYPE_ICONS: Record<ResourceType, LucideIcon> = {
+  lecture: TYPE_STYLES.lecture.icon,
+  notes: TYPE_STYLES.notes.icon,
+  exercise: TYPE_STYLES.exercise.icon,
+  exam: TYPE_STYLES.exam.icon,
+  solution: TYPE_STYLES.solution.icon,
+  other: TYPE_STYLES.other.icon,
 };
