@@ -26,6 +26,11 @@ The row of live catalogue numbers on Home, under the year cards: files, courses,
 years covered. Counts only published material. It replaced the "Jump straight to a course" course browser (2026-11-25).
 _Avoid_: Stats, KPIs, numbers strip (the older, removed version)
 
+**Recently added**:
+The home page's short list of the newest published files, by the time they were uploaded (not by exam year or
+course). A visitor's view: a draft is never in it. Not "new since your last visit" and not progress.
+_Avoid_: Latest, updates, what's new
+
 **Lecturer**:
 The person who taught or wrote a resource, named as written (e.g. "Dr. Ali Ghorayeb"). A resource
 has at most one lecturer, or none when unknown; a course's lecturers are those of its resources.

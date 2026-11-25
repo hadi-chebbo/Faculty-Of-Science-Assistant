@@ -23,7 +23,8 @@ async function openFilters(page: import("@playwright/test").Page) {
 // Rows are the list items that open a resource (on its reader page). (Pages visited earlier in the session can stay
 // in the DOM hidden, so a plain "ul > li" would also count their lists.)
 function rows(page: import("@playwright/test").Page) {
-  return page.locator("li").filter({ has: page.locator('a[href^="/resources/"]') });
+  // Visible only: the home page's "Recently added" list also links to readers and stays hidden in the DOM after a soft navigation.
+  return page.locator("li").filter({ has: page.locator('a[href^="/resources/"]') }).filter({ visible: true });
 }
 
 async function expectTitles(page: import("@playwright/test").Page, titles: string[]) {

@@ -262,6 +262,15 @@ mock exam generation, personalization.
   and sign-out events and stores the measured height on a phone). A visitor without the hint gets the static page and no
   extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years, numbers row; a
   signed-in student band, hero, years, numbers row (`.home-*` rules in `globals.css`; no content is rendered twice).
+- Home "Recently added" and previous-exam shortcuts (ticket #183; `recent.tsx`, in the same Suspense boundary as the year
+  cards, after the numbers row on desktop and phone, `.home-recent` / `.home-exams` order 5 and 6 below md): "Recently added" is a
+  region of the newest published files (`listRecentResources(null)` in `src/services/resources/recent.ts`, newest
+  `createdAt` first, `RECENT_LIMIT` 6, the visitor's view so a draft never shows; no schema change), two columns from sm, each
+  a 56px-tall link to the reader with the type's icon box in its type colour, the title, "CODE · Lecture · 2 days ago"
+  (`<time>`, relative to the render, so on the static page it is as old as the last build) and a "See all" link to
+  `/search`. With fewer than `RECENT_MIN` (3) files the section hides itself. "Previous exams" is a region with three
+  links, "Partial exams", "Final exams" and "Second session", to `/exams?session=partial|final|second`. Not a progress
+  signal: nothing here reads the session or marks anything.
 - Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats()`; inside one
   Suspense boundary with `YearCardsSkeleton`): "Choose your year", one card per entry of `YEARS` (four: one column on a
   phone, two from sm, four from lg): the year circle (`YearCircle`, year colour) and "Second year", up to four
