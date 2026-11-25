@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BAND_HEIGHT_KEY, hasSignedInHint, saneBandHeight, SIGNED_IN_HINT_COOKIE, SIGNED_IN_SCRIPT } from "./signed-in-hint";
+import { BAND_HEIGHT_KEY, BAND_HEIGHT_WIDE_KEY, hasSignedInHint, saneBandHeight, SIGNED_IN_HINT_COOKIE, SIGNED_IN_SCRIPT } from "./signed-in-hint";
 
 describe("hasSignedInHint", () => {
   it("names the cookie ua_signed_in", () => {
@@ -27,7 +27,7 @@ describe("hasSignedInHint", () => {
 });
 
 // Runs the real pre-paint script against a stub document and storage, so it cannot drift from the helpers.
-function runScript(cookie: string, stored: string | null, storageThrows = false) {
+function runScript(cookie: string, stored: string | null, storageThrows = false, storedWide: string | null = null) {
   const attributes = new Map<string, string>();
   const properties = new Map<string, string>();
   const documentStub = {
@@ -40,11 +40,12 @@ function runScript(cookie: string, stored: string | null, storageThrows = false)
   const storageStub = {
     getItem: (key: string) => {
       if (storageThrows) throw new Error("blocked");
+      if (key === BAND_HEIGHT_WIDE_KEY) return storedWide;
       return key === BAND_HEIGHT_KEY ? stored : null;
     },
   };
   new Function("document", "localStorage", SIGNED_IN_SCRIPT)(documentStub, storageStub);
-  return { marked: attributes.get("data-signed-in") === "1", height: properties.get("--home-band-h") ?? null };
+  return { marked: attributes.get("data-signed-in") === "1", height: properties.get("--home-band-h") ?? null, wide: properties.get("--home-band-h-wide") ?? null };
 }
 
 describe("SIGNED_IN_SCRIPT", () => {
@@ -55,14 +56,23 @@ describe("SIGNED_IN_SCRIPT", () => {
   });
 
   it("sets the band height exactly when saneBandHeight accepts the stored value", () => {
-    for (const stored of ["262", "80", "600", "79", "601", "26.5", "abc", "", null]) {
+    for (const stored of ["262", "80", "600", "800", "79", "801", "26.5", "abc", "", null]) {
       const expected = saneBandHeight(stored);
       expect(runScript("ua_signed_in=1", stored).height).toBe(expected === null ? null : `${expected}px`);
     }
   });
 
+  it("sets the wide band height the same way, independently of the phone one", () => {
+    for (const stored of ["262", "80", "600", "800", "79", "801", "26.5", "abc", "", null]) {
+      const expected = saneBandHeight(stored);
+      expect(runScript("ua_signed_in=1", null, false, stored).wide).toBe(expected === null ? null : `${expected}px`);
+    }
+    expect(runScript("ua_signed_in=1", "300", false, "200")).toEqual({ marked: true, height: "300px", wide: "200px" });
+    expect(runScript("", null, false, "200").wide).toBeNull();
+  });
+
   it("sets no height without the hint, and survives blocked storage", () => {
     expect(runScript("", "262").height).toBeNull();
-    expect(runScript("ua_signed_in=1", "262", true)).toEqual({ marked: true, height: null });
+    expect(runScript("ua_signed_in=1", "262", true)).toEqual({ marked: true, height: null, wide: null });
   });
 });

@@ -97,19 +97,36 @@ describe("POST /api/v1/auth/sign-up", () => {
 });
 
 describe("POST /api/v1/auth/confirm", () => {
-  it("confirms with 200 once, then answers 400 invalid_token", async () => {
+  it("confirms and signs in with 200 once, then answers 400 invalid_token with no session", async () => {
     await signUp(post("/api/v1/auth/sign-up", { email: "a@example.com", password: PASSWORD }));
     const token = await tokenFor("a@example.com");
 
     const ok = await confirm(post("/api/v1/auth/confirm", { token }));
     expect(ok.status).toBe(200);
     expect(ok.headers.get("cache-control")).toBe("no-store");
-    expect(ok.headers.get("set-cookie")).toBeNull();
-    expect(await ok.json()).toEqual({ ok: true });
+    const body = await ok.json();
+    expect(body).toEqual({ ok: true, signedIn: true, user: { email: "a@example.com", role: "student" } });
+    expect(JSON.stringify(body)).not.toMatch(/token/i); // tokens only in cookies
+    const cookies = ok.headers.getSetCookie().join("\n");
+    expect(cookies).toContain("ua_signed_in=1");
+    expect(cookies).toMatch(/HttpOnly/i);
+    expect(ok.cookies.getAll().map((cookie) => cookie.name).length).toBeGreaterThanOrEqual(3);
 
     const reused = await confirm(post("/api/v1/auth/confirm", { token }));
     expect(reused.status).toBe(400);
+    expect(reused.headers.get("set-cookie")).toBeNull();
     expect(await reused.json()).toEqual({ error: "Invalid or expired link", code: "invalid_token" });
+  });
+
+  it("confirms a blocked account with 200 but sets no session", async () => {
+    await signUp(post("/api/v1/auth/sign-up", { email: "b@example.com", password: PASSWORD }));
+    const token = await tokenFor("b@example.com");
+    await getDb().User.update({ blockedAt: new Date() }, { where: { email: "b@example.com" } });
+
+    const ok = await confirm(post("/api/v1/auth/confirm", { token }));
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toEqual({ ok: true, signedIn: false });
+    expect(ok.headers.get("set-cookie")).toBeNull();
   });
 
   it("answers 400 for a missing or unknown token and 403 cross-origin", async () => {

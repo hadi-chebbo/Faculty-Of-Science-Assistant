@@ -7,7 +7,9 @@ import { parseInput } from "../validation";
 import { SIGN_UP_LIMIT_PER_IP, SIGN_UP_WINDOW_SECONDS, UNCONFIRMED_ACCOUNT_TTL_SECONDS } from "./constants";
 import { confirmationEmailRetryAfter, recordRateLimitEvent, retryAfterIfCountReached } from "./rate-limit";
 import { rawTokenSchema, resendConfirmationSchema, signUpSchema } from "./schemas";
+import { startSession } from "./auth";
 import { hashToken } from "./token-hash";
+import type { Session } from "./types";
 
 export const CONFIRM_EMAIL_KIND = "confirm-email";
 export const ALREADY_REGISTERED_KIND = "already-registered";
@@ -91,22 +93,27 @@ export async function signUp(
 
 // Marks the email confirmed. The token is single use and valid for 24 hours; every failure is the
 // same error. It confirms only: no session is created.
-export async function confirmEmail(rawToken: string, now: Date = new Date()): Promise<void> {
+// Uses the emailed link: confirms the address and, in the same transaction, signs the student in,
+// so opening the link also starts their session. Only the first use of a token signs in (it is
+// single use). A blocked account is confirmed but gets no session (null), as at sign-in.
+export async function confirmEmail(rawToken: string, now: Date = new Date()): Promise<Session | null> {
   const parsed = rawTokenSchema.safeParse(rawToken);
   if (!parsed.success) throw new InvalidConfirmationTokenError();
   const tokenHash = hashToken(parsed.data);
   const { sequelize, EmailConfirmation, User } = getDb();
 
-  const ok = await sequelize.transaction(async (transaction) => {
+  const outcome = await sequelize.transaction(async (transaction) => {
     const row = await EmailConfirmation.findOne({ where: { tokenHash }, lock: transaction.LOCK.UPDATE, transaction });
-    if (!row || row.usedAt || row.expiresAt.getTime() <= now.getTime()) return false;
+    if (!row || row.usedAt || row.expiresAt.getTime() <= now.getTime()) return { ok: false as const };
     const user = await User.findByPk(row.userId, { lock: transaction.LOCK.UPDATE, transaction });
-    if (!user) return false;
+    if (!user) return { ok: false as const };
     await row.update({ usedAt: now }, { transaction });
     if (!user.emailConfirmedAt) await user.update({ emailConfirmedAt: now, updatedAt: now }, { transaction });
-    return true;
+    const session = user.blockedAt ? null : await startSession(user, now, transaction);
+    return { ok: true as const, session };
   });
-  if (!ok) throw new InvalidConfirmationTokenError();
+  if (!outcome.ok) throw new InvalidConfirmationTokenError();
+  return outcome.session;
 }
 
 // Sends a new confirmation link to an unconfirmed account. The per-address limit counts any

@@ -1,5 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { activeDaysText, courseLabel, topCourses, type BandCourse } from "./progress-band-logic";
+import { activeDaysText, continueMeta, courseLabel, resumeHref, resumeLabel, topCourses, type BandCourse } from "./progress-band-logic";
+
+describe("the continue part", () => {
+  const entry = { id: "3f2b8a4e-1c5d-4e6f-8a9b-0c1d2e3f4a5b", title: "Sample lecture", courseCode: "DEMO301", type: "lecture" as const, at: "x" };
+
+  it("links to the reader, with the page only after the first", () => {
+    expect(resumeHref(entry.id, 7)).toBe(`/resources/${entry.id}#page=7`);
+    expect(resumeHref(entry.id, 1)).toBe(`/resources/${entry.id}`);
+    expect(resumeHref(entry.id, null)).toBe(`/resources/${entry.id}`);
+  });
+
+  it("names the course, the type and the page after the first", () => {
+    expect(continueMeta(entry, 7)).toBe("DEMO301 · Lecture · Page 7");
+    expect(continueMeta(entry, 1)).toBe("DEMO301 · Lecture");
+    expect(continueMeta(entry, null)).toBe("DEMO301 · Lecture");
+  });
+
+  it("gives the Resume link an accessible name", () => {
+    expect(resumeLabel(entry.title, 7)).toBe("Resume Sample lecture, page 7");
+    expect(resumeLabel(entry.title, null)).toBe("Resume Sample lecture");
+  });
+});
 
 const course = (code: string, last: string, done = 1, total = 4, finished = false): BandCourse => ({
   code,

@@ -167,7 +167,7 @@ mock exam generation, personalization.
   code; no auth framework.
 - A readable hint cookie `ua_signed_in=1` (not httpOnly, SameSite=Lax, path `/`, the refresh token's lifetime) is set and cleared inside
   `setSessionCookies` / `clearSessionCookies`, so sign-in, refresh, restore, sign-out and a failed refresh keep it in step. It holds nothing
-  personal and is never trusted: no server code reads it for authorization. It exists only so Home can reserve the progress band's space
+  personal and is never trusted: no server code reads it for authorization. It exists only so Home can reserve the Home card's space
   before paint (see Home); a stale one is harmless.
 - Access tokens are HS256 JWTs signed with `jose` (the one auth dependency),
   secret in `AUTH_SECRET` (32+ characters, read lazily so the build and public
@@ -250,20 +250,22 @@ mock exam generation, personalization.
   `/search?q=WORDS`. A rotating hint (`.hint-cycle`, "Course code or topic", "Try: final 2025", "Try: graphs", "Try:
   partial") shows only while the field is empty and is `aria-hidden`; under reduced motion it shows its first line.
   A soft coloured background (three blurred blobs, `.hero-blob`) drifts behind the hero only and stops under reduced
-  motion. The long "How it works", "What you will find", "Exams coming up?" and FAQ sections, the numbers strip and the
+  motion. The long "How it works", "What you will find", "Exams coming up?" and FAQ sections, the old numbers strip and the
   decorative course preview are gone (the independent-project statement stays in the footer). Home stays static and
   never reads the session on the server: a readable hint cookie (`ua_signed_in`, see Stack, Auth) is read by an inline
   script in the root layout's `<head>` before paint (`SIGNED_IN_SCRIPT`, `src/lib/auth/signed-in-hint.ts`, same test as
-  `hasSignedInHint`), which sets `html[data-signed-in]` and `--home-band-h` from `localStorage["home:band-h"]` (the
-  band's last measured phone height, kept when 80 to 600). Below md CSS then reserves a band slot of that height
-  (default 16.375rem) so the band fills it without moving the years (the slot, `ProgressBand`, `data-personal`, removes
+  `hasSignedInHint`), which sets `html[data-signed-in]`, `--home-band-h` from `localStorage["home:band-h"]` (the
+  card's last measured phone height) and `--home-band-h-wide` from `localStorage["home:band-h-wide"]` (its last measured
+  height from md up), each kept when 80 to 800. CSS then reserves a card slot of that height (defaults 28.5rem below md,
+  18.75rem from md up; a visitor's slot is `display: none`, so it takes no space and leaves no gap) so the card fills it
+  without moving the years (the slot, `ProgressBand`, `data-personal`, removes
   the marker when the session check answers signed out or the progress request fails, or after 8 s without an answer
   (`LOADING_GIVE_UP_MS`; a band arriving later then moves the years once); it sets it when a band shows, follows sign-in
-  and sign-out events and stores the measured height on a phone). A visitor without the hint gets the static page and no
-  extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years, course browser; a
-  signed-in student band, hero, years, course browser (`.home-*` rules in `globals.css`; no content is rendered twice).
+  and sign-out events and stores the measured height, under the key for the width it was measured at). A visitor without the hint gets the static page and no
+  extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years, numbers row; a
+  signed-in student band, hero, years, numbers row (`.home-*` rules in `globals.css`; no content is rendered twice).
 - Home "Recently added" and previous-exam shortcuts (ticket #183; `recent.tsx`, in the same Suspense boundary as the year
-  cards, after the course browser on desktop and phone, `.home-recent` / `.home-exams` order 5 and 6 below md): "Recently added" is a
+  cards, after the numbers row on desktop and phone, `.home-recent` / `.home-exams` order 5 and 6 below md): "Recently added" is a
   region of the newest published files (`listRecentResources(null)` in `src/services/resources/recent.ts`, newest
   `createdAt` first, `RECENT_LIMIT` 6, the visitor's view so a draft never shows; no schema change), two columns from sm, each
   a 56px-tall link to the reader with the type's icon box in its type colour, the title, "CODE · Lecture · 2 days ago"
@@ -271,27 +273,37 @@ mock exam generation, personalization.
   `/search`. With fewer than `RECENT_MIN` (3) files the section hides itself. "Previous exams" is a region with three
   links, "Partial exams", "Final exams" and "Second session", to `/exams?session=partial|final|second`. Not a progress
   signal: nothing here reads the session or marks anything.
-- Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats().years`; its `totals` are still computed, for #183; inside one
+- Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats()`; inside one
   Suspense boundary with `YearCardsSkeleton`): "Choose your year", one card per entry of `YEARS` (four: one column on a
   phone, two from sm, four from lg): the year circle (`YearCircle`, year colour) and "Second year", up to four
   course-code chips in the year's tint and "+N more", "7 courses · 101 files" and "Open →", lift and the year's border
   on hover, rising in as the page loads; a year with no course is a muted dashed card, not a link, "No courses yet";
-  wording in `year-card.ts`. Under the cards, "Jump straight to a course" (`#courses`, `course-browser.tsx`, a client
-  component fed by the same `getHomeStats().years`, whose entries now also carry `courses: { code, title, semester,
-  fileCount }[]` in semester-then-code order, `fileCount` counting visible files only, so the page stays static and
-  needs no account): Radix `Tabs` (real tabs, arrow keys, the selection announced) First year, Second year, Third year,
-  Master 1, the selected one in the year's solid colour, 44px tall, scrolling sideways inside their row on a phone
-  (`scroll-fade`, 24px end padding); it opens on the first year that has a course. The panel is a grid of course cards
-  (one column on a phone, two from sm, three from lg): code chip in the year's tint, title, "Semester 1" / "Semester 2"
-  (`semesterLabel`, never the stored number) · "N files", an arrow; each links to `/courses/CODE`. A year with none
-  says "No courses yet." On a phone it comes after the years (`.home-courses`); `YearCardsSkeleton` covers it. A
-  signed-in student also gets the "Your progress" band (`ProgressBand`, `data-personal`)
-  after the hero on desktop and first on a phone: loaded by the browser from `GET /api/v1/progress` after the page shows
-  (Home stays static; a visitor gets no band and no request), "N active days this week", up to three of My courses by
-  latest completion (ring, code, title, "x of y files · P%" or "✓ Finished", or "Exams: x of y done" for an exams-only
-  course) and "See all ›" to `/progress`; with no My courses it says "Mark files as done in the reader to track your
-  progress here." and leaves "See all" out. The continue card replaces or merges with it in #184. No claims about
-  features that do not exist.
+  wording in `year-card.ts`. Under the cards, the numbers row (`#numbers`, a region labelled "In numbers", `StatsRow` in
+  `year-cards.tsx`, wording in `stats-row.ts`, from `getHomeStats().totals`; it replaced the "Jump straight to a course"
+  browser, owner 2026-11-25): four tiles that are not links, "1,204 files", "42 courses", "156 previous exams" and
+  "2015–2025 exam years covered" (`totals.examYears`: the first and last `academic_year_start` of a visible exam, shown
+  from the first year's start to the last year's end), counts in `en-US` digits and agreeing with their noun; each tile a
+  `rounded-3xl` card with a tinted icon box (brand tint; the exam tile takes the exam type's colour), the number large in
+  the heading colour and the label muted. A 2x2 grid on a phone, one row of four from md up. Visible files only (the
+  viewer is null, so drafts never count). The row is left out when there is no visible file, and both exam tiles when
+  there is no visible exam (the span alone when no exam has a year). On a phone it comes after the years (`.home-stats`);
+  `YearCardsSkeleton` covers it. A
+  signed-in student also gets one card (`ProgressBand`, `data-personal`, flat, `rounded-3xl`, no gradient and no
+  percentage bar) after the hero on desktop and first on a phone, loaded by the browser from `GET /api/v1/progress` after
+  the page shows (Home stays static; a visitor gets no card and no request). It has three parts. First, "Continue where
+  you left off": the last file read in this browser (`reader:last-read`, see the Reader page bullet), its title, "DEMO301 ·
+  Lecture · Page 7" (the page only after the first, read from `reader:last-page:ID`) and a "Resume" button
+  (accessible name "Resume TITLE, page 7") to `/resources/ID#page=7` (no hash for page 1 or none remembered); when
+  nothing is remembered it says "Open any file and you can pick it up here next time." instead. It is read from
+  `localStorage` after mount (`useSyncExternalStore`, no hydration mismatch). It is a place to continue from: no
+  "page 7 of 24", no bar, no percentage, nothing derived from opening a file. Second, when the student has ever marked a
+  file (`hasCompletions`, the rule of "This week" on `/progress`), the week row (`WeekDots`, `src/components/site/week-dots.tsx`,
+  shared with `/progress`: a list labelled "This week", seven dots Monday to Sunday, items "Monday, active" / "Friday,
+  today", primary only, no streak wording) and "N active days this week". Third, under a rule, "Your progress" with up
+  to three of My courses by latest completion (ring, code, title, "x of y files · P%" or "✓ Finished", or "Exams: x of
+  y done" for an exams-only course; these numbers come from explicit completions) and "See all ›" to `/progress`; with
+  no My courses it says "Mark files as done in the reader to track your progress here." and leaves "See all" out. The
+  card adds no animation. No claims about features that do not exist.
 - Year page (`/years/1`, `/2`, `/3`, `/m1`, prerendered, any other value is the 404 page; `src/app/(site)/years/[year]/page.tsx`): breadcrumb
   Home › Second year, title "Second year", then an `h2` "Semester 1" (`id="semester-1"`, scroll margin) and "Semester 2"
   (`semester-2`), each with the course cards (code, title, "N resources", the signed-in progress ring from the one shared
@@ -410,7 +422,13 @@ mock exam generation, personalization.
   mode" button (44px, Minimize icon) sits in the top row while it is on (desktop keeps Esc and the menu). Keys (when not typing): arrows,
   PageUp/PageDown, Home/End, `+`/`-`, `0`. The page being read is remembered per resource in
   `localStorage` (`reader:last-page:ID`), and a later visit offers "Continue where you left off,
-  page N?" once; this is a position only, never progress. Desktop (md and up): breadcrumb ending at
+  page N?" once; this is a position only, never progress. An address ending in `#page=N` (N after the first page and
+  inside the file, `pageFromHash`; anything else is ignored) jumps to that page once the reader is ready, shows no
+  offer and removes the hash with `history.replaceState`; Home's Resume link uses it. The page also records the file
+  itself in `localStorage` (`reader:last-read`: `{ id, title, courseCode, type, at }`, validated on read, written by
+  `RememberLastRead` when a file with a stored file is shown; position only, never progress) for Home's card, and
+  signing in (`SignInFields`) and both sign-out buttons clear it (`clearLastRead`, `src/lib/reader-position.ts`) so the
+  next person on a shared browser does not see it. Desktop (md and up): breadcrumb ending at
   the course area that lists the resource, the title with its type and language on one line, the
   card at a fixed height with the pages scrolling inside it, and a narrow details column (plain text
   under small headings) beside it, with a full-width "Save for later" button at its top that becomes
@@ -652,7 +670,7 @@ mock exam generation, personalization.
 - The account pages share `BrandPanel` (the panel content) and `AuthShell`; each is `noindex`, has 44px touch targets and shows errors in one destructive alert.
 - Sign-up page (`/sign-up`; a signed-in visitor is redirected, like on `/sign-in`): "Create your account", fields Name (optional), Email and Password (show/hide, hint "At least 10 characters.", length also validated in the browser; no repeat field), "Create account", and a link to `/sign-in`. Field errors from a 400 show on the fields; a 429 says there were too many sign-ups from this network. On 202 the address is kept in `sessionStorage` (`signup:email`, never in the URL) and the page goes to `/sign-up/check-email`.
 - Check-email page (`/sign-up/check-email`): "Check your inbox" and "We sent a confirmation link to s•••@gmail.com." (`maskEmail`: first character of the local part, •••, the full domain; with no stored address it says "your email address" and the resend control asks for it). "Send a new link" is disabled for 60 s on arrival and after each send, with a countdown; 202 says "A new link is on its way.", 429 asks to wait and disables for `retryAfterSeconds` (shown at most 120 s). "Wrong email? Start again" clears the stored address and goes to `/sign-up`.
-- Confirm-email page (`/confirm-email?token=…`, `referrer: no-referrer`): the browser, not the server, reads the token, removes it from the address bar with `history.replaceState` and posts it once to `/api/v1/auth/confirm`, so mail scanners that prefetch the link cannot use it up. Success: "Email confirmed" and a Sign in button. An expired, used, unknown or missing token: "This link can't be used", a resend form that asks for the address, and a Sign in link.
+- Confirm-email page (`/confirm-email?token=…`, `referrer: no-referrer`): the browser, not the server, reads the token, removes it from the address bar with `history.replaceState` and posts it once to `/api/v1/auth/confirm`, so mail scanners that prefetch the link cannot use it up. The link also signs the student in (owner, 2026-11-25): a successful confirm sets the session cookies (a new session, like a sign-in), the page announces the session change and shows "Email confirmed", "You're signed in. Your account is ready." and a "Start browsing" button to `/`. A blocked account is confirmed but not signed in: "Email confirmed" with a Sign in button. An expired, used, unknown or missing token: "This link can't be used", a resend form that asks for the address, and a Sign in link.
 - The brand is "UniMate" (owner, 2026-11-25; domain `unimate-fs.online`, "fs" for Faculty of Science; the repository
   and this file's title keep the working name UniversityAssistant). The name appears in the page titles and
   `og:site_name` (`SITE_NAME`), the email sender name and the text of the emails. No university logo, crest or name as

@@ -62,7 +62,7 @@ async function allowAnotherEmail(email: string) {
   }
 }
 
-test("sign up, confirm by the emailed link, then sign in", async ({ page }) => {
+test("sign up, then the emailed link confirms and signs in", async ({ page }) => {
   const email = unique();
   await signUp(page, email);
   expect(page.url()).not.toContain("e2e.");
@@ -77,12 +77,13 @@ test("sign up, confirm by the emailed link, then sign in", async ({ page }) => {
   await expect(page).toHaveURL(/\/confirm-email$/); // the token is gone from the address bar
   expect(page.url()).not.toContain("token");
 
-  await page.getByRole("main").getByRole("link", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/sign-in$/);
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password", { exact: true }).fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByText("You're signed in. Your account is ready.")).toBeVisible();
+
+  await page.getByRole("link", { name: "Start browsing" }).click();
   await expect(page).toHaveURL(/\/$/);
+  // Signed in without typing the password: the header shows the account, not "Sign in".
+  await expect(page.getByRole("banner").getByRole("button", { name: "Account", exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").getByRole("link", { name: "Sign in" })).toHaveCount(0);
 });
 
 test("a password under 10 characters is refused in the browser and the hint is visible", async ({ page }) => {

@@ -21,15 +21,15 @@ resource type (lecture blue, notes teal, exercise orange, exam rose; solutions a
 the design language and always accompanied by the year's name or the type's name, never used alone.
 _Avoid_: Theme colour, category colour
 
+**Numbers row**:
+The row of live catalogue numbers on Home, under the year cards: files, courses, previous exams and the span of exam
+years covered. Counts only published material. It replaced the "Jump straight to a course" course browser (2026-11-25).
+_Avoid_: Stats, KPIs, numbers strip (the older, removed version)
+
 **Recently added**:
 The home page's short list of the newest published files, by the time they were uploaded (not by exam year or
 course). A visitor's view: a draft is never in it. Not "new since your last visit" and not progress.
 _Avoid_: Latest, updates, what's new
-
-**Course browser**:
-The "Jump straight to a course" section of Home: tabs by year, and under the chosen tab that year's courses as cards
-(code, title, "Semester 1" or "Semester 2", file count). A shortcut to a course page, not a new way to organise courses.
-_Avoid_: Course picker, course finder (the Search page finds)
 
 **Lecturer**:
 The person who taught or wrote a resource, named as written (e.g. "Dr. Ali Ghorayeb"). A resource
@@ -99,3 +99,10 @@ _Avoid_: Streak, login day
 One of a small fixed set of achievements a student earns once and keeps, such as finishing a first
 chapter.
 _Avoid_: Badge, trophy, achievement, reward
+
+**Last read file**:
+The file a student opened in the reader most recently, remembered only in that browser
+(`reader:last-read`), with the page from the reader's remembered position. It exists so Home can offer
+"Continue where you left off". It is a place to continue from: opening a file is never progress, so it is
+never counted, shown as a percentage or merged with completions. Forgotten on sign-in and sign-out.
+_Avoid_: Recently viewed, history, progress

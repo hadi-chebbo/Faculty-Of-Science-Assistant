@@ -1,5 +1,7 @@
 import type { ProgressOverview } from "@/services/progress/types";
 import { filesOf } from "@/lib/plural";
+import { RESOURCE_TYPE_SINGULAR_LABELS } from "@/lib/labels";
+import type { LastRead } from "@/lib/reader-position";
 
 export type BandCourse = ProgressOverview["courses"][number];
 
@@ -11,6 +13,21 @@ export function topCourses(courses: BandCourse[], limit = 3): BandCourse[] {
 export function activeDaysText(count: number): string {
   if (count === 0) return "No active days yet this week";
   return `${count} active ${count === 1 ? "day" : "days"} this week`;
+}
+
+// Home's "Continue where you left off": the remembered file and page are only a place to continue from.
+export function resumeHref(resourceId: string, page: number | null): string {
+  return `/resources/${resourceId}${page !== null && page > 1 ? `#page=${page}` : ""}`;
+}
+
+export function continueMeta(entry: Pick<LastRead, "courseCode" | "type">, page: number | null): string {
+  const parts = [entry.courseCode, RESOURCE_TYPE_SINGULAR_LABELS[entry.type]];
+  if (page !== null && page > 1) parts.push(`Page ${page}`);
+  return parts.join(" · ");
+}
+
+export function resumeLabel(title: string, page: number | null): string {
+  return page !== null && page > 1 ? `Resume ${title}, page ${page}` : `Resume ${title}`;
 }
 
 export function percentOf(done: number, total: number): number {

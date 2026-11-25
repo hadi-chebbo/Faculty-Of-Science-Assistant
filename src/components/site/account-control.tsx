@@ -14,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { clearLastRead } from "@/lib/reader-position";
 import { findAccount, type Account } from "@/lib/auth/client-session";
 import { announceSessionChange, SESSION_CHANGED_EVENT } from "@/lib/auth/session-events";
 
@@ -61,6 +62,8 @@ export function AccountControl() {
       await fetch("/api/v1/auth/sign-out", { method: "POST" });
     } finally {
       setAccount(null);
+      // The next person on a shared browser must not see the last file read.
+      clearLastRead();
       // The browser stores (done, saved, Home's progress band) drop what they know about the old session.
       announceSessionChange();
       if (pathname.startsWith("/admin")) router.replace("/sign-in");
