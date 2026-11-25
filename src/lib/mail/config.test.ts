@@ -19,11 +19,11 @@ describe("parseMailConfig", () => {
     expect(() => parseMailConfig({ VERCEL: "1", MAIL_DRIVER: "log" })).toThrow(/cannot be used on Vercel/);
   });
 
-  it("needs the key and the sender for brevo, reported by name only", () => {
-    expect(() => parseMailConfig({ MAIL_DRIVER: "brevo" })).toThrow("needs BREVO_API_KEY, MAIL_FROM");
+  it("needs the key and the sender for resend, reported by name only", () => {
+    expect(() => parseMailConfig({ MAIL_DRIVER: "resend" })).toThrow("needs RESEND_API_KEY, MAIL_FROM");
     const error = (() => {
       try {
-        parseMailConfig({ MAIL_DRIVER: "brevo", BREVO_API_KEY: "secret-key" });
+        parseMailConfig({ MAIL_DRIVER: "resend", RESEND_API_KEY: "secret-key" });
       } catch (e) {
         return e as Error;
       }
@@ -32,11 +32,15 @@ describe("parseMailConfig", () => {
     expect(error?.message).not.toContain("secret-key");
   });
 
-  it("builds the brevo config with the default sender name", () => {
-    expect(parseMailConfig({ VERCEL: "1", MAIL_DRIVER: "brevo", BREVO_API_KEY: "k", MAIL_FROM: "a@b.co" })).toEqual({
-      driver: "brevo",
-      brevo: { apiKey: "k", fromEmail: "a@b.co", fromName: "University Assistant" },
+  it("builds the resend config with the default sender name", () => {
+    expect(parseMailConfig({ VERCEL: "1", MAIL_DRIVER: "resend", RESEND_API_KEY: "k", MAIL_FROM: "a@b.co" })).toEqual({
+      driver: "resend",
+      resend: { apiKey: "k", fromEmail: "a@b.co", fromName: "University Assistant" },
     });
+  });
+
+  it("no longer accepts brevo", () => {
+    expect(() => parseMailConfig({ MAIL_DRIVER: "brevo", BREVO_API_KEY: "k", MAIL_FROM: "a@b.co" })).toThrow(/Invalid mail configuration/);
   });
 
   it("rejects an unknown driver", () => {
