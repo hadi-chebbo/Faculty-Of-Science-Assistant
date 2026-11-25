@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { BrandLink } from "./brand-link";
 import { NAV_ITEMS, type NavItem } from "./nav-items";
 
 const HEADING = "px-5 pb-1 pt-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase";
@@ -67,9 +68,7 @@ export function MobileNav() {
         <div className="flex h-14 shrink-0 items-center justify-between border-b pr-2 pl-5">
           <SheetTitle className="text-base">
             <SheetClose asChild>
-              <Link href="/" className="font-semibold tracking-tight text-heading">
-                Unimate
-              </Link>
+              <BrandLink />
             </SheetClose>
           </SheetTitle>
           <SheetDescription className="sr-only">Site navigation</SheetDescription>

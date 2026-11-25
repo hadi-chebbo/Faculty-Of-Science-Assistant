@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import Link from "next/link";
+import { BrandMark, Wordmark } from "@/components/brand/brand-mark";
 
 const PANEL_POINTS = ["Course material by chapter", "Previous exams", "A reader for every file"];
 
@@ -9,9 +10,10 @@ export function BrandPanel() {
     <>
       <Link
         href="/"
-        className="rounded-sm text-xl font-semibold tracking-tight outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-brand-panel-foreground/50"
+        className="inline-flex min-h-11 items-center gap-3 rounded-md text-xl outline-none focus-visible:ring-[3px] focus-visible:ring-brand-panel-foreground/50"
       >
-        Unimate
+        <BrandMark plate className="size-9" />
+        <Wordmark reversed />
       </Link>
       <p className="mt-6 text-balance text-2xl font-bold leading-tight">
         Every course, chapter and past exam in one place.

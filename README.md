@@ -1,4 +1,4 @@
-# Unimate
+# UniMate
 
 Study platform for Computer Science students of the Faculty of Science, Lebanese University (Hadath).
 See `CLAUDE.md` for product context, scope and engineering rules.
