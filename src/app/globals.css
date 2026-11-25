@@ -390,11 +390,14 @@
   .home-years {
     order: 3;
   }
-  .home-recent {
+  .home-courses {
     order: 4;
   }
-  .home-exams {
+  .home-recent {
     order: 5;
+  }
+  .home-exams {
+    order: 6;
   }
 }
 @media (min-width: 768px) {

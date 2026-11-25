@@ -35,7 +35,7 @@ describe("getHomeStats", () => {
   it("gives zeros and one ordered entry per year for an empty database", async () => {
     expect(await getHomeStats(null)).toEqual({
       totals: { courses: 0, chapters: 0, resources: 0, exams: 0 },
-      years: [1, 2, 3, 4].map((year) => ({ year, courseCount: 0, resourceCount: 0, courseCodes: [] })),
+      years: [1, 2, 3, 4].map((year) => ({ year, courseCount: 0, resourceCount: 0, courseCodes: [], courses: [] })),
     });
   });
 
@@ -62,10 +62,25 @@ describe("getHomeStats", () => {
   it("puts per-year counts and codes in the right year, in order", async () => {
     await seed();
     expect((await getHomeStats(null)).years).toEqual([
-      { year: 1, courseCount: 0, resourceCount: 0, courseCodes: [] },
-      { year: 2, courseCount: 2, resourceCount: 2, courseCodes: ["TEST301", "TEST302"] },
-      { year: 3, courseCount: 1, resourceCount: 1, courseCodes: ["TEST501"] },
-      { year: 4, courseCount: 0, resourceCount: 0, courseCodes: [] },
+      { year: 1, courseCount: 0, resourceCount: 0, courseCodes: [], courses: [] },
+      {
+        year: 2,
+        courseCount: 2,
+        resourceCount: 2,
+        courseCodes: ["TEST301", "TEST302"],
+        courses: [
+          { code: "TEST301", title: "Course A", semester: 3, fileCount: 2 },
+          { code: "TEST302", title: "Course B (empty)", semester: 3, fileCount: 0 },
+        ],
+      },
+      {
+        year: 3,
+        courseCount: 1,
+        resourceCount: 1,
+        courseCodes: ["TEST501"],
+        courses: [{ code: "TEST501", title: "Course C", semester: 5, fileCount: 1 }],
+      },
+      { year: 4, courseCount: 0, resourceCount: 0, courseCodes: [], courses: [] },
     ]);
     expect((await getHomeStats(admin)).years.map((y) => y.resourceCount)).toEqual([0, 3, 2, 0]);
   });
@@ -78,5 +93,18 @@ describe("getHomeStats", () => {
     const [first] = (await getHomeStats(null)).years;
     expect(first.courseCodes).toEqual(["TEST200", "TEST900", "TEST100"]);
     expect(first.resourceCount).toBe(0);
+    expect(first.courses.map((c) => [c.code, c.semester, c.fileCount])).toEqual([
+      ["TEST200", 1, 0],
+      ["TEST900", 1, 0],
+      ["TEST100", 2, 0],
+    ]);
+  });
+
+  it("counts only visible files per course: drafts for an admin only", async () => {
+    await seed();
+    const fileCounts = (stats: Awaited<ReturnType<typeof getHomeStats>>) =>
+      Object.fromEntries(stats.years.flatMap((y) => y.courses).map((c) => [c.code, c.fileCount]));
+    expect(fileCounts(await getHomeStats(null))).toEqual({ TEST301: 2, TEST302: 0, TEST501: 1 });
+    expect(fileCounts(await getHomeStats(admin))).toEqual({ TEST301: 3, TEST302: 0, TEST501: 2 });
   });
 });

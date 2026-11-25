@@ -185,7 +185,7 @@ mock exam generation, personalization.
   checks that need a function or compare columns; `up` in a transaction;
   timestamps default with `Sequelize.fn('now')`, never `Sequelize.NOW`.
 - Email: a Postgres `email_jobs` queue processed with `after()` and a daily Vercel Cron sweep
-  (`/api/cron/email-jobs`, `CRON_SECRET`); Brevo in production, a log driver off Vercel; payloads never
+  (`/api/cron/email-jobs`, `CRON_SECRET`); Resend in production (sending from a verified subdomain such as `mail.unimate-fs.online`), a log driver off Vercel; payloads never
   hold secrets. See `docs/backend-architecture.md`.
 - Error tracking: Sentry (`@sentry/nextjs`), errors only, nothing personal attached, browser SDK loaded lazily; enabled only when a DSN is set (production on Vercel), a no-op everywhere else.
 
@@ -242,7 +242,7 @@ mock exam generation, personalization.
   without a name), labelled with the name (never the email). Its menu holds the account only: the name,
   Admin (admins only) and Sign out; pages never go in it.
 - Page width: every site page, the header and the footer use the `page-container` utility (`globals.css`): content up to 1280px (`max-w-7xl`), centred, side padding 16px on a phone, 24px from sm, 32px from lg, so the edges never move between pages; the reader follows it too. The account pages keep their full-screen split.
-- Home (spec #179, ticket #181; more sections arrive with #182 to #184): a hero card, then "Choose your year". The hero
+- Home (spec #179, tickets #181 and #182; more sections arrive with #183 and #184): a hero card, then "Choose your year". The hero
   (`hero.tsx`) says "Computer Science · Faculty of Science · Hadath", the headline "Find any course, exam or lecture.", one
   plain line, a real search field and two buttons, "Previous exams" (to `/exams`) and "Choose your year" (to `#years`). The
   field (`home-search.tsx`, `role="search"`, label "Search courses, chapters and files") is a plain GET form to
@@ -260,10 +260,10 @@ mock exam generation, personalization.
   the marker when the session check answers signed out or the progress request fails, or after 8 s without an answer
   (`LOADING_GIVE_UP_MS`; a band arriving later then moves the years once); it sets it when a band shows, follows sign-in
   and sign-out events and stores the measured height on a phone). A visitor without the hint gets the static page and no
-  extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years; a
-  signed-in student band, hero, years (`.home-*` rules in `globals.css`; no content is rendered twice).
+  extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years, course browser; a
+  signed-in student band, hero, years, course browser (`.home-*` rules in `globals.css`; no content is rendered twice).
 - Home "Recently added" and previous-exam shortcuts (ticket #183; `recent.tsx`, in the same Suspense boundary as the year
-  cards, after them on desktop and phone, `.home-recent` / `.home-exams` order 4 and 5 below md): "Recently added" is a
+  cards, after the course browser on desktop and phone, `.home-recent` / `.home-exams` order 5 and 6 below md): "Recently added" is a
   region of the newest published files (`listRecentResources(null)` in `src/services/resources/recent.ts`, newest
   `createdAt` first, `RECENT_LIMIT` 6, the visitor's view so a draft never shows; no schema change), two columns from sm, each
   a 56px-tall link to the reader with the type's icon box in its type colour, the title, "CODE · Lecture · 2 days ago"
@@ -271,12 +271,21 @@ mock exam generation, personalization.
   `/search`. With fewer than `RECENT_MIN` (3) files the section hides itself. "Previous exams" is a region with three
   links, "Partial exams", "Final exams" and "Second session", to `/exams?session=partial|final|second`. Not a progress
   signal: nothing here reads the session or marks anything.
-- Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats().years`; its `totals` are still computed, for #182 to #183; inside one
+- Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats().years`; its `totals` are still computed, for #183; inside one
   Suspense boundary with `YearCardsSkeleton`): "Choose your year", one card per entry of `YEARS` (four: one column on a
   phone, two from sm, four from lg): the year circle (`YearCircle`, year colour) and "Second year", up to four
   course-code chips in the year's tint and "+N more", "7 courses · 101 files" and "Open →", lift and the year's border
   on hover, rising in as the page loads; a year with no course is a muted dashed card, not a link, "No courses yet";
-  wording in `year-card.ts`. A signed-in student also gets the "Your progress" band (`ProgressBand`, `data-personal`)
+  wording in `year-card.ts`. Under the cards, "Jump straight to a course" (`#courses`, `course-browser.tsx`, a client
+  component fed by the same `getHomeStats().years`, whose entries now also carry `courses: { code, title, semester,
+  fileCount }[]` in semester-then-code order, `fileCount` counting visible files only, so the page stays static and
+  needs no account): Radix `Tabs` (real tabs, arrow keys, the selection announced) First year, Second year, Third year,
+  Master 1, the selected one in the year's solid colour, 44px tall, scrolling sideways inside their row on a phone
+  (`scroll-fade`, 24px end padding); it opens on the first year that has a course. The panel is a grid of course cards
+  (one column on a phone, two from sm, three from lg): code chip in the year's tint, title, "Semester 1" / "Semester 2"
+  (`semesterLabel`, never the stored number) · "N files", an arrow; each links to `/courses/CODE`. A year with none
+  says "No courses yet." On a phone it comes after the years (`.home-courses`); `YearCardsSkeleton` covers it. A
+  signed-in student also gets the "Your progress" band (`ProgressBand`, `data-personal`)
   after the hero on desktop and first on a phone: loaded by the browser from `GET /api/v1/progress` after the page shows
   (Home stays static; a visitor gets no band and no request), "N active days this week", up to three of My courses by
   latest completion (ring, code, title, "x of y files · P%" or "✓ Finished", or "Exams: x of y done" for an exams-only
@@ -644,9 +653,13 @@ mock exam generation, personalization.
 - Sign-up page (`/sign-up`; a signed-in visitor is redirected, like on `/sign-in`): "Create your account", fields Name (optional), Email and Password (show/hide, hint "At least 10 characters.", length also validated in the browser; no repeat field), "Create account", and a link to `/sign-in`. Field errors from a 400 show on the fields; a 429 says there were too many sign-ups from this network. On 202 the address is kept in `sessionStorage` (`signup:email`, never in the URL) and the page goes to `/sign-up/check-email`.
 - Check-email page (`/sign-up/check-email`): "Check your inbox" and "We sent a confirmation link to s•••@gmail.com." (`maskEmail`: first character of the local part, •••, the full domain; with no stored address it says "your email address" and the resend control asks for it). "Send a new link" is disabled for 60 s on arrival and after each send, with a countdown; 202 says "A new link is on its way.", 429 asks to wait and disables for `retryAfterSeconds` (shown at most 120 s). "Wrong email? Start again" clears the stored address and goes to `/sign-up`.
 - Confirm-email page (`/confirm-email?token=…`, `referrer: no-referrer`): the browser, not the server, reads the token, removes it from the address bar with `history.replaceState` and posts it once to `/api/v1/auth/confirm`, so mail scanners that prefetch the link cannot use it up. Success: "Email confirmed" and a Sign in button. An expired, used, unknown or missing token: "This link can't be used", a resend form that asks for the address, and a Sign in link.
-- Branding is the plain text "University Assistant". No university logo, crest or name as
-  branding. The site's own icon is a "UA" mark, white on a rounded square in the primary blue `#3E4EB8`
-  (`src/app/icon.svg`, `apple-icon.png`, `favicon.ico`; no Next.js sample files remain in `public`).
+- Branding is the plain text "Unimate" (owner, 2026-11-25; domain `unimate-fs.online`, "fs" for Faculty of Science;
+  the repository and this file's title keep the working name UniversityAssistant). It appears in the header, the phone
+  menu, the account-page brand panel, the page titles and `og:site_name` (`SITE_NAME`), the email sender name and the
+  text of the emails. No university logo, crest or name as branding. The site's own icon is still a "UA" mark, white on a
+  rounded square in the primary blue `#3E4EB8` (`src/app/icon.svg`, `apple-icon.png`, `favicon.ico`, and the link-preview
+  image `opengraph-image.png`, which also carries the old name); they are unchanged until the owner decides the
+  identity and logo (follow-up). No Next.js sample files remain in `public`.
 - Page titles and link previews: the course tab is "CODE Title" and the chapter tab "CODE · Chapter N: Title"
   (`courseTitle`, `chapterTitle` and `pageMetadata` in `src/lib/page-title.ts`, used by `generateMetadata` on
   both pages with the light `getCourseTitle` / `getChapterTitle` queries, never the course's files; an unknown course or

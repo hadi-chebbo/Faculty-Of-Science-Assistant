@@ -26,6 +26,11 @@ The home page's short list of the newest published files, by the time they were 
 course). A visitor's view: a draft is never in it. Not "new since your last visit" and not progress.
 _Avoid_: Latest, updates, what's new
 
+**Course browser**:
+The "Jump straight to a course" section of Home: tabs by year, and under the chosen tab that year's courses as cards
+(code, title, "Semester 1" or "Semester 2", file count). A shortcut to a course page, not a new way to organise courses.
+_Avoid_: Course picker, course finder (the Search page finds)
+
 **Lecturer**:
 The person who taught or wrote a resource, named as written (e.g. "Dr. Ali Ghorayeb"). A resource
 has at most one lecturer, or none when unknown; a course's lecturers are those of its resources.

@@ -13,7 +13,7 @@ test("health endpoint reports the database is reachable", async ({ request }) =>
 
 test("the site has link-preview and theme-colour tags", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "University Assistant");
+  await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "Unimate");
   await expect(page.locator('meta[property="og:type"]')).toHaveAttribute("content", "website");
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", /opengraph-image/);
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
