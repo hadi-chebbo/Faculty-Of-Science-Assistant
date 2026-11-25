@@ -14,7 +14,7 @@ export function ContinueCard() {
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted"><div className="h-full w-[62%] rounded-full bg-primary" /></div>
         <span className="text-sm font-semibold tabular-nums text-heading">62%</span>
       </div>
-      <div className="mt-4 flex items-center gap-3">
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-4">
         <Link href="/progress" className="inline-flex h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
           <Play aria-hidden className="size-4 fill-current" /> Resume
         </Link>
@@ -27,10 +27,10 @@ export function ContinueCard() {
 export function WeekDots() {
   const active = [true, true, false, true, false, false, false];
   return (
-    <div className="ml-auto flex items-center gap-2">
+    <div className="flex items-center gap-2 sm:ml-auto">
       <ul aria-label="This week" className="flex gap-1">
         {"MTWTFSS".split("").map((d, i) => (
-          <li key={i} className={`flex size-6 items-center justify-center rounded-full text-[0.6875rem] font-semibold ${active[i] ? "bg-primary text-primary-foreground" : "border text-muted-foreground"} ${i === 3 ? "ring-2 ring-primary/40 ring-offset-2 ring-offset-card" : ""}`}>
+          <li key={i} className={`flex size-7 items-center justify-center rounded-full text-xs font-semibold ${active[i] ? "bg-primary text-primary-foreground" : "border text-muted-foreground"} ${i === 3 ? "ring-2 ring-primary/40 ring-offset-2 ring-offset-card" : ""}`}>
             {d}
           </li>
         ))}
@@ -44,7 +44,7 @@ export function LatestList() {
     <div className="rounded-3xl border bg-card p-5">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-heading">Recently added</h2>
-        <Link href="/search" className="flex items-center gap-1 text-sm font-medium text-link">See all <ArrowRight aria-hidden className="size-4" /></Link>
+        <Link href="/search" className="-mr-2 inline-flex min-h-11 items-center gap-1 px-2 text-sm font-medium text-link">See all <ArrowRight aria-hidden className="size-4" /></Link>
       </div>
       <ul className="mt-3 space-y-2">
         {SAMPLE_LATEST.map((f) => {
