@@ -4,12 +4,15 @@ import { createResendMailer, type ResendConfig } from "./resend";
 import type { Mailer } from "./types";
 
 // Like storage/config.ts: nothing here runs at import time, so `next build` needs no mail setup.
+// A sender is one line: a line break in either value could add a header to the message.
+const NO_LINE_BREAK = /^[^\r\n]*$/;
+
 const mailEnvSchema = z.object({
   MAIL_DRIVER: z.enum(["log", "resend"]).optional(),
   MAIL_LOG_FILE: z.string().min(1).optional(),
   RESEND_API_KEY: z.string().min(1).optional(),
-  MAIL_FROM: z.string().min(1).optional(),
-  MAIL_FROM_NAME: z.string().min(1).default("University Assistant"),
+  MAIL_FROM: z.string().min(1).regex(NO_LINE_BREAK, "must be one line").optional(),
+  MAIL_FROM_NAME: z.string().min(1).regex(NO_LINE_BREAK, "must be one line").default("University Assistant"),
   VERCEL: z.string().optional(),
 });
 

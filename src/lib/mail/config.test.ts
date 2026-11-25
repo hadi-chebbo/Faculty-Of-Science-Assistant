@@ -39,6 +39,12 @@ describe("parseMailConfig", () => {
     });
   });
 
+  it("refuses a line break in the sender address or name", () => {
+    const base = { MAIL_DRIVER: "resend", RESEND_API_KEY: "k" };
+    expect(() => parseMailConfig({ ...base, MAIL_FROM: "a@b.co\nBcc: x@y.z" })).toThrow(/MAIL_FROM: must be one line/);
+    expect(() => parseMailConfig({ ...base, MAIL_FROM: "a@b.co", MAIL_FROM_NAME: "Uni\r\nBcc: x@y.z" })).toThrow(/MAIL_FROM_NAME: must be one line/);
+  });
+
   it("no longer accepts brevo", () => {
     expect(() => parseMailConfig({ MAIL_DRIVER: "brevo", BREVO_API_KEY: "k", MAIL_FROM: "a@b.co" })).toThrow(/Invalid mail configuration/);
   });

@@ -44,7 +44,7 @@ describe("resendFrom", () => {
     expect(resendFrom("Unimate", "noreply@mail.example.com")).toBe('"Unimate" <noreply@mail.example.com>');
   });
 
-  it("escapes quotes and backslashes in the name so it cannot break out of the header", () => {
+  it("escapes quotes and backslashes in the name so it cannot end the name early", () => {
     expect(resendFrom('Uni "Mate" \\ co', "a@b.co")).toBe('"Uni \\"Mate\\" \\\\ co" <a@b.co>');
   });
 });
