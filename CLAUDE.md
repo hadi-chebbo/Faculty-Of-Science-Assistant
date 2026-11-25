@@ -260,8 +260,8 @@ mock exam generation, personalization.
   the marker when the session check answers signed out or the progress request fails, or after 8 s without an answer
   (`LOADING_GIVE_UP_MS`; a band arriving later then moves the years once); it sets it when a band shows, follows sign-in
   and sign-out events and stores the measured height on a phone). A visitor without the hint gets the static page and no
-  extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years; a
-  signed-in student band, hero, years (`.home-*` rules in `globals.css`; no content is rendered twice).
+  extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years, course browser; a
+  signed-in student band, hero, years, course browser (`.home-*` rules in `globals.css`; no content is rendered twice).
 - Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats().years`; its `totals` are still computed, for #183; inside one
   Suspense boundary with `YearCardsSkeleton`): "Choose your year", one card per entry of `YEARS` (four: one column on a
   phone, two from sm, four from lg): the year circle (`YearCircle`, year colour) and "Second year", up to four

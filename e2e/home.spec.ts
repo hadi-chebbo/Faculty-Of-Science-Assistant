@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 // Needs the demo data: SEED_DEMO_DATA=true npm run db:seed (courses in all six semesters).
 // Read-only: it only visits pages.
@@ -213,46 +213,46 @@ test("the pre-paint script marks the document from the hint and the stored band 
 
 // "Jump straight to a course": tabs by year and that year's course cards.
 test.describe("the course browser", () => {
-  const browser = (page: import("@playwright/test").Page) => page.locator("#courses");
+  const courseBrowser = (page: Page) => page.locator("#courses");
 
   test("opens on a year with courses; switching a tab shows that year's courses, each linking to its page", async ({ page }) => {
     await page.goto("/");
-    const tabs = browser(page).getByRole("tab");
+    const tabs = courseBrowser(page).getByRole("tab");
     await expect(tabs).toHaveText(["First year", "Second year", "Third year", "Master 1"]);
-    await expect(browser(page).getByRole("tab", { selected: true })).toHaveCount(1);
+    await expect(courseBrowser(page).getByRole("tab", { selected: true })).toHaveCount(1);
 
-    await browser(page).getByRole("tab", { name: "Second year" }).click();
-    await expect(browser(page).getByRole("tab", { name: "Second year" })).toHaveAttribute("aria-selected", "true");
-    const card = browser(page).getByRole("tabpanel").getByRole("link", { name: /DEMO301/ });
+    await courseBrowser(page).getByRole("tab", { name: "Second year" }).click();
+    await expect(courseBrowser(page).getByRole("tab", { name: "Second year" })).toHaveAttribute("aria-selected", "true");
+    const card = courseBrowser(page).getByRole("tabpanel").getByRole("link", { name: /DEMO301/ });
     await expect(card).toHaveAttribute("href", "/courses/DEMO301");
     // Semester as students read it, never the stored number; a file count.
     await expect(card).toContainText(/Semester [12] · \d+ files?/);
-    await expect(browser(page).getByRole("tabpanel")).not.toContainText(/semester [3-8]/i);
+    await expect(courseBrowser(page).getByRole("tabpanel")).not.toContainText(/semester [3-8]/i);
 
-    await browser(page).getByRole("tab", { name: "First year" }).click();
-    await expect(browser(page).getByRole("tabpanel").getByRole("link", { name: /DEMO110/ })).toHaveAttribute("href", "/courses/DEMO110");
-    await expect(browser(page).getByRole("tabpanel").getByRole("link", { name: /DEMO301/ })).toHaveCount(0);
+    await courseBrowser(page).getByRole("tab", { name: "First year" }).click();
+    await expect(courseBrowser(page).getByRole("tabpanel").getByRole("link", { name: /DEMO110/ })).toHaveAttribute("href", "/courses/DEMO110");
+    await expect(courseBrowser(page).getByRole("tabpanel").getByRole("link", { name: /DEMO301/ })).toHaveCount(0);
 
-    await browser(page).getByRole("tabpanel").getByRole("link", { name: /DEMO110/ }).click();
+    await courseBrowser(page).getByRole("tabpanel").getByRole("link", { name: /DEMO110/ }).click();
     await expect(page).toHaveURL(/\/courses\/DEMO110$/);
   });
 
   test("arrow keys move between tabs and the selection follows", async ({ page, isMobile }) => {
     test.skip(isMobile, "keyboard");
     await page.goto("/");
-    const first = browser(page).getByRole("tab", { name: "First year" });
+    const first = courseBrowser(page).getByRole("tab", { name: "First year" });
     await first.click();
     await first.press("ArrowRight");
-    await expect(browser(page).getByRole("tab", { name: "Second year" })).toBeFocused();
-    await expect(browser(page).getByRole("tab", { name: "Second year" })).toHaveAttribute("aria-selected", "true");
+    await expect(courseBrowser(page).getByRole("tab", { name: "Second year" })).toBeFocused();
+    await expect(courseBrowser(page).getByRole("tab", { name: "Second year" })).toHaveAttribute("aria-selected", "true");
     await page.keyboard.press("ArrowLeft");
     await expect(first).toHaveAttribute("aria-selected", "true");
   });
 
   test("Master 1 says No courses yet while it has none", async ({ page }) => {
     await page.goto("/");
-    await browser(page).getByRole("tab", { name: "Master 1" }).click();
-    const panel = browser(page).getByRole("tabpanel");
+    await courseBrowser(page).getByRole("tab", { name: "Master 1" }).click();
+    const panel = courseBrowser(page).getByRole("tabpanel");
     if ((await panel.innerText()).includes("No courses yet")) {
       await expect(panel.getByRole("link")).toHaveCount(0);
     } else {
@@ -264,13 +264,13 @@ test.describe("the course browser", () => {
     test.skip(!isMobile, "phone layout");
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
-    const list = browser(page).getByRole("tablist");
+    const list = courseBrowser(page).getByRole("tablist");
     await list.scrollIntoViewIfNeeded();
     const sizes = await list.evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
     expect(sizes.scroll).toBeGreaterThan(sizes.client);
     await list.evaluate((el) => (el.scrollLeft = el.scrollWidth));
-    await expect(browser(page).getByRole("tab", { name: "Master 1" })).toBeInViewport();
-    for (const tab of await browser(page).getByRole("tab").all()) {
+    await expect(courseBrowser(page).getByRole("tab", { name: "Master 1" })).toBeInViewport();
+    for (const tab of await courseBrowser(page).getByRole("tab").all()) {
       expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(43.5);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
