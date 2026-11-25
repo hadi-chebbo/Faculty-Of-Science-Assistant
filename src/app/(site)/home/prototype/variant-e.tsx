@@ -15,22 +15,22 @@ export function VariantE() {
     <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container flex flex-col gap-10 py-6 md:gap-12 md:py-8">
       <ProtoStyles />
 
-      {/* hero: the site's own blue, flat; the continue card is for signed-in students only */}
-      <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <div className="proto-rise rounded-3xl bg-brand-panel p-6 text-brand-panel-foreground md:p-10">
-          <p className="text-sm font-medium text-white/80">Computer Science · Faculty of Science · Hadath</p>
-          <h1 className="mt-3 max-w-xl text-balance text-4xl font-bold leading-[1.1] tracking-tight text-white md:text-5xl">
-            Lectures, exercises and past exams for every course.
-          </h1>
-          <p className="mt-3 max-w-md text-lg text-white/80">Choose your year, or search by course code.</p>
-          <SearchBox className="mt-7 max-w-lg text-foreground" />
-          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-white">
-            <Link href="/exams" className="inline-flex items-center gap-1.5 underline-offset-4 hover:underline">Past exams <ArrowRight aria-hidden className="size-4" /></Link>
-            <Link href="#years" className="inline-flex items-center gap-1.5 underline-offset-4 hover:underline">Choose your year <ArrowRight aria-hidden className="size-4" /></Link>
-          </div>
+      {/* hero: centred, the search box is the main action (the first-round "spotlight" search), flat colour */}
+      <section className="proto-rise rounded-3xl border bg-card px-5 py-12 text-center md:py-20">
+        <p className="text-sm font-medium text-link">Computer Science · Faculty of Science · Hadath</p>
+        <h1 className="mx-auto mt-3 max-w-3xl text-balance text-4xl font-bold leading-[1.08] tracking-tight md:text-6xl">
+          Find any course, exam or lecture.
+        </h1>
+        <p className="mx-auto mt-3 max-w-md text-lg text-muted-foreground">Search by course code or topic, or choose your year below.</p>
+        <SearchBox className="mx-auto mt-8 max-w-2xl rounded-2xl px-5 py-5 text-left text-lg shadow-xl" />
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <Link href="/exams" className="inline-flex h-11 items-center rounded-full border bg-background px-4 text-sm font-medium transition-colors hover:border-primary/60 hover:text-link">Previous exams</Link>
+          <Link href="#years" className="inline-flex h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-transform hover:-translate-y-0.5">Choose your year</Link>
         </div>
-        <div className="proto-rise [animation-delay:100ms]"><ContinueCard /></div>
       </section>
+
+      {/* signed-in students only */}
+      <div className="proto-rise [animation-delay:100ms]"><ContinueCard /></div>
 
       {/* years: the way in, as before */}
       <section id="years" className="scroll-mt-20">
