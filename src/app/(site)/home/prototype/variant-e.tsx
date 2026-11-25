@@ -5,7 +5,8 @@ import Link from "next/link";
 import { yearHref, type Year } from "@/lib/years";
 import { ProtoStyles } from "./styles";
 import { SAMPLE_COURSES, YEAR_STYLE, type YearKey } from "./lang";
-import { ContinueCard, LatestList, QuickLinks, SearchBox } from "./parts";
+import { ContinueCard, LatestList, QuickLinks } from "./parts";
+import { SearchBox } from "./search-box";
 import { YearBrowser } from "./year-browser";
 
 const KEYS: YearKey[] = [1, 2, 3, 4];
@@ -16,7 +17,12 @@ export function VariantE() {
       <ProtoStyles />
 
       {/* hero: centred, the search box is the main action (the first-round "spotlight" search), flat colour */}
-      <section className="proto-rise rounded-3xl border bg-card px-5 py-12 text-center md:py-20">
+      <section className="proto-rise relative isolate overflow-hidden rounded-3xl border bg-card px-5 py-12 text-center md:py-20">
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          <div className="proto-float absolute -left-20 -top-24 size-72 rounded-full bg-sky-500/25 blur-3xl" />
+          <div className="proto-float absolute -bottom-24 right-0 size-80 rounded-full bg-violet-500/20 blur-3xl [animation-delay:-5s]" />
+          <div className="proto-float absolute left-1/2 top-4 size-48 rounded-full bg-amber-400/20 blur-3xl [animation-delay:-8s]" />
+        </div>
         <p className="text-sm font-medium text-link">Computer Science · Faculty of Science · Hadath</p>
         <h1 className="mx-auto mt-3 max-w-3xl text-balance text-4xl font-bold leading-[1.08] tracking-tight md:text-6xl">
           Find any course, exam or lecture.

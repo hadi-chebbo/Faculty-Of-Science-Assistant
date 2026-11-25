@@ -1,24 +1,7 @@
 // PROTOTYPE (throwaway): pieces both new variants use, written in the shared design language.
-import { ArrowRight, Play, Search } from "lucide-react";
+import { ArrowRight, Play } from "lucide-react";
 import Link from "next/link";
 import { SAMPLE_LATEST, TYPE_STYLE } from "./lang";
-
-export function SearchBox({ className = "" }: { className?: string }) {
-  return (
-    <Link
-      href="/search"
-      className={`group flex items-center gap-3 rounded-2xl border bg-background px-4 py-3.5 shadow-lg shadow-primary/10 transition-[box-shadow,border-color] hover:border-primary/60 hover:shadow-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${className}`}
-    >
-      <Search aria-hidden className="size-5 shrink-0 text-link" />
-      <span className="proto-cycle relative h-6 flex-1 overflow-hidden text-muted-foreground">
-        {["Search by course code or topic", "Try: final exam 2025", "Try: graphs", "Try: partial"].map((t, i) => (
-          <span key={t} className="absolute inset-0 truncate" style={{ animationDelay: `${i * 2.5}s` }}>{t}</span>
-        ))}
-      </span>
-      <span className="hidden rounded-md border bg-muted px-2 py-0.5 text-xs text-muted-foreground sm:block">Search</span>
-    </Link>
-  );
-}
 
 // Signed-in only in the real page (from /api/v1/progress); sample values here.
 export function ContinueCard() {
