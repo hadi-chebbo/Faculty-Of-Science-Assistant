@@ -12,7 +12,7 @@ const mailEnvSchema = z.object({
   MAIL_LOG_FILE: z.string().min(1).optional(),
   RESEND_API_KEY: z.string().min(1).optional(),
   MAIL_FROM: z.string().min(1).regex(NO_LINE_BREAK, "must be one line").optional(),
-  MAIL_FROM_NAME: z.string().min(1).regex(NO_LINE_BREAK, "must be one line").default("University Assistant"),
+  MAIL_FROM_NAME: z.string().min(1).regex(NO_LINE_BREAK, "must be one line").default("Unimate"),
   VERCEL: z.string().optional(),
 });
 

@@ -11,7 +11,7 @@ export function BrandPanel() {
         href="/"
         className="rounded-sm text-xl font-semibold tracking-tight outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-brand-panel-foreground/50"
       >
-        University Assistant
+        Unimate
       </Link>
       <p className="mt-6 text-balance text-2xl font-bold leading-tight">
         Every course, chapter and past exam in one place.

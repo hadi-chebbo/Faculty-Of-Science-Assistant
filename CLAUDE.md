@@ -635,9 +635,13 @@ mock exam generation, personalization.
 - Sign-up page (`/sign-up`; a signed-in visitor is redirected, like on `/sign-in`): "Create your account", fields Name (optional), Email and Password (show/hide, hint "At least 10 characters.", length also validated in the browser; no repeat field), "Create account", and a link to `/sign-in`. Field errors from a 400 show on the fields; a 429 says there were too many sign-ups from this network. On 202 the address is kept in `sessionStorage` (`signup:email`, never in the URL) and the page goes to `/sign-up/check-email`.
 - Check-email page (`/sign-up/check-email`): "Check your inbox" and "We sent a confirmation link to s•••@gmail.com." (`maskEmail`: first character of the local part, •••, the full domain; with no stored address it says "your email address" and the resend control asks for it). "Send a new link" is disabled for 60 s on arrival and after each send, with a countdown; 202 says "A new link is on its way.", 429 asks to wait and disables for `retryAfterSeconds` (shown at most 120 s). "Wrong email? Start again" clears the stored address and goes to `/sign-up`.
 - Confirm-email page (`/confirm-email?token=…`, `referrer: no-referrer`): the browser, not the server, reads the token, removes it from the address bar with `history.replaceState` and posts it once to `/api/v1/auth/confirm`, so mail scanners that prefetch the link cannot use it up. Success: "Email confirmed" and a Sign in button. An expired, used, unknown or missing token: "This link can't be used", a resend form that asks for the address, and a Sign in link.
-- Branding is the plain text "University Assistant". No university logo, crest or name as
-  branding. The site's own icon is a "UA" mark, white on a rounded square in the primary blue `#3E4EB8`
-  (`src/app/icon.svg`, `apple-icon.png`, `favicon.ico`; no Next.js sample files remain in `public`).
+- Branding is the plain text "Unimate" (owner, 2026-11-25; domain `unimate-fs.online`, "fs" for Faculty of Science;
+  the repository and this file's title keep the working name UniversityAssistant). It appears in the header, the phone
+  menu, the account-page brand panel, the page titles and `og:site_name` (`SITE_NAME`), the email sender name and the
+  text of the emails. No university logo, crest or name as branding. The site's own icon is still a "UA" mark, white on a
+  rounded square in the primary blue `#3E4EB8` (`src/app/icon.svg`, `apple-icon.png`, `favicon.ico`, and the link-preview
+  image `opengraph-image.png`, which also carries the old name); they are unchanged until the owner decides the
+  identity and logo (follow-up). No Next.js sample files remain in `public`.
 - Page titles and link previews: the course tab is "CODE Title" and the chapter tab "CODE · Chapter N: Title"
   (`courseTitle`, `chapterTitle` and `pageMetadata` in `src/lib/page-title.ts`, used by `generateMetadata` on
   both pages with the light `getCourseTitle` / `getChapterTitle` queries, never the course's files; an unknown course or

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createResendMailer, resendFrom } from "./resend";
 
-const config = { apiKey: "re_key-123", fromEmail: "noreply@mail.example.com", fromName: "University Assistant" };
+const config = { apiKey: "re_key-123", fromEmail: "noreply@mail.example.com", fromName: "Unimate" };
 const message = { to: "a@example.com", subject: "Hi", text: "plain", html: "<p>html</p>" };
 
 describe("Resend mailer", () => {
@@ -14,7 +14,7 @@ describe("Resend mailer", () => {
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer re_key-123");
     expect((init.headers as Record<string, string>)["content-type"]).toBe("application/json");
     expect(JSON.parse(init.body as string)).toEqual({
-      from: '"University Assistant" <noreply@mail.example.com>',
+      from: '"Unimate" <noreply@mail.example.com>',
       to: ["a@example.com"],
       subject: "Hi",
       html: "<p>html</p>",

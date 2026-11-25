@@ -4,7 +4,7 @@ import Link from "next/link";
 export function BrandLink() {
   return (
     <Link href="/" className="font-semibold tracking-tight text-heading">
-      University Assistant
+      Unimate
     </Link>
   );
 }
