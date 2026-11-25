@@ -107,7 +107,7 @@ export function ExamsListSkeleton() {
   );
 }
 
-// Home page: the year cards.
+// Home page: the year cards and the numbers row under them.
 export function YearCardsSkeleton() {
   return (
     <div className="contents" role="status" aria-label="Loading years">
@@ -124,17 +124,10 @@ export function YearCardsSkeleton() {
           ))}
         </div>
       </div>
-      <div className="home-courses">
-        <div className="mb-4">
-          <Skeleton className="h-8 w-72" />
-          <Skeleton className="mt-2.5 h-1 w-12" />
-        </div>
-        <Skeleton className="h-11 w-full rounded-full" />
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }, (_, i) => (
-            <Skeleton key={i} className="h-24 w-full rounded-2xl" />
-          ))}
-        </div>
+      <div className="home-stats grid grid-cols-2 gap-3 md:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-32 w-full rounded-3xl md:h-36" />
+        ))}
       </div>
     </div>
   );

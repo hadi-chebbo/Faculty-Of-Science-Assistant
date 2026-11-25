@@ -21,10 +21,10 @@ resource type (lecture blue, notes teal, exercise orange, exam rose; solutions a
 the design language and always accompanied by the year's name or the type's name, never used alone.
 _Avoid_: Theme colour, category colour
 
-**Course browser**:
-The "Jump straight to a course" section of Home: tabs by year, and under the chosen tab that year's courses as cards
-(code, title, "Semester 1" or "Semester 2", file count). A shortcut to a course page, not a new way to organise courses.
-_Avoid_: Course picker, course finder (the Search page finds)
+**Numbers row**:
+The row of live catalogue numbers on Home, under the year cards: files, courses, previous exams and the span of exam
+years covered. Counts only published material. It replaced the "Jump straight to a course" course browser (2026-11-25).
+_Avoid_: Stats, KPIs, numbers strip (the older, removed version)
 
 **Lecturer**:
 The person who taught or wrote a resource, named as written (e.g. "Dr. Ali Ghorayeb"). A resource

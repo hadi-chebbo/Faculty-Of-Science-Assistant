@@ -211,68 +211,48 @@ test("the pre-paint script marks the document from the hint and the stored band 
   release();
 });
 
-// "Jump straight to a course": tabs by year and that year's course cards.
-test.describe("the course browser", () => {
-  const courseBrowser = (page: Page) => page.locator("#courses");
+// The numbers row under the year cards: live counts of published material, replacing the course browser.
+test.describe("the numbers row", () => {
+  const numbers = (page: Page) => page.getByRole("region", { name: "In numbers" });
 
-  test("opens on a year with courses; switching a tab shows that year's courses, each linking to its page", async ({ page }) => {
+  test("shows files, courses, previous exams and the exam years, after the year cards", async ({ page }) => {
     await page.goto("/");
-    const tabs = courseBrowser(page).getByRole("tab");
-    await expect(tabs).toHaveText(["First year", "Second year", "Third year", "Master 1"]);
-    await expect(courseBrowser(page).getByRole("tab", { selected: true })).toHaveCount(1);
-
-    await courseBrowser(page).getByRole("tab", { name: "Second year" }).click();
-    await expect(courseBrowser(page).getByRole("tab", { name: "Second year" })).toHaveAttribute("aria-selected", "true");
-    const card = courseBrowser(page).getByRole("tabpanel").getByRole("link", { name: /DEMO301/ });
-    await expect(card).toHaveAttribute("href", "/courses/DEMO301");
-    // Semester as students read it, never the stored number; a file count.
-    await expect(card).toContainText(/Semester [12] · \d+ files?/);
-    await expect(courseBrowser(page).getByRole("tabpanel")).not.toContainText(/semester [3-8]/i);
-
-    await courseBrowser(page).getByRole("tab", { name: "First year" }).click();
-    await expect(courseBrowser(page).getByRole("tabpanel").getByRole("link", { name: /DEMO110/ })).toHaveAttribute("href", "/courses/DEMO110");
-    await expect(courseBrowser(page).getByRole("tabpanel").getByRole("link", { name: /DEMO301/ })).toHaveCount(0);
-
-    await courseBrowser(page).getByRole("tabpanel").getByRole("link", { name: /DEMO110/ }).click();
-    await expect(page).toHaveURL(/\/courses\/DEMO110$/);
+    const tiles = numbers(page).getByRole("listitem");
+    await expect(tiles).toHaveCount(4);
+    await expect(tiles.nth(0)).toHaveText(/^[\d,]+\s*files?$/);
+    await expect(tiles.nth(1)).toHaveText(/^[\d,]+\s*courses?$/);
+    await expect(tiles.nth(2)).toHaveText(/^[\d,]+\s*previous exams?$/);
+    await expect(tiles.nth(3)).toHaveText(/^(\d{4})–(\d{4})\s*exam years? covered$/);
+    await expect(numbers(page).getByRole("link")).toHaveCount(0);
+    expect(await top(page.getByRole("heading", { name: "Choose your year" }))).toBeLessThan(await top(numbers(page)));
   });
 
-  test("arrow keys move between tabs and the selection follows", async ({ page, isMobile }) => {
-    test.skip(isMobile, "keyboard");
+  test("the course browser is gone", async ({ page }) => {
     await page.goto("/");
-    const first = courseBrowser(page).getByRole("tab", { name: "First year" });
-    await first.click();
-    await first.press("ArrowRight");
-    await expect(courseBrowser(page).getByRole("tab", { name: "Second year" })).toBeFocused();
-    await expect(courseBrowser(page).getByRole("tab", { name: "Second year" })).toHaveAttribute("aria-selected", "true");
-    await page.keyboard.press("ArrowLeft");
-    await expect(first).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("heading", { name: "Jump straight to a course" })).toHaveCount(0);
+    await expect(page.locator("main").getByRole("tablist")).toHaveCount(0);
   });
 
-  test("Master 1 says No courses yet while it has none", async ({ page }) => {
-    await page.goto("/");
-    await courseBrowser(page).getByRole("tab", { name: "Master 1" }).click();
-    const panel = courseBrowser(page).getByRole("tabpanel");
-    if ((await panel.innerText()).includes("No courses yet")) {
-      await expect(panel.getByRole("link")).toHaveCount(0);
-    } else {
-      await expect(panel.getByRole("link").first()).toHaveAttribute("href", /\/courses\//);
-    }
-  });
-
-  test("on a phone the tabs scroll sideways inside their row, nothing else does, and targets are 44px", async ({ page, isMobile }) => {
+  test("on a phone the tiles sit two by two, nothing scrolls sideways", async ({ page, isMobile }) => {
     test.skip(!isMobile, "phone layout");
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
-    const list = courseBrowser(page).getByRole("tablist");
-    await list.scrollIntoViewIfNeeded();
-    const sizes = await list.evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
-    expect(sizes.scroll).toBeGreaterThan(sizes.client);
-    await list.evaluate((el) => (el.scrollLeft = el.scrollWidth));
-    await expect(courseBrowser(page).getByRole("tab", { name: "Master 1" })).toBeInViewport();
-    for (const tab of await courseBrowser(page).getByRole("tab").all()) {
-      expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(43.5);
-    }
+    const tiles = numbers(page).getByRole("listitem");
+    await expect(tiles).toHaveCount(4);
+    // Layout positions (offsetTop ignores the rise-in transform, which staggers the tiles while they appear).
+    const tops = await tiles.evaluateAll((items) => items.map((el) => ({ top: (el as HTMLElement).offsetTop, height: (el as HTMLElement).offsetHeight })));
+    expect(tops[0].top).toBe(tops[1].top);
+    expect(tops[2].top).toBe(tops[3].top);
+    expect(tops[2].top).toBeGreaterThanOrEqual(tops[0].top + tops[0].height);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  });
+
+  test("on a phone a visitor sees the hero, the years, then the numbers", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "phone layout");
+    await page.goto("/");
+    const headline = await top(page.getByRole("heading", { level: 1 }));
+    const years = await top(page.getByRole("heading", { name: "Choose your year" }));
+    expect(headline).toBeLessThan(years);
+    expect(years).toBeLessThan(await top(numbers(page)));
   });
 });
