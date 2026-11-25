@@ -382,7 +382,7 @@
   }
   html[data-signed-in] .home-band-slot {
     display: block;
-    min-height: var(--home-band-h, 16.375rem);
+    min-height: var(--home-band-h, 28.5rem);
   }
   .home-hero {
     order: 2;
@@ -401,9 +401,14 @@
   }
 }
 @media (min-width: 768px) {
-  /* The slot adds no box: the band (when there is one) is a plain child of <main>. */
+  /* A visitor gets no slot (so no gap in <main>'s flex column). A signed-in student gets the card's last
+     measured height (--home-band-h-wide, set before paint) reserved, so the years do not move when it arrives. */
   .home-band-slot {
-    display: contents;
+    display: none;
+  }
+  html[data-signed-in] .home-band-slot {
+    display: block;
+    min-height: var(--home-band-h-wide, 18.75rem);
   }
 }
 

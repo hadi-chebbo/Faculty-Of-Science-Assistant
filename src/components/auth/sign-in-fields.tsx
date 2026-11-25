@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useHydrated } from "@/lib/use-hydrated";
 import { RESEND_MESSAGES, requestNewLink } from "@/lib/auth/resend-client";
 import { announceSessionChange } from "@/lib/auth/session-events";
+import { clearLastRead } from "@/lib/reader-position";
 import { maskEmail } from "@/lib/mask-email";
 
 // The sign-in form shared by the /sign-in page and the sign-in dialog. The route sets the session
@@ -65,6 +66,8 @@ export function SignInFields({
       });
       if (response.ok) {
         const body: { user?: { role?: string } } | null = await response.json().catch(() => null);
+        // Whatever this browser read before belongs to whoever was here then, not to this account.
+        clearLastRead();
         announceSessionChange();
         onSuccess(body?.user?.role);
         return;
