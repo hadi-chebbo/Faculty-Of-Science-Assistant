@@ -287,17 +287,30 @@ describe("confirmEmail", () => {
     return mintToken(jobId!);
   }
 
-  it("confirms once, stores only the hash, and creates no session", async () => {
+  it("confirms once, stores only the hash, and starts a session for the user", async () => {
     const token = await pending();
     const rows = await getDb().EmailConfirmation.findAll({ raw: true });
     expect(rows).toHaveLength(1);
     expect(rows[0].tokenHash).toBe(sha256(token));
     expect(JSON.stringify(rows)).not.toContain(token);
 
-    const result = await confirmEmail(token, at(HOUR));
-    expect(result).toBeUndefined();
-    expect((await userByEmail())!.emailConfirmedAt).toEqual(at(HOUR));
+    const session = await confirmEmail(token, at(HOUR));
+    const user = (await userByEmail())!;
+    expect(user.emailConfirmedAt).toEqual(at(HOUR));
     expect((await getDb().EmailConfirmation.findOne())!.usedAt).toEqual(at(HOUR));
+    expect(session).not.toBeNull();
+    expect(session!.user).toEqual({ id: user.id, email: EMAIL, name: null, role: "student" });
+    const refresh = await getDb().RefreshToken.findAll();
+    expect(refresh).toHaveLength(1);
+    expect(refresh[0].userId).toBe(user.id);
+    expect(refresh[0].tokenHash).toBe(sha256(session!.refreshToken));
+  });
+
+  it("confirms a blocked account without starting a session", async () => {
+    const token = await pending();
+    await getDb().User.update({ blockedAt: at(MINUTE) }, { where: { email: EMAIL } });
+    expect(await confirmEmail(token, at(HOUR))).toBeNull();
+    expect((await userByEmail())!.emailConfirmedAt).toEqual(at(HOUR));
     expect(await getDb().RefreshToken.count()).toBe(0);
   });
 

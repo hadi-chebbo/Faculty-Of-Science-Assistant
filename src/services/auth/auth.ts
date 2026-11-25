@@ -125,6 +125,17 @@ export async function signIn(
   return { user: toAccountSummary(user), ...tokens };
 }
 
+// Starts a new session (a new refresh-token family) for a user already proven to own the account,
+// e.g. by using their emailed confirmation link. The caller checks the account may sign in.
+export async function startSession(
+  user: { id: string; email: string; name: string | null; role: AccountSummary["role"] },
+  now: Date,
+  transaction?: Transaction,
+): Promise<Session> {
+  const tokens = await issueTokens(user, randomUUID(), now, transaction);
+  return { user: toAccountSummary(user), ...tokens };
+}
+
 type RefreshOutcome =
   | { kind: "ok"; session: Session }
   | { kind: "invalid"; revokeFamily?: string };

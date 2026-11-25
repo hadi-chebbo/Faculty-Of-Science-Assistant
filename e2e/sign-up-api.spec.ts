@@ -39,7 +39,7 @@ function tokenOf(mail: Mail, baseURL: string): string {
   return match![1];
 }
 
-test("sign up, confirm by link, then sign in", async ({ request, baseURL }) => {
+test("sign up, confirm by link (which signs in), then sign in with the password too", async ({ request, baseURL }) => {
   const headers = { origin: baseURL!, "x-forwarded-for": ownIp() };
   const email = unique();
 
@@ -58,8 +58,10 @@ test("sign up, confirm by link, then sign in", async ({ request, baseURL }) => {
 
   const confirm = await request.post("/api/v1/auth/confirm", { headers, data: { token } });
   expect(confirm.status()).toBe(200);
-  expect(await confirm.json()).toEqual({ ok: true });
-  expect(confirm.headers()["set-cookie"]).toBeUndefined(); // confirms only; no session
+  expect(await confirm.json()).toEqual({ ok: true, signedIn: true, user: { email, role: "student" } });
+  expect(confirm.headers()["set-cookie"]).toContain("ua_signed_in=1"); // the link signs the student in
+  const me = await request.get("/api/v1/auth/me");
+  expect(me.status()).toBe(200);
 
   const signIn = await request.post("/api/v1/auth/sign-in", { headers, data: { email, password: PASSWORD } });
   expect(signIn.status()).toBe(200);
