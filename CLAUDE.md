@@ -256,7 +256,7 @@ mock exam generation, personalization.
   script in the root layout's `<head>` before paint (`SIGNED_IN_SCRIPT`, `src/lib/auth/signed-in-hint.ts`, same test as
   `hasSignedInHint`), which sets `html[data-signed-in]`, `--home-band-h` from `localStorage["home:band-h"]` (the
   card's last measured phone height) and `--home-band-h-wide` from `localStorage["home:band-h-wide"]` (its last measured
-  height from md up), each kept when 80 to 600. CSS then reserves a card slot of that height (defaults 28.5rem below md,
+  height from md up), each kept when 80 to 800. CSS then reserves a card slot of that height (defaults 28.5rem below md,
   18.75rem from md up; a visitor's slot is `display: none`, so it takes no space and leaves no gap) so the card fills it
   without moving the years (the slot, `ProgressBand`, `data-personal`, removes
   the marker when the session check answers signed out or the progress request fails, or after 8 s without an answer

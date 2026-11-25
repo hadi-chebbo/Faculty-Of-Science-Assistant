@@ -56,14 +56,14 @@ describe("SIGNED_IN_SCRIPT", () => {
   });
 
   it("sets the band height exactly when saneBandHeight accepts the stored value", () => {
-    for (const stored of ["262", "80", "600", "79", "601", "26.5", "abc", "", null]) {
+    for (const stored of ["262", "80", "600", "800", "79", "801", "26.5", "abc", "", null]) {
       const expected = saneBandHeight(stored);
       expect(runScript("ua_signed_in=1", stored).height).toBe(expected === null ? null : `${expected}px`);
     }
   });
 
   it("sets the wide band height the same way, independently of the phone one", () => {
-    for (const stored of ["262", "80", "600", "79", "601", "26.5", "abc", "", null]) {
+    for (const stored of ["262", "80", "600", "800", "79", "801", "26.5", "abc", "", null]) {
       const expected = saneBandHeight(stored);
       expect(runScript("ua_signed_in=1", null, false, stored).wide).toBe(expected === null ? null : `${expected}px`);
     }

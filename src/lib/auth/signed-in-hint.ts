@@ -17,7 +17,7 @@ export const SIGNED_IN_MARKER = "data-signed-in";
 export const BAND_HEIGHT_VAR = "--home-band-h";
 export const BAND_HEIGHT_WIDE_VAR = "--home-band-h-wide";
 export const BAND_HEIGHT_MIN = 80;
-export const BAND_HEIGHT_MAX = 600;
+export const BAND_HEIGHT_MAX = 800;
 
 export function saneBandHeight(value: string | null): number | null {
   if (value === null || !/^\d+$/.test(value)) return null;
