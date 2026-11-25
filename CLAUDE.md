@@ -207,6 +207,20 @@ mock exam generation, personalization.
   - Light theme: headings `#41454F`, body text `#575757`, page `#F5F5F5`, muted `#F8F8F8`,
     cards white. The dark theme uses dark neutral surfaces with light text.
   - Text contrast is at least 4.5:1 in both themes.
+- Shared design language (spec #179, calm and friendly; owner-approved on the home prototype, 2026-11-25): defined once in
+  `src/lib/design-language.ts` (`YEAR_STYLES`, `TYPE_STYLES`) with `YearCircle` / `YearChip`
+  (`src/components/site/year-badge.tsx`) and the `rise-in` utility in `globals.css`; no page hard-codes its own year or
+  file-type colours. Status: the foundation is in (#180: the module, the row's type colour and name, `rise-in`); pages adopt
+  year colours and the other styles ticket by ticket (#181 to #191). Each year has its own colour on every page (first sky, second violet, third emerald, Master 1
+  amber; solid for circles and tabs, a tinted chip, a hover border); each file type has its own colour and icon on
+  every resource row (lecture blue book, notes teal document, exercise orange pencil, exam rose clipboard; solutions
+  and other stay neutral). A `ResourceRow` tints its icon box with the type colour and names the type in a chip beside
+  the language badge (also in lists already grouped by type, and on exam rows), never colour alone. Surfaces are flat
+  with large radii; no gradient text, no gradient card fills, no floating decorative cards, no emoji. The only
+  decorative animation allowed is a soft blurred background behind the home hero; `rise-in` (set `--rise-delay` to
+  stagger) exists only under `prefers-reduced-motion: no-preference`, and hover lifts use `motion-safe:` variants. Primary blue stays the brand and
+  action colour, success green still means done or finished only, yellow stays decorative. Text on tinted chips keeps
+  4.5:1 in both themes. Each redesign ticket (#181 to #191) applies it to its pages.
 - Theme: light and dark, defaults to the device setting, toggle in the top bar.
 - UI language: English only.
 - Navigation adapts to the device. The items are Browse, Exams, Search, Saved, To-do and Progress, shown to
