@@ -372,10 +372,9 @@
   }
 }
 
-/* Home below md (phone): the order of <main>'s children. A visitor sees intro, years, the course
-   preview, the numbers strip, then the rest. A signed-in student (html[data-signed-in], set before
-   paint from the hint cookie and kept true by ProgressBand) sees the progress band first, the years,
-   a short hero (headline and buttons only), the strip, then the rest. Desktop keeps the DOM order. */
+/* Home below md (phone): the order of <main>'s children. A visitor sees the hero, then the years. A signed-in
+   student (html[data-signed-in], set before paint from the hint cookie and kept true by ProgressBand) sees the
+   progress band first, then the hero and the years. Desktop keeps the DOM order (hero, band, years). */
 @media (max-width: 767px) {
   .home-band-slot {
     display: none;
@@ -385,33 +384,60 @@
     display: block;
     min-height: var(--home-band-h, 16.375rem);
   }
-  .home-intro {
+  .home-hero {
     order: 2;
   }
   .home-years {
     order: 3;
-  }
-  .home-preview {
-    order: 4;
-  }
-  .home-strip {
-    order: 5;
-  }
-  .home-rest {
-    order: 6;
-  }
-  html[data-signed-in] .home-intro {
-    order: 4;
-    padding-block: 1.25rem;
-  }
-  html[data-signed-in] .home-long {
-    display: none;
   }
 }
 @media (min-width: 768px) {
   /* The slot adds no box: the band (when there is one) is a plain child of <main>. */
   .home-band-slot {
     display: contents;
+  }
+}
+
+/* Home hero: the search field's hint shows its first line when nothing moves, and rotates through its lines
+   (set animation-delay on each) otherwise; the background blobs drift slowly. Both only for people who have
+   not asked for reduced motion. */
+.hint-cycle > span {
+  opacity: 0;
+}
+.hint-cycle > span:first-child {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hint-cycle > span {
+    animation: hint-cycle 10s infinite both;
+  }
+  .hero-blob {
+    animation: hero-drift 11s ease-in-out infinite;
+  }
+}
+@keyframes hint-cycle {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  4%,
+  22% {
+    opacity: 1;
+    transform: none;
+  }
+  26%,
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+@keyframes hero-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(18px, -22px, 0);
   }
 }
 

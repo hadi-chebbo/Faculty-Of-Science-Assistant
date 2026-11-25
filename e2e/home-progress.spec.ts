@@ -93,39 +93,28 @@ async function top(locator: import("@playwright/test").Locator): Promise<number>
   return locator.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
 }
 
-test("on a phone a signed-in student sees progress, the years, then a short hero", async ({ page, isMobile }) => {
+test("on a phone a signed-in student sees progress first, then the hero, then the years", async ({ page, isMobile }) => {
   test.skip(!isMobile, "phone layout");
   await signIn(page, DEMO_EMAIL);
   const band = page.getByRole("heading", { name: "Your progress" });
   await expect(band).toBeVisible();
-  const years = page.getByRole("heading", { name: "Choose your year" });
   const headline = page.getByRole("heading", { level: 1 });
-  const strip = page.locator("dl").first();
-  expect(await top(band)).toBeLessThan(await top(years));
-  expect(await top(years)).toBeLessThan(await top(headline));
-  expect(await top(headline)).toBeLessThan(await top(strip));
-  // The short hero: the headline and its two buttons only.
-  await expect(page.getByText("Stop digging through Drive links.")).toBeHidden();
-  await expect(page.getByText("No account needed")).toBeHidden();
-  await expect(page.getByTestId("course-preview")).toBeHidden();
-  await expect(page.getByRole("link", { name: "Browse courses" })).toBeVisible();
+  const years = page.getByRole("heading", { name: "Choose your year" });
+  expect(await top(band)).toBeLessThan(await top(headline));
+  expect(await top(headline)).toBeLessThan(await top(years));
+  await expect(page.getByRole("searchbox", { name: /Search courses/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Previous exams" }).first()).toBeVisible();
-  await expect(headline).toBeVisible();
 });
 
-test("on desktop a signed-in student keeps the order: hero, progress, numbers, years", async ({ page, isMobile }) => {
+test("on desktop a signed-in student keeps the order: hero, progress, years", async ({ page, isMobile }) => {
   test.skip(isMobile, "desktop layout");
   await signIn(page, DEMO_EMAIL);
   const band = page.getByRole("heading", { name: "Your progress" });
   await expect(band).toBeVisible();
   const headline = await top(page.getByRole("heading", { level: 1 }));
-  const strip = await top(page.locator("dl").first());
   const years = await top(page.getByRole("heading", { name: "Choose your year" }));
   expect(headline).toBeLessThan(await top(band));
-  expect(await top(band)).toBeLessThan(strip);
-  expect(strip).toBeLessThan(years);
-  await expect(page.getByText("Stop digging through Drive links.")).toBeVisible();
-  await expect(page.getByTestId("course-preview")).toBeVisible();
+  expect(await top(band)).toBeLessThan(years);
 });
 
 test("on a phone the years do not move when the band loads", async ({ page, isMobile }) => {
@@ -164,6 +153,6 @@ test("the hint cookie is readable and set on sign-in, and cleared on sign-out", 
   // Signing out on Home returns the visitor layout in place (marker removed, band gone).
   await expect(page.getByRole("heading", { name: "Your progress" })).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveAttribute("data-signed-in", /.*/);
-  await expect(page.getByText("Stop digging through Drive links.")).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: /Search courses/ })).toBeVisible();
   expect((await context.cookies()).find((cookie) => cookie.name === "ua_signed_in")).toBeUndefined();
 });

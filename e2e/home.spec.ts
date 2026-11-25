@@ -5,25 +5,59 @@ import { expect, test } from "@playwright/test";
 
 test("the headline and the two buttons", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every course, chapter and past exam in one place.");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Find any course, exam or lecture.");
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   await expect(page.getByRole("link", { name: "Previous exams" }).first()).toHaveAttribute("href", "/exams");
+  await expect(page.getByRole("link", { name: "Choose your year" }).first()).toHaveAttribute("href", "#years");
 });
 
-test("Browse courses jumps to the years section", async ({ page }) => {
+test("Choose your year jumps to the years section", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "Browse courses" }).click();
+  await page.getByRole("link", { name: "Choose your year" }).first().click();
   await expect(page).toHaveURL(/#years$/);
   await expect(page.getByRole("heading", { name: "Choose your year" })).toBeInViewport();
 });
 
-test("the numbers strip shows four labels with numbers", async ({ page }) => {
+test("typing in the hero search keeps the page; Enter opens the search page with the query", async ({ page }) => {
   await page.goto("/");
-  for (const label of ["Courses", "Chapters", "Files to study from", "Previous exams"]) {
-    const value = page.locator("dl div").filter({ has: page.locator("dt", { hasText: new RegExp(`^${label}$`) }) }).locator("dd");
-    await expect(value).toBeVisible();
-    expect(Number(await value.innerText())).toBeGreaterThan(0);
-  }
+  const field = page.getByRole("searchbox", { name: /Search courses, chapters and files/ });
+  await field.click();
+  await field.fill("algo");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(field).toHaveValue("algo");
+  await field.press("Enter");
+  await expect(page).toHaveURL(/\/search\?q=algo$/);
+  await expect(page).toHaveTitle(/algo/);
+});
+
+test("the Search button opens the search page with the query", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("searchbox", { name: /Search courses/ }).fill("final exam 2025");
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(page).toHaveURL(/\/search\?q=final(\+|%20)exam(\+|%20)2025$/);
+});
+
+test.describe("without JavaScript", () => {
+  test.use({ javaScriptEnabled: false });
+  test("the hero search is a plain form that opens the search page", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("searchbox", { name: /Search courses/ }).fill("graphs");
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await expect(page).toHaveURL(/\/search\?q=graphs$/);
+  });
+});
+
+test("the rotating hint shows only while the field is empty", async ({ page }) => {
+  await page.goto("/");
+  const field = page.getByRole("searchbox", { name: /Search courses/ });
+  const hint = page.locator(".hint-cycle");
+  await expect(hint).toBeVisible();
+  await field.fill("x");
+  await expect(hint).toHaveCount(0);
+  await field.fill("");
+  await expect(hint).toBeVisible();
+  // The hint is decoration: it is hidden from assistive technology.
+  await expect(hint).toHaveAttribute("aria-hidden", "true");
 });
 
 test("four year cards, the second links to its page and shows counts", async ({ page }) => {
@@ -33,48 +67,33 @@ test("four year cards, the second links to its page and shows counts", async ({ 
   await expect(second).toHaveAttribute("href", "/years/2");
   await expect(second).toContainText("DEMO301");
   await expect(second).toContainText(/\d+ courses? · \d+ files?/);
-  await expect(second).toContainText("Browse");
+  await expect(second).toContainText("Open");
   await expect(page.locator("#years")).not.toContainText(/semester/i);
-});
-
-test("the steps, the features and the sections", async ({ page }) => {
-  await page.goto("/");
-  const steps = page.getByRole("list").filter({ has: page.getByRole("heading", { name: "Pick your year" }) });
-  await expect(steps.locator("> li")).toHaveCount(3);
-  await expect(page.getByRole("heading", { name: "Open a course" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Study, or go straight to exams" })).toBeVisible();
-  for (const title of [
-    "Courses split into chapters",
-    "Previous exams by year",
-    "Exercises with their solutions",
-    "Built for a phone and a slow connection",
-  ]) {
-    await expect(page.getByRole("heading", { name: title })).toBeVisible();
+  for (const [name, href] of [["First year", "/years/1"], ["Third year", "/years/3"]] as const) {
+    await expect(page.locator("#years").getByRole("link", { name: new RegExp(name) })).toHaveAttribute("href", href);
   }
 });
 
-test("each session link opens the exams page with that session selected", async ({ page }) => {
-  for (const [name, value] of [
-    ["Partial exams", "partial"],
-    ["Final exams", "final"],
-    ["Second session", "second"],
-  ] as const) {
-    await page.goto("/");
-    await page.getByRole("link", { name, exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/exams\\?session=${value}$`));
-    await expect(page.locator('input[name="session"]')).toHaveValue(value);
+test("Master 1 is a muted card that is not a link until it has courses", async ({ page }) => {
+  await page.goto("/");
+  const master = page.locator("#years li").nth(3);
+  await expect(master).toContainText("Master 1");
+  if ((await master.innerText()).includes("No courses yet")) {
+    // The demo data has no Master 1 courses: the card says so and is not clickable.
+    await expect(master.getByRole("link")).toHaveCount(0);
+  } else {
+    await expect(master.getByRole("link")).toHaveAttribute("href", "/years/m1");
   }
 });
 
-test("the first question is open and another opens on click", async ({ page }) => {
+test("the long text sections and the decorative preview are gone, the footer statement stays", async ({ page }) => {
   await page.goto("/");
-  const first = page.locator("details", { hasText: "Is this an official university website?" });
-  const second = page.locator("details", { hasText: "Do I need an account?" });
-  await expect(first).toHaveAttribute("open", "");
-  await expect(second).not.toHaveAttribute("open", "");
-  await second.locator("summary").click();
-  await expect(second).toHaveAttribute("open", "");
-  await expect(second.getByText("Browsing, opening and downloading files never require an account.")).toBeVisible();
+  for (const name of ["How it works", "What you will find", "Exams coming up?", "Pick your year"]) {
+    await expect(page.getByRole("heading", { name })).toHaveCount(0);
+  }
+  await expect(page.locator("details")).toHaveCount(0);
+  await expect(page.getByTestId("course-preview")).toHaveCount(0);
+  await expect(page.getByText("Independent student project. Not an official Lebanese University website.")).toBeVisible();
 });
 
 test("the page makes no claim about features that do not exist", async ({ page }) => {
@@ -82,7 +101,6 @@ test("the page makes no claim about features that do not exist", async ({ page }
   const text = await page.locator("main").innerText();
   expect(text).not.toMatch(/\bAI\b/);
   expect(text.toLowerCase()).not.toContain("sign up");
-  expect(text).not.toContain("Search");
 });
 
 test("nothing scrolls sideways", async ({ page }) => {
@@ -92,29 +110,25 @@ test("nothing scrolls sideways", async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
-test("the course preview is a generic example with no course code", async ({ page }) => {
-  await page.goto("/");
-  const preview = page.getByTestId("course-preview");
-  await expect(preview).toContainText("Your course");
-  await expect(preview).toContainText("Chapter 1: Introduction");
-  await expect(preview).toContainText("Final exam 2024-2025");
-  await expect(preview).not.toContainText("DEMO");
-});
-
-test("on a phone the preview's tab labels are not cut off", async ({ page, isMobile }) => {
+test("on a phone every control of the hero and the year cards is at least 44px tall, with text of 12px or more", async ({ page, isMobile }) => {
   test.skip(!isMobile, "phone layout");
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  for (const name of ["Chapters", "Previous exams"]) {
-    const tab = page.getByTestId("course-preview").getByText(name, { exact: true });
-    expect(await tab.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
-  }
-});
-
-test("the account answer says which pages need an account", async ({ page }) => {
-  await page.goto("/");
-  const answer = page.locator("details", { hasText: "Do I need an account?" });
-  await answer.locator("summary").click();
-  await expect(answer.getByText("Saved, To-do and Progress need a free account")).toBeVisible();
+  await expect(page.locator("#years li").first()).toBeVisible();
+  const small = await page.evaluate(() => {
+    const out: string[] = [];
+    document.querySelectorAll<HTMLElement>("main a, main button, main input").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height < 43.5) out.push(`${el.innerText || el.getAttribute("aria-label") || el.tagName} ${Math.round(r.height)}`);
+    });
+    document.querySelectorAll<HTMLElement>("main *").forEach((el) => {
+      const own = [...el.childNodes].some((n) => n.nodeType === 3 && (n.textContent ?? "").trim());
+      if (own && parseFloat(getComputedStyle(el).fontSize) < 12) out.push(`tiny: ${(el.textContent ?? "").slice(0, 20)}`);
+    });
+    return out;
+  });
+  expect(small).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });
 
 // Document-relative top of an element (stable while scrolling).
@@ -122,18 +136,12 @@ async function top(locator: import("@playwright/test").Locator): Promise<number>
   return locator.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
 }
 
-test("on a phone a visitor sees the headline, the years, the preview, then the numbers strip", async ({ page, isMobile }) => {
-  test.skip(!isMobile, "phone layout");
+test("a visitor sees the headline, then the years", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator("#years li").first()).toBeVisible();
   const headline = await top(page.getByRole("heading", { level: 1 }));
   const years = await top(page.getByRole("heading", { name: "Choose your year" }));
-  const preview = await top(page.getByTestId("course-preview"));
-  const strip = await top(page.locator("dl").first());
   expect(headline).toBeLessThan(years);
-  expect(years).toBeLessThan(preview);
-  expect(preview).toBeLessThan(strip);
-  await expect(page.getByText("Stop digging through Drive links.")).toBeVisible();
   // No second copy of anything: one headline, one years heading.
   await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "Choose your year" })).toHaveCount(1);
@@ -148,28 +156,12 @@ test("on a phone the band slot takes no space for a visitor", async ({ page, isM
   expect(await page.evaluate(() => document.documentElement.hasAttribute("data-signed-in"))).toBe(false);
 });
 
-test("on desktop a visitor sees the hero card, then the strip, then the years", async ({ page, isMobile }) => {
-  test.skip(isMobile, "desktop layout");
-  await page.goto("/");
-  await expect(page.locator("#years li").first()).toBeVisible();
-  const hero = await top(page.getByRole("heading", { level: 1 }));
-  const strip = await top(page.locator("dl").first());
-  const years = await top(page.getByRole("heading", { name: "Choose your year" }));
-  expect(hero).toBeLessThan(strip);
-  expect(strip).toBeLessThan(years);
-  // The preview sits beside the intro, not below it.
-  const preview = await page.getByTestId("course-preview").boundingBox();
-  const headline = await page.getByRole("heading", { level: 1 }).boundingBox();
-  expect(preview!.x).toBeGreaterThan(headline!.x + headline!.width - 1);
-});
-
 test("a stale hint cookie falls back to the visitor layout with no empty gap", async ({ page, context, isMobile }) => {
   test.skip(!isMobile, "phone layout");
   await context.addCookies([{ name: "ua_signed_in", value: "1", url: "http://localhost:" + (process.env.PLAYWRIGHT_PORT ?? 3100) }]);
   await page.goto("/");
   await expect(page.locator("html")).not.toHaveAttribute("data-signed-in", /.*/);
-  await expect(page.getByText("Stop digging through Drive links.")).toBeVisible();
-  await expect(page.getByTestId("course-preview")).toBeVisible();
+  await expect(page.getByRole("searchbox", { name: /Search courses/ })).toBeVisible();
   expect(await page.getByTestId("home-band-slot").boundingBox()).toBeNull();
   const headline = await top(page.getByRole("heading", { level: 1 }));
   expect(headline).toBeLessThan(300);

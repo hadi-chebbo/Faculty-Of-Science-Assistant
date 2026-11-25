@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { showStats, yearCardText } from "./year-card";
+import { yearCardText } from "./year-card";
 
 const codes = (n: number) => Array.from({ length: n }, (_, i) => `C${i + 1}`);
 
@@ -60,13 +60,5 @@ describe("yearCardText for Master 1", () => {
       counts: null,
       empty: "No courses yet",
     });
-  });
-});
-
-describe("showStats", () => {
-  it("needs at least 5 courses", () => {
-    expect(showStats(4)).toBe(false);
-    expect(showStats(5)).toBe(true);
-    expect(showStats(0)).toBe(false);
   });
 });

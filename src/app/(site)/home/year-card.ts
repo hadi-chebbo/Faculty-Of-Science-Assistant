@@ -14,13 +14,6 @@ export interface YearCardText {
 
 const CODE_CHIPS = 4;
 
-// The strip of totals is only worth showing once there is a catalogue to count.
-export const STATS_MIN_COURSES = 5;
-
-export function showStats(courses: number): boolean {
-  return courses >= STATS_MIN_COURSES;
-}
-
 function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
