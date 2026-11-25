@@ -23,10 +23,12 @@ test("phone: applying filters shows the active count", async ({ page, isMobile }
   await page.goto("/exams?semester=3&year=2024&bogus=1&session=nope");
   await expect(page.locator("summary", { hasText: "Filters" })).toHaveText("Filters (2)");
 
-  // With JavaScript a change submits at once; the disclosure stays open.
+  // With JavaScript the dropdowns are popovers (the native selects are the fallback without it); choosing an
+  // option submits at once and the disclosure stays open.
   await page.locator("summary").click();
   await expect(async () => {
-    await page.getByLabel("Session", { exact: true }).selectOption("final");
+    await page.locator("#exam-session").click();
+    await page.getByRole("option", { name: "Final", exact: true }).click({ timeout: 2000 });
     await expect(page).toHaveURL(/session=final/, { timeout: 1000 });
   }).toPass();
   await expect(page.locator("summary", { hasText: "Filters" })).toHaveText("Filters (3)");
@@ -38,9 +40,11 @@ test.describe("without JavaScript", () => {
   test("phone: the control opens and Apply filters the list", async ({ page, isMobile }) => {
     test.skip(!isMobile, "phone layout");
     await page.goto("/exams");
-    await expect(page.getByLabel("Session", { exact: true })).toBeHidden();
+    // Without JavaScript the filters are native selects, folded away until the control is opened.
+    const session = page.locator("#exam-session-native");
+    await expect(session).toBeHidden();
     await page.locator("summary", { hasText: "Filters" }).click();
-    await page.getByLabel("Session", { exact: true }).selectOption("final");
+    await session.selectOption("final");
     await page.getByRole("button", { name: "Apply" }).click();
     await expect(page).toHaveURL(/session=final/);
     await expect(page.locator("summary", { hasText: "Filters" })).toHaveText("Filters (1)");
