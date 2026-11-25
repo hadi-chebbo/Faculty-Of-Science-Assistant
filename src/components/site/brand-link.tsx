@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 // The brand lockup (mark and two-tone wordmark) that leads home, shared by the site header, the phone
 // menu and the account pages' bar. Its accessible name is "UniMate".
+// className is merged, not replaced, because SheetClose asChild in the phone menu passes props through.
 export function BrandLink({ className, ...props }: Omit<React.ComponentProps<typeof Link>, "href">) {
   return (
     <Link
