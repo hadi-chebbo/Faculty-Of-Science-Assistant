@@ -4,15 +4,14 @@ import { Hero } from "./home/hero";
 import { ExamBand, HowItWorks, Questions, WhatYouWillFind } from "./home/sections";
 import { ProgressBand } from "./home/progress-band";
 import { PrototypeSwitcher } from "./home/prototype/switcher";
-import { VariantD } from "./home/prototype/variant-d";
 import { VariantE } from "./home/prototype/variant-e";
 import { StatsAndYears } from "./home/stats-and-years";
 
-// PROTOTYPE: ?variant=D|E swaps the whole page; no variant is the current home. Remove before merging.
+// PROTOTYPE: ?variant=E swaps the whole page; no variant is the current home. Remove before merging.
 export default async function Home({ searchParams }: { searchParams: Promise<{ variant?: string }> }) {
   const { variant } = await searchParams;
   const proto =
-    variant === "D" ? <VariantD /> : variant === "E" ? <VariantE /> : null;
+    variant === "E" ? <VariantE /> : null;
   if (proto) {
     return (
       <>

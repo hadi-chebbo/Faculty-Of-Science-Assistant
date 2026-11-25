@@ -41,7 +41,7 @@ export function YearBrowser() {
             <li key={c.code} className="proto-rise" style={{ animationDelay: `${i * 60}ms` }}>
               <Link
                 href={`/courses/${c.code}`}
-                className={`group relative flex h-full min-h-40 flex-col overflow-hidden rounded-3xl border bg-gradient-to-br ${s.tint} to-card to-60% p-5 transition-[transform,box-shadow,border-color] motion-safe:hover:-translate-y-1 hover:shadow-lg ${s.border} focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50`}
+                className={`group relative flex h-full min-h-40 flex-col overflow-hidden rounded-3xl border bg-card p-5 transition-[transform,box-shadow,border-color] motion-safe:hover:-translate-y-1 hover:shadow-lg ${s.border} focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50`}
               >
                 <span className={`w-fit rounded-lg px-2 py-0.5 font-mono text-xs font-semibold ${s.chip}`}>{c.code}</span>
                 <span className="mt-3 text-lg font-bold leading-snug text-heading">{c.title}</span>

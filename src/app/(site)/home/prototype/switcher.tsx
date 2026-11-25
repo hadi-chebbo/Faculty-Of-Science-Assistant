@@ -6,8 +6,7 @@ import { useCallback, useEffect } from "react";
 
 export const VARIANTS = [
   { key: "current", name: "Current home" },
-  { key: "D", name: "Dashboard" },
-  { key: "E", name: "Playful" },
+  { key: "E", name: "Calmer" },
 ] as const;
 
 export function PrototypeSwitcher() {
