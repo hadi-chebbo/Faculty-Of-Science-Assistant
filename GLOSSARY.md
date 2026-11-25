@@ -15,6 +15,12 @@ stored. Students browse by year; a course still belongs to one semester, shown t
 year (URL `/years/m1`, circle text "M1"; students never see a 4).
 _Avoid_: Level, L1/L2/L3, Year 2, S3, Semester 3 (in student-facing text), academic year (that is the 2024-2025 year of an exam)
 
+**Year colour** and **Type colour**:
+The colour that always stands for a year (first sky, second violet, third emerald, Master 1 amber) or for a
+resource type (lecture blue, notes teal, exercise orange, exam rose; solutions and other neutral). Defined once in
+the design language and always accompanied by the year's name or the type's name, never used alone.
+_Avoid_: Theme colour, category colour
+
 **Lecturer**:
 The person who taught or wrote a resource, named as written (e.g. "Dr. Ali Ghorayeb"). A resource
 has at most one lecturer, or none when unknown; a course's lecturers are those of its resources.
