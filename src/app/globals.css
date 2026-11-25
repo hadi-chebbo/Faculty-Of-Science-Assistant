@@ -393,6 +393,12 @@
   .home-courses {
     order: 4;
   }
+  .home-recent {
+    order: 5;
+  }
+  .home-exams {
+    order: 6;
+  }
 }
 @media (min-width: 768px) {
   /* The slot adds no box: the band (when there is one) is a plain child of <main>. */

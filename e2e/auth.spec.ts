@@ -239,6 +239,10 @@ test("public pages render the same signed in and signed out", async ({ page }) =
       await page.locator("main [data-personal]").evaluateAll((elements) =>
         elements.forEach((element) => ((element as HTMLElement).style.display = "none")),
       );
+      // "Recently added" (home) depends on the moment too: new files and "2 days ago" change while other specs run.
+      await page.locator("main .home-recent").evaluateAll((elements) =>
+        elements.forEach((element) => ((element as HTMLElement).style.display = "none")),
+      );
       texts.push((await page.locator("main").innerText()).replace(/(Chapters\s+)\d+/, "$1#"));
     }
     return texts;

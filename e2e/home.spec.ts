@@ -211,6 +211,39 @@ test("the pre-paint script marks the document from the hint and the stored band 
   release();
 });
 
+test("Recently added lists published files with type and course, newest first; every one opens", async ({ page, request }) => {
+  await page.goto("/");
+  const section = page.getByRole("region", { name: "Recently added" });
+  await expect(section).toBeVisible();
+  const items = section.locator("li");
+  expect(await items.count()).toBeGreaterThanOrEqual(3);
+  expect(await items.count()).toBeLessThanOrEqual(6);
+  // Each item names its course code, its type and when it was added.
+  await expect(items.first()).toContainText(/DEMO\d+/);
+  await expect(items.first()).toContainText(/Lecture|Notes|Exercise|Exam|Solution|Other/);
+  await expect(items.first().locator("time")).toHaveAttribute("datetime", /\d{4}-\d{2}-\d{2}T/);
+  // Newest first.
+  const stamps = await section.locator("time").evaluateAll((els) => els.map((el) => Date.parse(el.getAttribute("datetime") ?? "")));
+  expect(stamps).toEqual([...stamps].sort((a, b) => b - a));
+  // The reader serves published files only (a draft is the 404 page), so every link opening proves none is a draft.
+  const hrefs = await section.locator("li a").evaluateAll((els) => els.map((el) => el.getAttribute("href") ?? ""));
+  for (const href of hrefs) {
+    expect(href).toMatch(/^\/resources\/[0-9a-f-]{36}$/);
+    expect((await request.get(href)).status()).toBe(200);
+  }
+  await expect(section.getByRole("link", { name: /See all/ })).toHaveAttribute("href", "/search");
+});
+
+test("the previous-exam shortcuts open the exams page with their session", async ({ page }) => {
+  await page.goto("/");
+  const section = page.getByRole("region", { name: "Previous exams" });
+  for (const [name, session] of [["Partial exams", "partial"], ["Final exams", "final"], ["Second session", "second"]] as const) {
+    await expect(section.getByRole("link", { name })).toHaveAttribute("href", `/exams?session=${session}`);
+  }
+  await section.getByRole("link", { name: "Second session" }).click();
+  await expect(page).toHaveURL(/\/exams\?session=second$/);
+});
+
 // "Jump straight to a course": tabs by year and that year's course cards.
 test.describe("the course browser", () => {
   const courseBrowser = (page: Page) => page.locator("#courses");

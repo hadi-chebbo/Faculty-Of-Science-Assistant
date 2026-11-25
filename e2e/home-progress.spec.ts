@@ -62,7 +62,8 @@ test("a student with no completions sees the empty text", async ({ page, isMobil
     await signIn(page, email);
     await expect(page.getByRole("heading", { name: "Your progress" })).toBeVisible();
     await expect(page.getByText("Mark files as done in the reader to track your progress here.")).toBeVisible();
-    await expect(page.getByRole("link", { name: /See all/ })).toHaveCount(0);
+    // The band has no "See all" (the page's "Recently added" list has its own, which is not the band's).
+    await expect(page.locator("section[data-personal]").getByRole("link", { name: /See all/ })).toHaveCount(0);
   } finally {
     await withDb((client) => client.query(`DELETE FROM users WHERE email = $1`, [email]));
   }

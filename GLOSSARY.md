@@ -21,6 +21,11 @@ resource type (lecture blue, notes teal, exercise orange, exam rose; solutions a
 the design language and always accompanied by the year's name or the type's name, never used alone.
 _Avoid_: Theme colour, category colour
 
+**Recently added**:
+The home page's short list of the newest published files, by the time they were uploaded (not by exam year or
+course). A visitor's view: a draft is never in it. Not "new since your last visit" and not progress.
+_Avoid_: Latest, updates, what's new
+
 **Course browser**:
 The "Jump straight to a course" section of Home: tabs by year, and under the chosen tab that year's courses as cards
 (code, title, "Semester 1" or "Semester 2", file count). A shortcut to a course page, not a new way to organise courses.

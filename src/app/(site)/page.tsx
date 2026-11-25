@@ -2,9 +2,10 @@ import { Suspense } from "react";
 import { YearCardsSkeleton } from "@/components/site/skeletons";
 import { Hero } from "./home/hero";
 import { ProgressBand } from "./home/progress-band";
+import { RecentAndExams } from "./home/recent";
 import { YearCards } from "./home/year-cards";
 
-// Everything is static except the year cards, which read the database inside one Suspense boundary.
+// Everything is static except the year cards and the recent files, which read the database inside one Suspense boundary.
 // The signed-in progress band is the one personal part (loaded by the browser, see ProgressBand).
 export default function Home() {
   return (
@@ -13,6 +14,7 @@ export default function Home() {
       <ProgressBand />
       <Suspense fallback={<YearCardsSkeleton />}>
         <YearCards />
+        <RecentAndExams />
       </Suspense>
     </main>
   );
