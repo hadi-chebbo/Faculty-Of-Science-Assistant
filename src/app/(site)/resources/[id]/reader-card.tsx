@@ -15,7 +15,7 @@ import { useDoneResource } from "@/lib/completions-client";
 import { useSavedResource } from "@/lib/saved-client";
 import { ReaderMenu } from "./reader-menu";
 import { readContentsOpen, writeContentsOpen } from "./reader-panel";
-import { pageToOffer, readLastPage, writeLastPage } from "./reader-position";
+import { pageFromHash, pageToOffer, readLastPage, writeLastPage } from "./reader-position";
 import { ReaderSearchBar } from "./reader-search-bar";
 import { createTapTracker } from "./reader-tap";
 import {
@@ -135,7 +135,11 @@ export function ReaderCard({
     setDraftState(value);
   }, []);
   // The viewer only runs in the browser (no server render), so storage can be read right away.
-  const [offer, setOffer] = useState<number | null>(() => pageToOffer(readLastPage(resourceId), total));
+  // A "#page=N" address (Home's Resume link) opens that page itself, so the offer is not shown.
+  const [hashPage] = useState<number | null>(() => pageFromHash(window.location.hash, total));
+  const [offer, setOffer] = useState<number | null>(() =>
+    pageFromHash(window.location.hash, total) !== null ? null : pageToOffer(readLastPage(resourceId), total),
+  );
   const [menuOpen, setMenuOpen] = useState(false);
   const menuOpenRef = useRef(false);
   // Contents: on a wide screen a panel beside the pages (remembered); on a phone a sheet.
@@ -340,6 +344,15 @@ export function ReaderCard({
     },
     [scroller, viewport, inner, total, update, pokeBar, scrollPagesBy, alignPage],
   );
+
+  // Jump to the page named by the address once the pages are there, then drop the hash.
+  const hashDone = useRef(false);
+  useEffect(() => {
+    if (hashDone.current || hashPage === null || !scroller || !ready) return;
+    hashDone.current = true;
+    goTo(hashPage);
+    history.replaceState(history.state, "", window.location.pathname + window.location.search);
+  }, [hashPage, scroller, ready, goTo]);
 
   // ---- The page box -----------------------------------------------------------------------
   const commitDraft = () => {

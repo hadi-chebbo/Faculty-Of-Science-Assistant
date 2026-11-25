@@ -1,6 +1,9 @@
 import { randomBytes } from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import pg from "pg";
+import { samplePdf } from "../src/lib/storage/sample-pdf";
 
 // Needs the demo data (SEED_DEMO_DATA=true npm run db:seed, STORAGE_DRIVER=local). The empty-state
 // test uses a fresh confirmed student per project, created and deleted here.
@@ -155,4 +158,168 @@ test("the hint cookie is readable and set on sign-in, and cleared on sign-out", 
   await expect(page.locator("html")).not.toHaveAttribute("data-signed-in", /.*/);
   await expect(page.getByRole("searchbox", { name: /Search courses/ })).toBeVisible();
   expect((await context.cookies()).find((cookie) => cookie.name === "ua_signed_in")).toBeUndefined();
+});
+
+test("a visitor gets no reserved space for the card", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Choose your year" })).toBeVisible();
+  const height = await page.getByTestId("home-band-slot").evaluate((el) => el.getBoundingClientRect().height);
+  expect(height).toBe(0);
+  await expect(page.getByRole("heading", { name: "Continue where you left off" })).toHaveCount(0);
+});
+
+test("on desktop the years do not move when the card loads", async ({ page, isMobile }) => {
+  test.skip(isMobile, "desktop layout");
+  await signIn(page, DEMO_EMAIL);
+  await expect(page.getByRole("heading", { name: "Your progress" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("home:band-h-wide"))).not.toBeNull();
+
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route("**/api/v1/progress", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  const years = page.getByRole("heading", { name: "Choose your year" });
+  await expect(years).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your progress" })).toHaveCount(0);
+  const before = await top(years);
+  release();
+  await expect(page.getByRole("heading", { name: "Your progress" })).toBeVisible();
+  expect(await top(years)).toBe(before);
+});
+
+test("the card shows the short prompt, the week row and no streak when nothing was read", async ({ page }) => {
+  await signIn(page, DEMO_EMAIL);
+  const card = page.locator("section[data-personal]").filter({ has: page.getByRole("heading", { name: "Continue where you left off" }) });
+  await expect(card).toBeVisible();
+  await expect(card.getByText("Open any file and you can pick it up here next time.")).toBeVisible();
+  await expect(card.getByRole("link", { name: /Resume/ })).toHaveCount(0);
+  const week = card.getByRole("list", { name: "This week" });
+  await expect(week.getByRole("listitem")).toHaveCount(7);
+  await expect(week.getByRole("listitem").filter({ hasText: "today" })).toHaveCount(1);
+  await expect(card.getByText(/streak|flame/i)).toHaveCount(0);
+});
+
+// The seed files have one page, so these tests store a 12-page file and a resource that points at it
+// (in DEMO302, which no other spec marks), and remove both afterwards.
+test.describe("continuing where the student left off", () => {
+  const PAGES = 12;
+  let id = "";
+  let key = "";
+  let title = "";
+  const storageDir = () => path.resolve(process.env.STORAGE_LOCAL_DIR ?? ".storage");
+
+  test.beforeAll(async () => {
+    key = `resources/${crypto.randomUUID()}.pdf`;
+    title = `Continue test lecture ${crypto.randomUUID().slice(0, 8)}`;
+    const file = path.join(storageDir(), ...key.split("/"));
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, samplePdf(["CONTINUE TEST", "Twelve pages"], PAGES));
+    await fs.writeFile(`${file}.meta.json`, JSON.stringify({ contentType: "application/pdf" }));
+    id = await withDb(async (client) => {
+      const { rows } = await client.query(
+        `INSERT INTO resources (course_id, type, title, language, file_key, is_published)
+         SELECT id, 'lecture', $2, 'en', $1, true FROM courses WHERE code = 'DEMO302' RETURNING id`,
+        [key, title],
+      );
+      return rows[0].id as string;
+    });
+  });
+
+  test.afterAll(async () => {
+    await withDb((client) => client.query("DELETE FROM resources WHERE id = $1", [id]));
+    const file = path.join(storageDir(), ...key.split("/"));
+    await fs.rm(file, { force: true });
+    await fs.rm(`${file}.meta.json`, { force: true });
+  });
+
+  async function readTo(page: Page, pageNumber: number) {
+    await page.goto(`/resources/${id}#page=${pageNumber}`);
+    await expect(page.getByRole("img", { name: `Page ${pageNumber} of ${PAGES}` })).toBeVisible();
+    await expect.poll(() => page.evaluate((k) => localStorage.getItem(k), `reader:last-page:${id}`)).toBe(String(pageNumber));
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("reader:last-read"))).not.toBeNull();
+  }
+
+  const cardOf = (page: Page) =>
+    page.locator("section[data-personal]").filter({ has: page.getByRole("heading", { name: "Continue where you left off" }) });
+
+  test("Home names the last file and page, and Resume opens the reader on that page", async ({ page, isMobile }) => {
+    await signIn(page, DEMO_EMAIL);
+    await readTo(page, 5);
+    // The address no longer carries the hash once it has been used.
+    expect(new URL(page.url()).hash).toBe("");
+
+    await page.goto("/");
+    const card = cardOf(page);
+    await expect(card.getByText(title)).toBeVisible();
+    await expect(card.getByText("DEMO302 · Lecture · Page 5")).toBeVisible();
+    // Opening a file never produces a progress number on the card's continue part.
+    expect(await card.getByTestId("home-continue").innerText()).not.toContain("%");
+
+    const resume = card.getByRole("link", { name: `Resume ${title}, page 5` });
+    await expect(resume).toHaveAttribute("href", `/resources/${id}#page=5`);
+    await resume.click();
+    await expect(page).toHaveURL(new RegExp(`/resources/${id}$`));
+    await expect(page.getByRole("img", { name: `Page 5 of ${PAGES}` })).toBeInViewport();
+    if (isMobile) await expect(page.getByRole("group", { name: "Page and zoom" })).toContainText(`5 / ${PAGES}`);
+    else await expect(page.getByLabel("Page number")).toHaveValue("5");
+    await expect(page.getByRole("region", { name: "Continue reading" })).toHaveCount(0);
+  });
+
+  test("a file read only on its first page is resumed without a page", async ({ page }) => {
+    await signIn(page, DEMO_EMAIL);
+    await page.goto(`/resources/${id}`);
+    await expect(page.getByRole("img", { name: `Page 1 of ${PAGES}` })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("reader:last-read"))).not.toBeNull();
+    await page.evaluate((k) => localStorage.removeItem(k), `reader:last-page:${id}`);
+    await page.goto("/");
+    const card = cardOf(page);
+    await expect(card.getByText("DEMO302 · Lecture", { exact: true })).toBeVisible();
+    await expect(card.getByRole("link", { name: `Resume ${title}` })).toHaveAttribute("href", `/resources/${id}`);
+  });
+
+  test("a hash that is not a page inside the file is ignored", async ({ page }) => {
+    await page.goto(`/resources/${id}#page=99`);
+    await expect(page.getByRole("img", { name: `Page 1 of ${PAGES}` })).toBeVisible();
+    await expect(page.getByRole("img", { name: `Page 1 of ${PAGES}` })).toBeInViewport();
+  });
+
+  test("signing out forgets the last file", async ({ page }) => {
+    await signIn(page, DEMO_EMAIL);
+    await readTo(page, 3);
+    await page.goto("/");
+    await expect(cardOf(page).getByText(title)).toBeVisible();
+    await page.locator('header button[aria-haspopup="menu"]').click();
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
+    await expect(page.getByRole("heading", { name: "Continue where you left off" })).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => localStorage.getItem("reader:last-read"))).toBeNull();
+  });
+
+  test("on a phone nothing overflows and every target and text in the card is big enough", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "phone layout");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await signIn(page, DEMO_EMAIL);
+    await readTo(page, 5);
+    await page.goto("/");
+    const card = cardOf(page);
+    await expect(card.getByRole("link", { name: /^Resume/ })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+    for (const link of [card.getByRole("link", { name: /^Resume/ }), card.getByRole("link", { name: /See all/ }), ...(await card.locator('a[href^="/courses/"]').all())]) {
+      expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+    const smallest = await card.evaluate((root) => {
+      let min = Infinity;
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (!node.textContent?.trim() || !node.parentElement) continue;
+        const el = node.parentElement;
+        if (el.closest(".sr-only")) continue;
+        min = Math.min(min, parseFloat(getComputedStyle(el).fontSize));
+      }
+      return min;
+    });
+    expect(smallest).toBeGreaterThanOrEqual(12);
+  });
 });

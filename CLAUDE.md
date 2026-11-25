@@ -167,7 +167,7 @@ mock exam generation, personalization.
   code; no auth framework.
 - A readable hint cookie `ua_signed_in=1` (not httpOnly, SameSite=Lax, path `/`, the refresh token's lifetime) is set and cleared inside
   `setSessionCookies` / `clearSessionCookies`, so sign-in, refresh, restore, sign-out and a failed refresh keep it in step. It holds nothing
-  personal and is never trusted: no server code reads it for authorization. It exists only so Home can reserve the progress band's space
+  personal and is never trusted: no server code reads it for authorization. It exists only so Home can reserve the Home card's space
   before paint (see Home); a stale one is harmless.
 - Access tokens are HS256 JWTs signed with `jose` (the one auth dependency),
   secret in `AUTH_SECRET` (32+ characters, read lazily so the build and public
@@ -254,12 +254,14 @@ mock exam generation, personalization.
   decorative course preview are gone (the independent-project statement stays in the footer). Home stays static and
   never reads the session on the server: a readable hint cookie (`ua_signed_in`, see Stack, Auth) is read by an inline
   script in the root layout's `<head>` before paint (`SIGNED_IN_SCRIPT`, `src/lib/auth/signed-in-hint.ts`, same test as
-  `hasSignedInHint`), which sets `html[data-signed-in]` and `--home-band-h` from `localStorage["home:band-h"]` (the
-  band's last measured phone height, kept when 80 to 600). Below md CSS then reserves a band slot of that height
-  (default 16.375rem) so the band fills it without moving the years (the slot, `ProgressBand`, `data-personal`, removes
+  `hasSignedInHint`), which sets `html[data-signed-in]`, `--home-band-h` from `localStorage["home:band-h"]` (the
+  card's last measured phone height) and `--home-band-h-wide` from `localStorage["home:band-h-wide"]` (its last measured
+  height from md up), each kept when 80 to 600. CSS then reserves a card slot of that height (defaults 28.5rem below md,
+  18.75rem from md up; a visitor's slot is `display: none`, so it takes no space and leaves no gap) so the card fills it
+  without moving the years (the slot, `ProgressBand`, `data-personal`, removes
   the marker when the session check answers signed out or the progress request fails, or after 8 s without an answer
   (`LOADING_GIVE_UP_MS`; a band arriving later then moves the years once); it sets it when a band shows, follows sign-in
-  and sign-out events and stores the measured height on a phone). A visitor without the hint gets the static page and no
+  and sign-out events and stores the measured height, under the key for the width it was measured at). A visitor without the hint gets the static page and no
   extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years, course browser; a
   signed-in student band, hero, years, course browser (`.home-*` rules in `globals.css`; no content is rendered twice).
 - Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats().years`; its `totals` are still computed, for #183; inside one
@@ -276,13 +278,22 @@ mock exam generation, personalization.
   (one column on a phone, two from sm, three from lg): code chip in the year's tint, title, "Semester 1" / "Semester 2"
   (`semesterLabel`, never the stored number) · "N files", an arrow; each links to `/courses/CODE`. A year with none
   says "No courses yet." On a phone it comes after the years (`.home-courses`); `YearCardsSkeleton` covers it. A
-  signed-in student also gets the "Your progress" band (`ProgressBand`, `data-personal`)
-  after the hero on desktop and first on a phone: loaded by the browser from `GET /api/v1/progress` after the page shows
-  (Home stays static; a visitor gets no band and no request), "N active days this week", up to three of My courses by
-  latest completion (ring, code, title, "x of y files · P%" or "✓ Finished", or "Exams: x of y done" for an exams-only
-  course) and "See all ›" to `/progress`; with no My courses it says "Mark files as done in the reader to track your
-  progress here." and leaves "See all" out. The continue card replaces or merges with it in #184. No claims about
-  features that do not exist.
+  signed-in student also gets one card (`ProgressBand`, `data-personal`, flat, `rounded-3xl`, no gradient and no
+  percentage bar) after the hero on desktop and first on a phone, loaded by the browser from `GET /api/v1/progress` after
+  the page shows (Home stays static; a visitor gets no card and no request). It has three parts. First, "Continue where
+  you left off": the last file read in this browser (`reader:last-read`, see the Reader page bullet), its title, "DEMO301 ·
+  Lecture · Page 7" (the page only after the first, read from `reader:last-page:ID`) and a "Resume" button
+  (accessible name "Resume TITLE, page 7") to `/resources/ID#page=7` (no hash for page 1 or none remembered); when
+  nothing is remembered it says "Open any file and you can pick it up here next time." instead. It is read from
+  `localStorage` after mount (`useSyncExternalStore`, no hydration mismatch). It is a place to continue from: no
+  "page 7 of 24", no bar, no percentage, nothing derived from opening a file. Second, when the student has ever marked a
+  file (`hasCompletions`, the rule of "This week" on `/progress`), the week row (`WeekDots`, `src/components/site/week-dots.tsx`,
+  shared with `/progress`: a list labelled "This week", seven dots Monday to Sunday, items "Monday, active" / "Friday,
+  today", primary only, no streak wording) and "N active days this week". Third, under a rule, "Your progress" with up
+  to three of My courses by latest completion (ring, code, title, "x of y files · P%" or "✓ Finished", or "Exams: x of
+  y done" for an exams-only course; these numbers come from explicit completions) and "See all ›" to `/progress`; with
+  no My courses it says "Mark files as done in the reader to track your progress here." and leaves "See all" out. The
+  card adds no animation. No claims about features that do not exist.
 - Year page (`/years/1`, `/2`, `/3`, `/m1`, prerendered, any other value is the 404 page; `src/app/(site)/years/[year]/page.tsx`): breadcrumb
   Home › Second year, title "Second year", then an `h2` "Semester 1" (`id="semester-1"`, scroll margin) and "Semester 2"
   (`semester-2`), each with the course cards (code, title, "N resources", the signed-in progress ring from the one shared
@@ -401,7 +412,12 @@ mock exam generation, personalization.
   mode" button (44px, Minimize icon) sits in the top row while it is on (desktop keeps Esc and the menu). Keys (when not typing): arrows,
   PageUp/PageDown, Home/End, `+`/`-`, `0`. The page being read is remembered per resource in
   `localStorage` (`reader:last-page:ID`), and a later visit offers "Continue where you left off,
-  page N?" once; this is a position only, never progress. Desktop (md and up): breadcrumb ending at
+  page N?" once; this is a position only, never progress. An address ending in `#page=N` (N after the first page and
+  inside the file, `pageFromHash`; anything else is ignored) jumps to that page once the reader is ready, shows no
+  offer and removes the hash with `history.replaceState`; Home's Resume link uses it. The page also records the file
+  itself in `localStorage` (`reader:last-read`: `{ id, title, courseCode, type, at }`, validated on read, written by
+  `RememberLastRead` when a file with a stored file is shown; position only, never progress) for Home's card, and
+  both sign-out buttons clear it so the next person on a shared browser does not see it. Desktop (md and up): breadcrumb ending at
   the course area that lists the resource, the title with its type and language on one line, the
   card at a fixed height with the pages scrolling inside it, and a narrow details column (plain text
   under small headings) beside it, with a full-width "Save for later" button at its top that becomes

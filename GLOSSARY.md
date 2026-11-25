@@ -94,3 +94,10 @@ _Avoid_: Streak, login day
 One of a small fixed set of achievements a student earns once and keeps, such as finishing a first
 chapter.
 _Avoid_: Badge, trophy, achievement, reward
+
+**Last read file**:
+The file a student opened in the reader most recently, remembered only in that browser
+(`reader:last-read`), with the page from the reader's remembered position. It exists so Home can offer
+"Continue where you left off". It is a place to continue from: opening a file is never progress, so it is
+never counted, shown as a percentage or merged with completions. Forgotten on sign-out.
+_Avoid_: Recently viewed, history, progress
