@@ -5,6 +5,7 @@ import { YEAR_STYLES } from "@/lib/design-language";
 import { readForPage } from "@/lib/page-errors";
 import { yearHref } from "@/lib/years";
 import { getHomeStats, type HomeStats } from "@/services/courses/home";
+import { CourseBrowser } from "./course-browser";
 import { SectionTitle } from "./section-title";
 import { yearCardText } from "./year-card";
 
@@ -13,16 +14,22 @@ import { yearCardText } from "./year-card";
 export async function YearCards() {
   const stats = await readForPage(() => getHomeStats(null));
   return (
-    <section id="years" className="home-years scroll-mt-20">
-      <SectionTitle>Choose your year</SectionTitle>
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.years.map((entry, index) => (
-          <li key={entry.year}>
-            <YearCard entry={entry} delay={index * 70} />
-          </li>
-        ))}
-      </ul>
-    </section>
+    <>
+      <section id="years" className="home-years scroll-mt-20">
+        <SectionTitle>Choose your year</SectionTitle>
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {stats.years.map((entry, index) => (
+            <li key={entry.year}>
+              <YearCard entry={entry} delay={index * 70} />
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section id="courses" className="home-courses scroll-mt-20" aria-labelledby="courses-title">
+        <SectionTitle id="courses-title">Jump straight to a course</SectionTitle>
+        <CourseBrowser years={stats.years} />
+      </section>
+    </>
   );
 }
 

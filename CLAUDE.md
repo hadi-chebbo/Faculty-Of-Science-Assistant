@@ -242,7 +242,7 @@ mock exam generation, personalization.
   without a name), labelled with the name (never the email). Its menu holds the account only: the name,
   Admin (admins only) and Sign out; pages never go in it.
 - Page width: every site page, the header and the footer use the `page-container` utility (`globals.css`): content up to 1280px (`max-w-7xl`), centred, side padding 16px on a phone, 24px from sm, 32px from lg, so the edges never move between pages; the reader follows it too. The account pages keep their full-screen split.
-- Home (spec #179, ticket #181; more sections arrive with #182 to #184): a hero card, then "Choose your year". The hero
+- Home (spec #179, tickets #181 and #182; more sections arrive with #183 and #184): a hero card, then "Choose your year". The hero
   (`hero.tsx`) says "Computer Science · Faculty of Science · Hadath", the headline "Find any course, exam or lecture.", one
   plain line, a real search field and two buttons, "Previous exams" (to `/exams`) and "Choose your year" (to `#years`). The
   field (`home-search.tsx`, `role="search"`, label "Search courses, chapters and files") is a plain GET form to
@@ -262,12 +262,21 @@ mock exam generation, personalization.
   and sign-out events and stores the measured height on a phone). A visitor without the hint gets the static page and no
   extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years; a
   signed-in student band, hero, years (`.home-*` rules in `globals.css`; no content is rendered twice).
-- Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats().years`; its `totals` are still computed, for #182 to #183; inside one
+- Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats().years`; its `totals` are still computed, for #183; inside one
   Suspense boundary with `YearCardsSkeleton`): "Choose your year", one card per entry of `YEARS` (four: one column on a
   phone, two from sm, four from lg): the year circle (`YearCircle`, year colour) and "Second year", up to four
   course-code chips in the year's tint and "+N more", "7 courses · 101 files" and "Open →", lift and the year's border
   on hover, rising in as the page loads; a year with no course is a muted dashed card, not a link, "No courses yet";
-  wording in `year-card.ts`. A signed-in student also gets the "Your progress" band (`ProgressBand`, `data-personal`)
+  wording in `year-card.ts`. Under the cards, "Jump straight to a course" (`#courses`, `course-browser.tsx`, a client
+  component fed by the same `getHomeStats().years`, whose entries now also carry `courses: { code, title, semester,
+  fileCount }[]` in semester-then-code order, `fileCount` counting visible files only, so the page stays static and
+  needs no account): Radix `Tabs` (real tabs, arrow keys, the selection announced) First year, Second year, Third year,
+  Master 1, the selected one in the year's solid colour, 44px tall, scrolling sideways inside their row on a phone
+  (`scroll-fade`, 24px end padding); it opens on the first year that has a course. The panel is a grid of course cards
+  (one column on a phone, two from sm, three from lg): code chip in the year's tint, title, "Semester 1" / "Semester 2"
+  (`semesterLabel`, never the stored number) · "N files", an arrow; each links to `/courses/CODE`. A year with none
+  says "No courses yet." On a phone it comes after the years (`.home-courses`); `YearCardsSkeleton` covers it. A
+  signed-in student also gets the "Your progress" band (`ProgressBand`, `data-personal`)
   after the hero on desktop and first on a phone: loaded by the browser from `GET /api/v1/progress` after the page shows
   (Home stays static; a visitor gets no band and no request), "N active days this week", up to three of My courses by
   latest completion (ring, code, title, "x of y files · P%" or "✓ Finished", or "Exams: x of y done" for an exams-only
