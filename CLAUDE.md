@@ -250,7 +250,7 @@ mock exam generation, personalization.
   `/search?q=WORDS`. A rotating hint (`.hint-cycle`, "Course code or topic", "Try: final 2025", "Try: graphs", "Try:
   partial") shows only while the field is empty and is `aria-hidden`; under reduced motion it shows its first line.
   A soft coloured background (three blurred blobs, `.hero-blob`) drifts behind the hero only and stops under reduced
-  motion. The long "How it works", "What you will find", "Exams coming up?" and FAQ sections, the numbers strip and the
+  motion. The long "How it works", "What you will find", "Exams coming up?" and FAQ sections, the old numbers strip and the
   decorative course preview are gone (the independent-project statement stays in the footer). Home stays static and
   never reads the session on the server: a readable hint cookie (`ua_signed_in`, see Stack, Auth) is read by an inline
   script in the root layout's `<head>` before paint (`SIGNED_IN_SCRIPT`, `src/lib/auth/signed-in-hint.ts`, same test as
@@ -262,10 +262,10 @@ mock exam generation, personalization.
   the marker when the session check answers signed out or the progress request fails, or after 8 s without an answer
   (`LOADING_GIVE_UP_MS`; a band arriving later then moves the years once); it sets it when a band shows, follows sign-in
   and sign-out events and stores the measured height, under the key for the width it was measured at). A visitor without the hint gets the static page and no
-  extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years, course browser; a
-  signed-in student band, hero, years, course browser (`.home-*` rules in `globals.css`; no content is rendered twice).
+  extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years, numbers row; a
+  signed-in student band, hero, years, numbers row (`.home-*` rules in `globals.css`; no content is rendered twice).
 - Home "Recently added" and previous-exam shortcuts (ticket #183; `recent.tsx`, in the same Suspense boundary as the year
-  cards, after the course browser on desktop and phone, `.home-recent` / `.home-exams` order 5 and 6 below md): "Recently added" is a
+  cards, after the numbers row on desktop and phone, `.home-recent` / `.home-exams` order 5 and 6 below md): "Recently added" is a
   region of the newest published files (`listRecentResources(null)` in `src/services/resources/recent.ts`, newest
   `createdAt` first, `RECENT_LIMIT` 6, the visitor's view so a draft never shows; no schema change), two columns from sm, each
   a 56px-tall link to the reader with the type's icon box in its type colour, the title, "CODE · Lecture · 2 days ago"
@@ -273,20 +273,21 @@ mock exam generation, personalization.
   `/search`. With fewer than `RECENT_MIN` (3) files the section hides itself. "Previous exams" is a region with three
   links, "Partial exams", "Final exams" and "Second session", to `/exams?session=partial|final|second`. Not a progress
   signal: nothing here reads the session or marks anything.
-- Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats().years`; its `totals` are still computed, for #183; inside one
+- Home year cards (`#years`, `year-cards.tsx`; the only part that reads the database, `getHomeStats()`; inside one
   Suspense boundary with `YearCardsSkeleton`): "Choose your year", one card per entry of `YEARS` (four: one column on a
   phone, two from sm, four from lg): the year circle (`YearCircle`, year colour) and "Second year", up to four
   course-code chips in the year's tint and "+N more", "7 courses · 101 files" and "Open →", lift and the year's border
   on hover, rising in as the page loads; a year with no course is a muted dashed card, not a link, "No courses yet";
-  wording in `year-card.ts`. Under the cards, "Jump straight to a course" (`#courses`, `course-browser.tsx`, a client
-  component fed by the same `getHomeStats().years`, whose entries now also carry `courses: { code, title, semester,
-  fileCount }[]` in semester-then-code order, `fileCount` counting visible files only, so the page stays static and
-  needs no account): Radix `Tabs` (real tabs, arrow keys, the selection announced) First year, Second year, Third year,
-  Master 1, the selected one in the year's solid colour, 44px tall, scrolling sideways inside their row on a phone
-  (`scroll-fade`, 24px end padding); it opens on the first year that has a course. The panel is a grid of course cards
-  (one column on a phone, two from sm, three from lg): code chip in the year's tint, title, "Semester 1" / "Semester 2"
-  (`semesterLabel`, never the stored number) · "N files", an arrow; each links to `/courses/CODE`. A year with none
-  says "No courses yet." On a phone it comes after the years (`.home-courses`); `YearCardsSkeleton` covers it. A
+  wording in `year-card.ts`. Under the cards, the numbers row (`#numbers`, a region labelled "In numbers", `StatsRow` in
+  `year-cards.tsx`, wording in `stats-row.ts`, from `getHomeStats().totals`; it replaced the "Jump straight to a course"
+  browser, owner 2026-11-25): four tiles that are not links, "1,204 files", "42 courses", "156 previous exams" and
+  "2015–2025 exam years covered" (`totals.examYears`: the first and last `academic_year_start` of a visible exam, shown
+  from the first year's start to the last year's end), counts in `en-US` digits and agreeing with their noun; each tile a
+  `rounded-3xl` card with a tinted icon box (brand tint; the exam tile takes the exam type's colour), the number large in
+  the heading colour and the label muted. A 2x2 grid on a phone, one row of four from md up. Visible files only (the
+  viewer is null, so drafts never count). The row is left out when there is no visible file, and both exam tiles when
+  there is no visible exam (the span alone when no exam has a year). On a phone it comes after the years (`.home-stats`);
+  `YearCardsSkeleton` covers it. A
   signed-in student also gets one card (`ProgressBand`, `data-personal`, flat, `rounded-3xl`, no gradient and no
   percentage bar) after the hero on desktop and first on a phone, loaded by the browser from `GET /api/v1/progress` after
   the page shows (Home stays static; a visitor gets no card and no request). It has three parts. First, "Continue where
