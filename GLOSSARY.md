@@ -21,6 +21,11 @@ resource type (lecture blue, notes teal, exercise orange, exam rose; solutions a
 the design language and always accompanied by the year's name or the type's name, never used alone.
 _Avoid_: Theme colour, category colour
 
+**Recently added**:
+The home page's short list of the newest published files, by the time they were uploaded (not by exam year or
+course). A visitor's view: a draft is never in it. Not "new since your last visit" and not progress.
+_Avoid_: Latest, updates, what's new
+
 **Lecturer**:
 The person who taught or wrote a resource, named as written (e.g. "Dr. Ali Ghorayeb"). A resource
 has at most one lecturer, or none when unknown; a course's lecturers are those of its resources.
