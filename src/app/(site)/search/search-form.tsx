@@ -3,8 +3,6 @@
 import { Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { SEARCH_MAX_LENGTH } from "@/services/search/query";
 import { searchHref } from "./href";
 import type { SearchChip } from "@/services/search/query";
@@ -47,18 +45,18 @@ export function SearchForm({ q, type }: { q: string; type?: SearchChip }) {
       action="/search"
       method="get"
       role="search"
-      className="flex gap-2"
+      className="flex items-center gap-2 rounded-2xl border bg-background py-1.5 pl-4 pr-1.5 shadow-lg shadow-primary/10 transition-[box-shadow,border-color] focus-within:border-primary/60 focus-within:ring-[3px] focus-within:ring-ring/40"
       onSubmit={(event) => {
         event.preventDefault();
         go(inputRef.current?.value ?? "");
       }}
     >
-      <div className="relative flex-1">
+      <Search aria-hidden className="size-5 shrink-0 text-link" />
+      <div className="relative min-w-0 flex-1">
         <label htmlFor="search-q" className="sr-only">
           Search courses, chapters and files
         </label>
-        <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground" />
-        <Input
+        <input
           ref={inputRef}
           id="search-q"
           name="q"
@@ -71,7 +69,7 @@ export function SearchForm({ q, type }: { q: string; type?: SearchChip }) {
           autoCapitalize="none"
           spellCheck={false}
           // Chrome draws its own clear button in a search field; ours is drawn once, below.
-          className="peer h-12 rounded-lg bg-card pl-10 pr-11 text-base shadow-none md:h-12 md:text-base [&::-webkit-search-cancel-button]:hidden"
+          className="peer h-11 w-full bg-transparent pr-11 text-base text-foreground outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
           onChange={(event) => {
             clearTimeout(timer.current);
             const text = event.currentTarget.value;
@@ -82,7 +80,7 @@ export function SearchForm({ q, type }: { q: string; type?: SearchChip }) {
         <button
           type="button"
           aria-label="Clear search"
-          className="absolute right-1 top-1/2 hidden size-11 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground outline-none hover:text-heading focus-visible:ring-[3px] focus-visible:ring-ring/50 peer-[:not(:placeholder-shown)]:flex"
+          className="absolute right-0 top-1/2 hidden size-11 -translate-y-1/2 items-center justify-center rounded-xl text-muted-foreground outline-none hover:text-heading focus-visible:ring-[3px] focus-visible:ring-ring/50 peer-[:not(:placeholder-shown)]:flex"
           onClick={() => {
             const input = inputRef.current;
             if (input) {
@@ -98,9 +96,12 @@ export function SearchForm({ q, type }: { q: string; type?: SearchChip }) {
       {/* After the box, so the address reads q first. */}
       {type && <input type="hidden" name="type" value={type} />}
       {/* Hidden on a phone (Enter submits), but visible while it has the keyboard focus. */}
-      <Button type="submit" className="h-12 px-5 max-md:[&:not(:focus)]:sr-only">
+      <button
+        type="submit"
+        className="h-11 shrink-0 rounded-xl bg-primary px-5 text-base font-semibold text-primary-foreground transition-transform focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 motion-safe:hover:-translate-y-0.5 max-md:[&:not(:focus)]:sr-only"
+      >
         Search
-      </Button>
+      </button>
     </form>
   );
 }

@@ -1,13 +1,15 @@
-import { ChevronRight, SearchX } from "lucide-react";
+import { SearchX } from "lucide-react";
 import Link from "next/link";
 import { ResourceRow } from "@/components/site/resource-row";
 import { Highlighted } from "@/components/site/highlighted";
+import { YearCircle } from "@/components/site/year-badge";
 import { Button } from "@/components/ui/button";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import type { ExamSession, ResourceType } from "@/db/constants";
 import { descriptionSnippet, markText } from "@/lib/highlight";
 import { RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
-import { YEARS, courseYearSemesterLabel, yearHref, yearLabel } from "@/lib/years";
+import { YEAR_STYLES } from "@/lib/design-language";
+import { YEARS, courseYearSemesterLabel, yearHref, yearLabel, yearOfSemester } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
 import { cn } from "@/lib/utils";
 import { SEARCH_CHIPS, type SearchChip } from "@/services/search/query";
@@ -18,8 +20,6 @@ import { ChipRow } from "./chips";
 import { searchHref, type SearchParams } from "./params";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
-const CARD = "overflow-hidden rounded-xl border bg-card";
-const ROW_LINK = `group/hit flex items-center gap-3 px-4 py-3 hover:bg-muted/60 focus-visible:bg-muted/60 ${FOCUS}`;
 const CHIP_LABELS: Record<SearchChip, string> = {
   all: "All",
   course: "Courses",
@@ -37,14 +37,15 @@ export function SearchHints() {
         <b className="font-semibold text-heading">final 2024</b>). Accents don&apos;t matter.
       </p>
       <div>
-        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Or browse a year</h2>
+        <h2 className="mb-2 text-base font-semibold text-heading">Or browse a year</h2>
         <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {YEARS.map((year) => (
             <li key={year}>
               <Link
                 href={yearHref(year)}
-                className={`flex min-h-12 items-center rounded-lg border bg-card px-4 font-semibold text-heading transition-colors hover:border-primary/40 hover:bg-muted/60 ${FOCUS}`}
+                className={`flex min-h-14 items-center gap-3 rounded-2xl border bg-card px-4 font-semibold text-heading transition-colors hover:bg-muted/60 ${YEAR_STYLES[year].border} ${FOCUS}`}
               >
+                <YearCircle year={year} className="size-8 text-sm" />
                 {yearLabel(year)}
               </Link>
             </li>
@@ -169,7 +170,7 @@ function Found({ outcome, params }: { outcome: SearchOutcome; params: SearchPara
       )}
       {outcome.courses && outcome.courses.total > 0 && (
         <Section title="Courses" total={outcome.courses.total}>
-          <ul className="space-y-2">
+          <ul className="grid gap-3 md:grid-cols-2">
             {outcome.courses.items.map((course) => (
               <CourseCard key={course.code} course={course} terms={outcome.highlight} />
             ))}
@@ -179,7 +180,7 @@ function Found({ outcome, params }: { outcome: SearchOutcome; params: SearchPara
       )}
       {outcome.chapters && outcome.chapters.total > 0 && (
         <Section title="Chapters" total={outcome.chapters.total}>
-          <ul className={cn(CARD, "divide-y")}>
+          <ul className="grid gap-3 md:grid-cols-2">
             {outcome.chapters.items.map((chapter) => (
               <ChapterRow key={`${chapter.courseCode}/${chapter.position}`} chapter={chapter} terms={outcome.highlight} />
             ))}
@@ -189,7 +190,7 @@ function Found({ outcome, params }: { outcome: SearchOutcome; params: SearchPara
       )}
       {outcome.files && outcome.files.total > 0 && (
         <Section title="Files" total={outcome.files.total}>
-          <ul className="space-y-2">
+          <ul className="space-y-2.5">
             {outcome.files.items.map((hit) => (
               <FileRow key={hit.resource.id} hit={hit} terms={outcome.highlight} />
             ))}
@@ -204,8 +205,8 @@ function Found({ outcome, params }: { outcome: SearchOutcome; params: SearchPara
 
 function Section({ title, total, children }: { title: string; total: number; children: React.ReactNode }) {
   return (
-    <section className="space-y-2">
-      <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <section className="space-y-2.5">
+      <h2 className="text-lg font-semibold tracking-tight text-heading">
         {title} · {total}
       </h2>
       {children}
@@ -233,7 +234,7 @@ function ShowAll({
   return (
     <Link
       href={searchHref({ q: params.q, type: params.type, show: section })}
-      className={`inline-flex min-h-11 items-center text-sm font-semibold text-link underline-offset-4 hover:underline ${FOCUS}`}
+      className={`inline-flex min-h-11 items-center rounded-xl border bg-card px-4 text-sm font-semibold text-link hover:bg-muted/60 ${FOCUS}`}
     >
       Show all {total} {noun}
     </Link>
@@ -247,7 +248,7 @@ function Pager({ outcome, params }: { outcome: SearchOutcome; params: SearchPara
       <PaginationContent>
         {outcome.page > 1 && (
           <PaginationItem>
-            <PaginationPrevious href={href(outcome.page - 1)} className="min-h-11" />
+            <PaginationPrevious href={href(outcome.page - 1)} className="min-h-11 rounded-xl" />
           </PaginationItem>
         )}
         <PaginationItem className="px-2 text-sm">
@@ -255,7 +256,7 @@ function Pager({ outcome, params }: { outcome: SearchOutcome; params: SearchPara
         </PaginationItem>
         {outcome.page < outcome.pages && (
           <PaginationItem>
-            <PaginationNext href={href(outcome.page + 1)} className="min-h-11" />
+            <PaginationNext href={href(outcome.page + 1)} className="min-h-11 rounded-xl" />
           </PaginationItem>
         )}
       </PaginationContent>
@@ -267,6 +268,7 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 
 function CourseCard({ course, terms }: { course: CourseHit; terms: string[] }) {
   const empty = course.fileCount === 0;
+  const year = YEAR_STYLES[yearOfSemester(course.semester)];
   const details = [
     courseYearSemesterLabel(course.semester),
     course.chapterCount > 0 && plural(course.chapterCount, "chapter"),
@@ -274,29 +276,31 @@ function CourseCard({ course, terms }: { course: CourseHit; terms: string[] }) {
   ].filter(Boolean);
   const body = (
     <>
-      <span className={`shrink-0 rounded-md bg-muted px-2 py-1 font-mono text-sm ${empty ? "text-muted-foreground" : "text-link"}`}>
+      <span
+        className={cn(
+          "w-fit rounded-md px-2 py-1 font-mono text-sm font-medium",
+          empty ? "bg-muted text-muted-foreground" : year.chip,
+        )}
+      >
         <Highlighted marked={markText(course.code, terms)} />
       </span>
-      <span className="min-w-0 flex-1">
-        <span className={`block font-medium ${empty ? "text-muted-foreground" : "text-heading"}`}>
-          <Highlighted marked={markText(course.title, terms)} />
-        </span>
-        <span className="mt-0.5 block text-sm">{details.join(" · ")}</span>
+      <span className={`block font-semibold ${empty ? "text-muted-foreground" : "text-heading"}`}>
+        <Highlighted marked={markText(course.title, terms)} />
       </span>
+      <span className="block text-sm">{details.join(" · ")}</span>
     </>
   );
   if (empty) {
     return (
-      <li className="overflow-hidden rounded-xl border border-dashed bg-muted/40">
-        <div className="flex items-center gap-3.5 p-3.5">{body}</div>
+      <li className="rounded-3xl border border-dashed bg-muted/40">
+        <div className="flex h-full flex-col gap-1.5 p-4">{body}</div>
       </li>
     );
   }
   return (
-    <li className="overflow-hidden rounded-xl border bg-card transition-colors hover:border-primary/40">
-      <Link href={`/courses/${encodeURIComponent(course.code)}`} className={`group/hit flex items-center gap-3.5 p-3.5 hover:bg-muted/60 focus-visible:bg-muted/60 ${FOCUS}`}>
+    <li className={cn("rounded-3xl border bg-card transition-colors", year.border)}>
+      <Link href={`/courses/${encodeURIComponent(course.code)}`} className={`flex h-full flex-col gap-1.5 rounded-3xl p-4 hover:bg-muted/60 focus-visible:bg-muted/60 ${FOCUS}`}>
         {body}
-        <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground group-hover/hit:text-link" />
       </Link>
     </li>
   );
@@ -304,21 +308,18 @@ function CourseCard({ course, terms }: { course: CourseHit; terms: string[] }) {
 
 function ChapterRow({ chapter, terms }: { chapter: ChapterHit; terms: string[] }) {
   return (
-    <li>
-      <Link href={`/courses/${encodeURIComponent(chapter.courseCode)}/chapters/${chapter.position}`} className={ROW_LINK}>
-        <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-xs text-heading">
-          {chapter.position}
+    <li className="rounded-3xl border bg-card transition-colors hover:border-primary/40">
+      <Link
+        href={`/courses/${encodeURIComponent(chapter.courseCode)}/chapters/${chapter.position}`}
+        className={`flex h-full flex-col gap-1.5 rounded-3xl p-4 hover:bg-muted/60 focus-visible:bg-muted/60 ${FOCUS}`}
+      >
+        <span className="w-fit rounded-md bg-muted px-2 py-1 text-sm font-medium text-link">Chapter {chapter.position}</span>
+        <span className="block font-semibold text-heading">
+          <Highlighted marked={markText(chapter.title, terms)} />
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block font-medium text-heading">
-            <span className="sr-only">Chapter {chapter.position}: </span>
-            <Highlighted marked={markText(chapter.title, terms)} />
-          </span>
-          <span className="mt-0.5 block text-sm">
-            {chapter.courseCode} · {chapter.courseTitle} · {plural(chapter.fileCount, "file")}
-          </span>
+        <span className="block text-sm">
+          {chapter.courseCode} · {chapter.courseTitle} · {plural(chapter.fileCount, "file")}
         </span>
-        <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground group-hover/hit:text-link" />
       </Link>
     </li>
   );
@@ -346,8 +347,8 @@ function FileRow({ hit, terms }: { hit: FileHit; terms: string[] }) {
 
 function NoResults({ outcome, params }: { outcome: SearchOutcome; params: SearchParams }) {
   return (
-    <div className="rounded-xl border bg-card px-5 py-6">
-      <span className="mb-3 flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+    <div className="rounded-3xl border bg-card px-5 py-6 md:px-6">
+      <span className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
         <SearchX aria-hidden className="size-5" />
       </span>
       <h2 className="text-lg font-semibold tracking-tight text-heading">No results for “{outcome.query}”</h2>
@@ -368,10 +369,10 @@ function NoResults({ outcome, params }: { outcome: SearchOutcome; params: Search
         </ul>
       </div>
       <div className="mt-5 flex flex-wrap gap-2.5">
-        <Button asChild variant="outline" className="h-11 px-4">
+        <Button asChild variant="outline" className="h-11 rounded-xl px-4">
           <Link href="/">Browse courses</Link>
         </Button>
-        <Button asChild variant="outline" className="h-11 px-4">
+        <Button asChild variant="outline" className="h-11 rounded-xl px-4">
           <Link href="/exams">Previous exams</Link>
         </Button>
       </div>

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { PageTitle } from "@/components/site/page-title";
 import { SearchSkeleton } from "@/components/site/skeletons";
 import { SEARCH_MIN_LENGTH, searchLength } from "@/services/search/query";
 import { parseSearchParams, type SearchParams } from "./params";
@@ -41,21 +40,31 @@ export default function SearchPage({ searchParams }: PageProps<"/search">) {
   );
 }
 
+// The title with the short yellow bar under it, as on every page (built here, not with `PageTitle`).
+function SearchTitle() {
+  return (
+    <header className="mb-5">
+      <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Search</h1>
+      <div data-title-bar className="mt-3 h-1 w-12 rounded-full bg-highlight" aria-hidden />
+    </header>
+  );
+}
+
 function SearchContent({ params }: { params: SearchParams }) {
   const active = searchLength(params.q) >= SEARCH_MIN_LENGTH;
   return (
-    <>
+    <div className="max-w-4xl">
       {/* On a phone the results need the room, so the visible title is for the start page and for
           larger screens; the heading itself is always there. */}
       {active ? (
         <>
           <h1 className="sr-only md:hidden">Search</h1>
           <div className="hidden md:block">
-            <PageTitle>Search</PageTitle>
+            <SearchTitle />
           </div>
         </>
       ) : (
-        <PageTitle>Search</PageTitle>
+        <SearchTitle />
       )}
       <div className="space-y-4">
         <SearchForm q={params.q} type={params.type} />
@@ -71,6 +80,6 @@ function SearchContent({ params }: { params: SearchParams }) {
           <SearchResults params={params} />
         </Suspense>
       </div>
-    </>
+    </div>
   );
 }

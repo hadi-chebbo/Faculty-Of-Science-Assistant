@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Crumbs } from "@/components/site/crumbs";
-import { PageTitle } from "@/components/site/page-title";
+import { ClipboardCheck } from "lucide-react";
 import { ExamsFiltersSkeleton, ExamsListSkeleton } from "@/components/site/skeletons";
+import { TYPE_STYLES } from "@/lib/design-language";
+import { cn } from "@/lib/utils";
 import { readForPage } from "@/lib/page-errors";
 import { listExamFilterOptions } from "@/services/resources/resources";
 import { ExamFilters } from "./filters";
@@ -30,7 +32,18 @@ export default function ExamsPage({ searchParams }: PageProps<"/exams">) {
   return (
     <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-6 md:py-8">
       <Crumbs items={[{ label: "Home", href: "/" }, { label: "Exams" }]} />
-      <PageTitle>Previous exams</PageTitle>
+      <header className="mb-6">
+        <div className="flex items-center gap-3.5">
+          <span aria-hidden className={cn("flex size-12 shrink-0 items-center justify-center rounded-2xl", TYPE_STYLES.exam.chip)}>
+            <ClipboardCheck className="size-6" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Previous exams</h1>
+            <p className="mt-0.5 text-sm text-muted-foreground md:text-base">Partial, final and second-session exams of every course.</p>
+          </div>
+        </div>
+        <div data-title-bar className="mt-4 h-1 w-12 rounded-full bg-highlight" aria-hidden />
+      </header>
       <noscript>
         <style>{NO_SCRIPT_CSS}</style>
       </noscript>
