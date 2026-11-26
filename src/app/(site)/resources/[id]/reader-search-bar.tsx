@@ -1,5 +1,6 @@
 "use client";
 
+import { READER_ICON_BUTTON } from "./chrome";
 import { ChevronDown, ChevronUp, Search, X } from "lucide-react";
 import type { Ref } from "react";
 import { Button } from "@/components/ui/button";
@@ -68,13 +69,13 @@ export function ReaderSearchBar({
           {status.kind === "searching" && <span aria-hidden>Searching… {status.percent}%</span>}
         </div>
       </div>
-      <Button variant="ghost" size="icon" className="size-11 md:size-10" aria-label="Previous match" disabled={matches === 0} onClick={() => onStep(-1)}>
+      <Button variant="ghost" size="icon" className={READER_ICON_BUTTON} aria-label="Previous match" disabled={matches === 0} onClick={() => onStep(-1)}>
         <ChevronUp aria-hidden />
       </Button>
-      <Button variant="ghost" size="icon" className="size-11 md:size-10" aria-label="Next match" disabled={matches === 0} onClick={() => onStep(1)}>
+      <Button variant="ghost" size="icon" className={READER_ICON_BUTTON} aria-label="Next match" disabled={matches === 0} onClick={() => onStep(1)}>
         <ChevronDown aria-hidden />
       </Button>
-      <Button variant="ghost" size="icon" className="size-11 md:size-10" aria-label="Close search" onClick={onClose}>
+      <Button variant="ghost" size="icon" className={READER_ICON_BUTTON} aria-label="Close search" onClick={onClose}>
         <X aria-hidden />
       </Button>
     </div>

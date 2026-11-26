@@ -1,5 +1,6 @@
 "use client";
 
+import { READER_ICON_BUTTON } from "./chrome";
 import { Bookmark, BookmarkCheck, Check, Circle, CircleCheck, Download, ExternalLink, ListPlus, Maximize, MoreHorizontal, Minimize, MoveVertical, MoveHorizontal } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Fragment, type Ref } from "react";
@@ -86,7 +87,7 @@ export function ReaderMenu(props: ReaderMenuProps) {
   const { sheet, open, onOpenChange, triggerRef } = props;
   const groups = entriesOf(props);
   const trigger = (
-    <Button ref={triggerRef} variant="ghost" size="icon" className="size-11 md:size-10" aria-label="More actions">
+    <Button ref={triggerRef} variant="ghost" size="icon" className={READER_ICON_BUTTON} aria-label="More actions">
       <MoreHorizontal aria-hidden />
     </Button>
   );

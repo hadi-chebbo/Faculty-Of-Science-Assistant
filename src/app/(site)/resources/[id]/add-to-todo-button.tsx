@@ -1,5 +1,6 @@
 "use client";
 
+import { DETAILS_BUTTON } from "./chrome";
 import { ListPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAddToTodo } from "@/lib/add-to-todo";
@@ -9,7 +10,7 @@ import { useAddToTodo } from "@/lib/add-to-todo";
 export function AddToTodoButton({ resourceId }: { resourceId: string }) {
   const { pending, add } = useAddToTodo(resourceId);
   return (
-    <Button type="button" variant="outline" disabled={pending} onClick={() => void add()} className="min-h-11 w-full rounded-xl md:min-h-10">
+    <Button type="button" variant="outline" disabled={pending} onClick={() => void add()} className={DETAILS_BUTTON}>
       <ListPlus aria-hidden />
       Add to to-do
     </Button>
