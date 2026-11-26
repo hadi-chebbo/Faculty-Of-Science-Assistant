@@ -305,7 +305,7 @@ mock exam generation, personalization.
   no My courses it says "Mark files as done in the reader to track your progress here." and leaves "See all" out. The
   card adds no animation. No claims about features that do not exist.
 - Year page (`/years/1`, `/2`, `/3`, `/m1`, prerendered, any other value is the 404 page; `src/app/(site)/years/[year]/page.tsx`): breadcrumb
-  Home › Second year, a header with the year's circle (`YearCircle`, 48px, 56px from md, the year colour as on the home cards)
+  Home › Second year, a header with the year's circle (`YearCircle` in `PageTitle`'s `leading` slot, 48px, 56px from md, the year colour as on the home cards)
   beside the title "Second year" and the yellow bar under it, then an `h2` "Semester 1" (`id="semester-1"`, scroll margin) and
   "Semester 2" (`semester-2`), each followed by a muted "3 courses" and its course cards (one column on a phone, two from sm,
   three from lg) or a dashed "No courses yet." box. In the shared design language (#185): a course card is a `rounded-3xl`

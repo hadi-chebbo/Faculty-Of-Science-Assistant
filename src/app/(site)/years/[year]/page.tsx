@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Crumbs } from "@/components/site/crumbs";
+import { PageTitle } from "@/components/site/page-title";
 import { CourseListSkeleton, YearSkeleton } from "@/components/site/skeletons";
 import { YearCircle } from "@/components/site/year-badge";
 import { YEAR_STYLES } from "@/lib/design-language";
@@ -45,24 +46,14 @@ function YearContent({ year: param }: { year: string }) {
   return (
     <>
       <Crumbs items={[{ label: "Home", href: "/" }, { label: yearLabel(year) }]} />
-      <YearHeader year={year} />
+      <header>
+        {/* The year's circle in its colour, as on the home cards; the name is always beside it. */}
+        <PageTitle leading={<YearCircle year={year} className="size-12 text-base md:size-14 md:text-lg" />}>{yearLabel(year)}</PageTitle>
+      </header>
       <Suspense fallback={<CourseListSkeleton />}>
         <Semesters year={year} />
       </Suspense>
     </>
-  );
-}
-
-// The year's circle (its colour, as on the home cards) beside the title, then the short yellow bar every page title has.
-function YearHeader({ year }: { year: Year }) {
-  return (
-    <header className="mb-8">
-      <div className="flex items-center gap-4">
-        <YearCircle year={year} className="size-12 text-base md:size-14 md:text-lg" />
-        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{yearLabel(year)}</h1>
-      </div>
-      <div className="mt-3 h-1 w-12 rounded-full bg-highlight" aria-hidden />
-    </header>
   );
 }
 
@@ -98,7 +89,7 @@ function SemesterSection({ year, entry }: { year: Year; entry: YearSemester }) {
             <li
               key={course.code}
               style={{ "--rise-delay": `${Math.min(index, 8) * 50}ms` } as React.CSSProperties}
-              className="rise-in relative"
+              className="rise-in"
             >
               {course.resourceCount === 0 ? <EmptyCourseCard course={course} /> : <CourseCard year={year} course={course} />}
             </li>
@@ -115,7 +106,7 @@ type YearCourse = YearSemester["courses"][number];
 function EmptyCourseCard({ course }: { course: YearCourse }) {
   return (
     <div className="flex h-full min-h-36 flex-col rounded-3xl border border-dashed bg-muted/40 p-5 text-muted-foreground">
-      <span className="w-fit rounded-lg bg-muted px-2 py-0.5 font-mono text-xs font-semibold">{course.code}</span>
+      <span className="w-fit rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs font-medium">{course.code}</span>
       <span className="mt-3 text-lg font-semibold leading-snug">{course.title}</span>
       <span className="mt-auto pt-4 text-sm">No files yet</span>
     </div>
@@ -124,15 +115,16 @@ function EmptyCourseCard({ course }: { course: YearCourse }) {
 
 // The code chip and the arrow take the year's tint, the hover border its colour; the card lifts on hover only when
 // motion is welcome. The top right stays clear for the signed-in progress ring, so it appears without moving anything.
+// The lift is on a wrapper (not the list item, whose rise-in animation holds its transform) so the ring moves with the card.
 function CourseCard({ year, course }: { year: Year; course: YearCourse }) {
   const style = YEAR_STYLES[year];
   return (
-    <>
+    <div className="group relative h-full transition-transform motion-safe:hover:-translate-y-1">
       <Link
         href={`/courses/${course.code}`}
-        className={`group flex h-full min-h-36 flex-col rounded-3xl border bg-card p-5 transition-[transform,border-color,box-shadow] hover:shadow-md motion-safe:hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${style.border}`}
+        className={`flex h-full min-h-36 flex-col rounded-3xl border bg-card p-5 transition-[border-color,box-shadow] hover:shadow-md focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${style.border}`}
       >
-        <span className={`w-fit rounded-lg px-2 py-0.5 font-mono text-xs font-semibold ${style.chip}`}>{course.code}</span>
+        <span className={`w-fit rounded-md px-1.5 py-0.5 font-mono text-xs font-medium ${style.chip}`}>{course.code}</span>
         <span className="mt-3 pr-10 text-lg font-semibold leading-snug text-heading">{course.title}</span>
         <span className="mt-auto flex items-center justify-between gap-3 pt-4 text-sm text-muted-foreground">
           <span>{plural(course.resourceCount, "resource")}</span>
@@ -142,6 +134,6 @@ function CourseCard({ year, course }: { year: Year; course: YearCourse }) {
         </span>
       </Link>
       <CourseProgressRing code={course.code} />
-    </>
+    </div>
   );
 }

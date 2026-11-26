@@ -78,7 +78,13 @@ export function TodoSkeleton() {
 export function YearSkeleton() {
   return (
     <div role="status" aria-label="Loading year">
-      <TitleSkeleton />
+      <div className="mb-6" aria-hidden>
+        <div className="flex items-center gap-4">
+          <Skeleton className="size-12 rounded-full md:size-14" />
+          <Skeleton className="h-8 w-48" />
+        </div>
+        <Skeleton className="mt-3 h-1 w-12" />
+      </div>
       <CourseListSkeleton />
     </div>
   );
