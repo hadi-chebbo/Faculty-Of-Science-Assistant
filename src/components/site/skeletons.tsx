@@ -12,9 +12,9 @@ export function TitleSkeleton() {
 
 export function CourseListSkeleton() {
   return (
-    <div className="grid gap-3 sm:grid-cols-2" role="status" aria-label="Loading courses">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" role="status" aria-label="Loading courses">
       {Array.from({ length: 4 }, (_, i) => (
-        <Skeleton key={i} className="h-[6.5rem] w-full rounded-xl" />
+        <Skeleton key={i} className="h-36 w-full rounded-3xl" />
       ))}
     </div>
   );

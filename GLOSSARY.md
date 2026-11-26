@@ -18,7 +18,9 @@ _Avoid_: Level, L1/L2/L3, Year 2, S3, Semester 3 (in student-facing text), acade
 **Year colour** and **Type colour**:
 The colour that always stands for a year (first sky, second violet, third emerald, Master 1 amber) or for a
 resource type (lecture blue, notes teal, exercise orange, exam rose; solutions and other neutral). Defined once in
-the design language and always accompanied by the year's name or the type's name, never used alone.
+the design language and always accompanied by the year's name or the type's name, never used alone. A year's colour
+marks its circle and course-code chips on the home year cards and on its year page (the circle beside the title, the code
+chips, arrows and hover borders of its course cards).
 _Avoid_: Theme colour, category colour
 
 **Numbers row**:
