@@ -56,11 +56,27 @@ export function CourseProgressBlock({ code }: { code: string }) {
   );
 }
 
+// One chapter of the course progress, or nothing for a visitor, while loading, or for a chapter with no counted files.
+function useChapterProgress(code: string, position: number) {
+  const chapter = useCourseProgress(code)?.chapters.find((c) => c.position === position);
+  return chapter && chapter.total > 0 ? chapter : null;
+}
+
+// The filled part of a chapter bar: primary, success green once finished.
+function BarFill({ chapter }: { chapter: { done: number; total: number; finished: boolean } }) {
+  return (
+    <span
+      className={`block h-full ${chapter.finished ? "bg-success" : "bg-primary"}`}
+      style={{ width: `${Math.round((chapter.done / chapter.total) * 100)}%` }}
+    />
+  );
+}
+
 // What a chapter card shows at the right of its "Chapter N" line. Nothing for a visitor, while
 // loading, or for a chapter with no counted files.
 export function ChapterProgressText({ code, position }: { code: string; position: number }) {
-  const chapter = useCourseProgress(code)?.chapters.find((c) => c.position === position);
-  if (!chapter || chapter.total === 0) return null;
+  const chapter = useChapterProgress(code, position);
+  if (!chapter) return null;
   if (chapter.finished) {
     return (
       <span data-personal className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 font-semibold text-success">
@@ -79,14 +95,11 @@ export function ChapterProgressText({ code, position }: { code: string; position
 // takes no height. `data-finished` lets the card tint its border (`has-[...]`). Decorative: the
 // text above says the same.
 export function ChapterProgressBar({ code, position }: { code: string; position: number }) {
-  const chapter = useCourseProgress(code)?.chapters.find((c) => c.position === position);
-  if (!chapter || chapter.total === 0) return null;
+  const chapter = useChapterProgress(code, position);
+  if (!chapter) return null;
   return (
     <span aria-hidden data-personal data-finished={chapter.finished} className="absolute inset-x-0 bottom-0 block h-1 bg-border">
-      <span
-        className={`block h-full ${chapter.finished ? "bg-success" : "bg-primary"}`}
-        style={{ width: `${Math.round((chapter.done / chapter.total) * 100)}%` }}
-      />
+      <BarFill chapter={chapter} />
     </span>
   );
 }
@@ -95,8 +108,8 @@ export function ChapterProgressBar({ code, position }: { code: string; position:
 // (success green once finished), from the same course request as the course page. Nothing for a visitor, while loading,
 // or for a chapter with no counted files. The page keeps its place free (see the chapter page), so nothing moves.
 export function ChapterProgressHeader({ code, position }: { code: string; position: number }) {
-  const chapter = useCourseProgress(code)?.chapters.find((c) => c.position === position);
-  if (!chapter || chapter.total === 0) return null;
+  const chapter = useChapterProgress(code, position);
+  if (!chapter) return null;
   return (
     <div data-personal className="w-full text-sm">
       <p className="flex items-baseline justify-between gap-3">
@@ -107,10 +120,7 @@ export function ChapterProgressHeader({ code, position }: { code: string; positi
         </span>
       </p>
       <span aria-hidden className="mt-2 block h-1.5 overflow-hidden rounded-full bg-heading/10">
-        <span
-          className={`block h-full rounded-full ${chapter.finished ? "bg-success" : "bg-primary"}`}
-          style={{ width: `${Math.round((chapter.done / chapter.total) * 100)}%` }}
-        />
+        <BarFill chapter={chapter} />
       </span>
     </div>
   );

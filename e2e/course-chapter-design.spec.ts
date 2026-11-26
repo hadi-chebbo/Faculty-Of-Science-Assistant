@@ -9,7 +9,7 @@ test("the course header names the year and semester and shows the code in the ye
   test.skip(isMobile, "the year line is shown from md up");
   await page.goto("/courses/DEMO301");
   const header = page.locator("main header");
-  await expect(header.getByRole("heading", { level: 1 })).toHaveText("DEMO301Sample Course A");
+  await expect(header.getByRole("heading", { level: 1 })).toHaveAccessibleName("DEMO301 Sample Course A"); // the code is not run into the title
   await expect(header).toContainText("Second year · Semester 1");
   // The current area tab takes the same solid year colour as the year circle in the header.
   const circle = await background(page, "main header p > span[aria-hidden]");

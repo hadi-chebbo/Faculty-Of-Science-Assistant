@@ -59,13 +59,6 @@ export function groupCounts<T extends ResourceType>(
     });
 }
 
-// "3 lectures · 1 note · 2 exercises": what a list of groups holds, in the order given.
-export function describeGroups(groups: { type: ResourceType; resources: unknown[] }[]): string {
-  return groupCounts(groups)
-    .map((entry) => entry.label)
-    .join(" · ");
-}
-
 // An academic year is stored by its start year: 2024 is shown as "2024-2025".
 export function formatAcademicYear(start: number): string {
   return `${start}-${start + 1}`;
