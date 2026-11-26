@@ -9,12 +9,15 @@ import type { Year } from "./years";
 //  - solid:  a filled circle or tab (text colour chosen for contrast)
 //  - chip:   a tinted chip or icon box with dark text in light mode and light text in dark mode
 //  - border: the hover border of a card
+//  - tab:    the selected tab of a shadcn Tabs list in the year's solid colour (its own `data-active` classes and their
+//            `dark:` forms, which outrank the component's dark defaults)
 // File type: lecture blue, notes teal, exercise orange, exam rose; solutions and other stay neutral.
 // Colour is never the only signal: the year label and the type name are always shown beside it.
 export interface YearStyle {
   solid: string;
   chip: string;
   border: string;
+  tab: string;
 }
 
 export const YEAR_STYLES: Record<Year, YearStyle> = {
@@ -22,21 +25,25 @@ export const YEAR_STYLES: Record<Year, YearStyle> = {
     solid: "bg-sky-700 text-white",
     chip: "bg-sky-500/15 text-sky-800 dark:text-sky-300",
     border: "hover:border-sky-500/70",
+    tab: "data-active:bg-sky-700 data-active:text-white dark:data-active:bg-sky-700 dark:data-active:text-white dark:data-active:border-transparent",
   },
   2: {
     solid: "bg-violet-600 text-white",
     chip: "bg-violet-500/15 text-violet-800 dark:text-violet-300",
     border: "hover:border-violet-500/70",
+    tab: "data-active:bg-violet-600 data-active:text-white dark:data-active:bg-violet-600 dark:data-active:text-white dark:data-active:border-transparent",
   },
   3: {
     solid: "bg-emerald-700 text-white",
     chip: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
     border: "hover:border-emerald-500/70",
+    tab: "data-active:bg-emerald-700 data-active:text-white dark:data-active:bg-emerald-700 dark:data-active:text-white dark:data-active:border-transparent",
   },
   4: {
     solid: "bg-amber-400 text-black",
     chip: "bg-amber-500/20 text-amber-900 dark:text-amber-300",
     border: "hover:border-amber-500/70",
+    tab: "data-active:bg-amber-400 data-active:text-black dark:data-active:bg-amber-400 dark:data-active:text-black dark:data-active:border-transparent",
   },
 };
 

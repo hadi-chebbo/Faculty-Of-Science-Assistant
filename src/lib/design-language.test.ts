@@ -10,6 +10,7 @@ describe("year styles", () => {
       expect(style.solid, `solid ${year}`).toBeTruthy();
       expect(style.chip, `chip ${year}`).toBeTruthy();
       expect(style.border, `border ${year}`).toBeTruthy();
+      expect(style.tab, `tab ${year}`).toBeTruthy();
     }
   });
 

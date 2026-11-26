@@ -26,7 +26,8 @@ test("a middle chapter has both Previous and Next", async ({ page }) => {
 test("a chapter holds exercises beside its lectures, with jump links and the solution", async ({ page }) => {
   await page.goto("/courses/DEMO302");
   const card = page.getByRole("link", { name: /Sample chapter 1/ });
-  await expect(card).toContainText("1 lecture · 1 exercise");
+  // One chip per kind of file, in the chapter's order.
+  await expect(card.getByText(/^\d+ (lectures?|exercises?)$/)).toHaveText(["1 lecture", "1 exercise"]);
   await card.click();
   await expect(page).toHaveURL(/\/courses\/DEMO302\/chapters\/1$/);
 

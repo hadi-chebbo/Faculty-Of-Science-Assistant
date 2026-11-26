@@ -23,11 +23,18 @@ export function CourseListSkeleton() {
 export function CourseSkeleton() {
   return (
     <div role="status" aria-label="Loading course">
-      <TitleSkeleton />
-      <Skeleton className="h-9 w-72 max-w-full" />
-      <div className="mt-4 space-y-3">
+      <div className="mb-6" aria-hidden>
+        <Skeleton className="hidden h-5 w-52 md:block" />
+        <div className="flex flex-col items-start gap-2 md:mt-2.5 md:flex-row md:items-center md:gap-3">
+          <Skeleton className="my-1.5 h-8 w-28 rounded-full md:my-0" />
+          <Skeleton className="h-8 w-64 max-w-full" />
+        </div>
+        <Skeleton className="mt-3 h-1 w-12" />
+      </div>
+      <Skeleton className="h-11 w-80 max-w-full rounded-2xl" />
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
         {Array.from({ length: 3 }, (_, i) => (
-          <Skeleton key={i} className="h-[4.5rem] w-full" />
+          <Skeleton key={i} className="h-36 w-full rounded-3xl" />
         ))}
       </div>
     </div>

@@ -4,7 +4,7 @@ import { Check } from "lucide-react";
 import Link from "next/link";
 import { ProgressRing } from "@/components/site/progress-ring";
 import { useCourseProgress } from "@/lib/course-progress-client";
-import { filesOf } from "@/lib/plural";
+import { filesOf, plural } from "@/lib/plural";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
@@ -28,15 +28,15 @@ export function CourseProgressBlock({ code }: { code: string }) {
         href="/progress"
         aria-label={label}
         data-personal
-        className={`absolute bottom-3.5 right-0 flex size-11 items-center justify-center rounded-full md:hidden ${FOCUS}`}
+        className={`absolute top-0 right-0 flex size-11 items-center justify-center rounded-full md:hidden ${FOCUS}`}
       >
         <ProgressRing done={course.done} total={course.total} size={44} />
       </Link>
-      <div data-personal className="absolute inset-y-0 right-0 bottom-6 hidden items-center md:flex">
+      <div data-personal className="absolute inset-y-0 right-0 hidden items-center md:flex">
         <Link
           href="/progress"
           aria-label={label}
-          className={`flex items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-colors hover:border-primary ${FOCUS}`}
+          className={`flex w-72 items-center gap-3.5 rounded-2xl border bg-card px-4 py-3.5 transition-colors hover:border-primary ${FOCUS}`}
         >
           <ProgressRing done={course.done} total={course.total} size={56} />
           <span className="block text-sm text-muted-foreground">
@@ -63,14 +63,14 @@ export function ChapterProgressText({ code, position }: { code: string; position
   if (!chapter || chapter.total === 0) return null;
   if (chapter.finished) {
     return (
-      <span data-personal className="inline-flex shrink-0 items-center gap-1 font-semibold text-success">
-        <Check aria-hidden className="size-3.5" /> Finished
+      <span data-personal className="inline-flex shrink-0 items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 font-semibold text-success">
+        <Check aria-hidden className="size-3" /> Finished
       </span>
     );
   }
   return (
-    <span data-personal className="shrink-0 font-normal text-muted-foreground">
-      {chapter.done === 0 ? `Not started · ${chapter.total} ${chapter.total === 1 ? "file" : "files"}` : `${chapter.done} of ${chapter.total} done`}
+    <span data-personal className={`shrink-0 ${chapter.done === 0 ? "text-muted-foreground" : "font-semibold text-heading"}`}>
+      {chapter.done === 0 ? `Not started · ${plural(chapter.total, "file")}` : `${chapter.done} of ${chapter.total} done`}
     </span>
   );
 }
@@ -88,5 +88,30 @@ export function ChapterProgressBar({ code, position }: { code: string; position:
         style={{ width: `${Math.round((chapter.done / chapter.total) * 100)}%` }}
       />
     </span>
+  );
+}
+
+// The chapter page header's progress, for a signed-in student only: "Your progress" and "4 of 5 files done" over a bar
+// (success green once finished), from the same course request as the course page. Nothing for a visitor, while loading,
+// or for a chapter with no counted files. The page keeps its place free (see the chapter page), so nothing moves.
+export function ChapterProgressHeader({ code, position }: { code: string; position: number }) {
+  const chapter = useCourseProgress(code)?.chapters.find((c) => c.position === position);
+  if (!chapter || chapter.total === 0) return null;
+  return (
+    <div data-personal className="w-full text-sm">
+      <p className="flex items-baseline justify-between gap-3">
+        <span className="font-semibold text-heading">Your progress</span>
+        <span className={chapter.finished ? "inline-flex items-center gap-1 font-semibold text-success" : undefined}>
+          {chapter.finished && <Check aria-hidden className="size-3.5" />}
+          {filesOf(chapter.done, chapter.total)} done
+        </span>
+      </p>
+      <span aria-hidden className="mt-2 block h-1.5 overflow-hidden rounded-full bg-heading/10">
+        <span
+          className={`block h-full rounded-full ${chapter.finished ? "bg-success" : "bg-primary"}`}
+          style={{ width: `${Math.round((chapter.done / chapter.total) * 100)}%` }}
+        />
+      </span>
+    </div>
   );
 }

@@ -21,6 +21,11 @@ resource type (lecture blue, notes teal, exercise orange, exam rose; solutions a
 the design language and always accompanied by the year's name or the type's name, never used alone.
 _Avoid_: Theme colour, category colour
 
+**Course colour**:
+A course's year colour, used on its course and chapter pages: the code chip, the current area or type tab and the
+hover border of its chapter cards. A course has no colour of its own.
+_Avoid_: Course theme
+
 **Numbers row**:
 The row of live catalogue numbers on Home, under the year cards: files, courses, previous exams and the span of exam
 years covered. Counts only published material. It replaced the "Jump straight to a course" course browser (2026-11-25).

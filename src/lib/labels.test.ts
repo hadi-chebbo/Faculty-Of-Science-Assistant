@@ -7,6 +7,7 @@ import {
   RESOURCE_TYPE_LABELS,
   RESOURCE_TYPE_SINGULAR_LABELS,
   describeGroups,
+  groupCounts,
   formatAcademicYear,
 } from "./labels";
 
@@ -24,6 +25,21 @@ describe("describeGroups", () => {
   it("is empty when nothing is inside", () => {
     expect(describeGroups([])).toBe("");
     expect(describeGroups([{ type: "lecture", resources: [] }])).toBe("");
+  });
+});
+
+describe("groupCounts", () => {
+  it("names each non-empty type with its count, in the order given", () => {
+    expect(
+      groupCounts([
+        { type: "lecture", resources: [1, 2] },
+        { type: "notes", resources: [] },
+        { type: "solution", resources: [1] },
+      ]),
+    ).toEqual([
+      { type: "lecture", label: "2 lectures" },
+      { type: "solution", label: "1 solution" },
+    ]);
   });
 });
 

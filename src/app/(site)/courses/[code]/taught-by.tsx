@@ -1,3 +1,4 @@
+import { Users } from "lucide-react";
 import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { lecturerInitials } from "@/lib/lecturer-name";
@@ -45,7 +46,7 @@ export function TaughtBy({
   const row = scope.lecturers.length >= SCROLL_ROW_FROM;
   return (
     <section className="mb-6">
-      <h2 className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Taught by</h2>
+      <h2 className="mb-2.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">Taught by</h2>
       <ul
         aria-label="Lecturer"
         data-layout={row ? "row" : "grid"}
@@ -62,7 +63,7 @@ export function TaughtBy({
               <Link
                 href={pageHref(path, { tab, lecturer: item.slug })}
                 aria-current={active ? "true" : undefined}
-                className={`flex h-full min-h-14 items-center gap-3 rounded-xl border p-3 transition-colors ${FOCUS} ${
+                className={`flex h-full min-h-14 items-center gap-3 rounded-2xl border px-3.5 py-3 transition-colors ${FOCUS} ${
                   active ? "border-primary bg-primary/10" : "bg-card hover:border-primary/40"
                 }`}
               >
@@ -70,12 +71,13 @@ export function TaughtBy({
                   <AvatarFallback
                     className={`text-sm font-semibold ${active ? "bg-primary text-primary-foreground" : "bg-muted text-heading"}`}
                   >
-                    {item.initials}
+                    {item.slug === null ? <Users className="size-4" /> : item.initials}
                   </AvatarFallback>
                 </Avatar>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium text-heading">{item.name}</span>
-                  <span className="block text-xs text-muted-foreground">{files(item.count)}</span>
+                  {/* Muted text falls under 4.5:1 on the chosen card's primary tint in the light theme. */}
+                  <span className={`block text-xs ${active ? "text-foreground" : "text-muted-foreground"}`}>{files(item.count)}</span>
                 </span>
               </Link>
             </li>

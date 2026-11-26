@@ -85,6 +85,12 @@ test("marking the last file of a chapter makes its card say Finished, and the he
     await expect(block).toContainText("Your progress");
     await expect(block).toContainText(/\d+ of \d+ files done/);
   }
+
+  // The chapter page's header shows the chapter's own progress (one lecture, now done).
+  await page.goto(`/courses/${course}/chapters/${chapter}`);
+  const header = page.locator("main header");
+  await expect(header).toContainText("Your progress");
+  await expect(header).toContainText("1 of 1 file done");
 });
 
 test("a visitor sees no progress block, no chapter progress and makes no progress request", async ({ page, isMobile }) => {
@@ -99,5 +105,9 @@ test("a visitor sees no progress block, no chapter progress and makes no progres
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("link", { name: /^Your progress/ })).toHaveCount(0);
   await expect(card).not.toContainText(/Finished|Not started|\d+ of \d+ done/);
+
+  await page.goto(`/courses/${course}/chapters/${chapter}`);
+  await page.waitForLoadState("networkidle");
+  await expect(page.locator("main header")).not.toContainText("Your progress");
   expect(asked).toEqual([]);
 });
