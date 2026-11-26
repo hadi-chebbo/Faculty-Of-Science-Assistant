@@ -45,7 +45,7 @@ function SearchTitle() {
   return (
     <header className="mb-5">
       <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Search</h1>
-      <div className="mt-3 h-1 w-12 rounded-full bg-highlight" aria-hidden />
+      <div data-title-bar className="mt-3 h-1 w-12 rounded-full bg-highlight" aria-hidden />
     </header>
   );
 }

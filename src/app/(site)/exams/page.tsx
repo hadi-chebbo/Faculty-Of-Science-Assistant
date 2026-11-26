@@ -39,10 +39,10 @@ export default function ExamsPage({ searchParams }: PageProps<"/exams">) {
           </span>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Previous exams</h1>
-            <p className="mt-0.5 text-sm md:text-base">Partial, final and second-session exams of every course.</p>
+            <p className="mt-0.5 text-sm text-muted-foreground md:text-base">Partial, final and second-session exams of every course.</p>
           </div>
         </div>
-        <div className="mt-4 h-1 w-12 rounded-full bg-highlight" aria-hidden />
+        <div data-title-bar className="mt-4 h-1 w-12 rounded-full bg-highlight" aria-hidden />
       </header>
       <noscript>
         <style>{NO_SCRIPT_CSS}</style>

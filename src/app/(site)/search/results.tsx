@@ -268,6 +268,7 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 
 function CourseCard({ course, terms }: { course: CourseHit; terms: string[] }) {
   const empty = course.fileCount === 0;
+  const year = YEAR_STYLES[yearOfSemester(course.semester)];
   const details = [
     courseYearSemesterLabel(course.semester),
     course.chapterCount > 0 && plural(course.chapterCount, "chapter"),
@@ -278,7 +279,7 @@ function CourseCard({ course, terms }: { course: CourseHit; terms: string[] }) {
       <span
         className={cn(
           "w-fit rounded-md px-2 py-1 font-mono text-sm font-medium",
-          empty ? "bg-muted text-muted-foreground" : YEAR_STYLES[yearOfSemester(course.semester)].chip,
+          empty ? "bg-muted text-muted-foreground" : year.chip,
         )}
       >
         <Highlighted marked={markText(course.code, terms)} />
@@ -297,7 +298,7 @@ function CourseCard({ course, terms }: { course: CourseHit; terms: string[] }) {
     );
   }
   return (
-    <li className={cn("rounded-3xl border bg-card transition-colors", YEAR_STYLES[yearOfSemester(course.semester)].border)}>
+    <li className={cn("rounded-3xl border bg-card transition-colors", year.border)}>
       <Link href={`/courses/${encodeURIComponent(course.code)}`} className={`flex h-full flex-col gap-1.5 rounded-3xl p-4 hover:bg-muted/60 focus-visible:bg-muted/60 ${FOCUS}`}>
         {body}
       </Link>

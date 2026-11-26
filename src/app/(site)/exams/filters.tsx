@@ -61,7 +61,7 @@ export function ExamFilters({ options, params }: { options: ExamFilterOptions; p
 
   return (
     <FilterForm activeCount={countActiveFilters(params)}>
-      <div className="rounded-3xl border bg-card p-4 md:p-5">
+      <div className="rounded-3xl border bg-card p-4 md:p-5 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-3">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Field id="exam-semester" label="Semester" name="semester" noun="semester" value={values.semester} options={semesterOptions} />
           <Field id="exam-course" label="Course" name="course" noun="course" value={values.course} options={courseOptions} />
@@ -90,7 +90,7 @@ export function ExamFilters({ options, params }: { options: ExamFilterOptions; p
             options={options.lecturers.map((l) => ({ value: l.slug, label: l.name }))}
           />
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2 lg:mt-0 lg:flex-nowrap">
           <Button type="submit" className="h-11 rounded-xl px-5">
             Apply
           </Button>

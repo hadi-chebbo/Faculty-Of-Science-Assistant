@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { YEAR_STYLES } from "../src/lib/design-language";
 
 // The Exams and Search pages in the shared design language (#187). Needs the demo data: SEED_DEMO_DATA=true npm run db:seed.
 
@@ -53,7 +54,9 @@ test("a course result's code chip carries its year's tint, and the exams header 
     .first()
     .locator("span")
     .first();
-  await expect(chip).toHaveClass(/bg-violet-500\/15/); // DEMO301 is in the second year
+  await expect(chip).toHaveClass(new RegExp(YEAR_STYLES[2].chip.split(" ")[0].replace("/", "\\/"))); // DEMO301 is in the second year
   await page.goto("/exams");
-  await expect(page.locator("main header div[aria-hidden]").last()).toHaveClass(/bg-highlight/);
+  await expect(page.locator("main [data-title-bar]")).toHaveClass(/bg-highlight/);
+  await page.goto("/search");
+  await expect(page.locator("main [data-title-bar]")).toHaveClass(/bg-highlight/);
 });
