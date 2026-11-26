@@ -210,7 +210,7 @@ mock exam generation, personalization.
 - Shared design language (spec #179, calm and friendly; owner-approved on the home prototype, 2026-11-25): defined once in
   `src/lib/design-language.ts` (`YEAR_STYLES`, `TYPE_STYLES`) with `YearCircle` / `YearChip`
   (`src/components/site/year-badge.tsx`) and the `rise-in` utility in `globals.css`; no page hard-codes its own year or
-  file-type colours. Status: the foundation is in (#180: the module, the row's type colour and name, `rise-in`); pages adopt
+  file-type colours. Status: the foundation is in (#180: the module, the row's type colour and name, `rise-in`), and the home (#181 to #184) and the year page (#185) use it; pages adopt
   year colours and the other styles ticket by ticket (#181 to #191). Each year has its own colour on every page (first sky, second violet, third emerald, Master 1
   amber; solid for circles and tabs, a tinted chip, a hover border); each file type has its own colour and icon on
   every resource row (lecture blue book, notes teal document, exercise orange pencil, exam rose clipboard; solutions
@@ -305,9 +305,15 @@ mock exam generation, personalization.
   no My courses it says "Mark files as done in the reader to track your progress here." and leaves "See all" out. The
   card adds no animation. No claims about features that do not exist.
 - Year page (`/years/1`, `/2`, `/3`, `/m1`, prerendered, any other value is the 404 page; `src/app/(site)/years/[year]/page.tsx`): breadcrumb
-  Home › Second year, title "Second year", then an `h2` "Semester 1" (`id="semester-1"`, scroll margin) and "Semester 2"
-  (`semester-2`), each with the course cards (code, title, "N resources", the signed-in progress ring from the one shared
-  `GET /api/v1/progress` request) or "No courses yet.". Card content aligns to the top. A course with no visible file is a muted dashed card that is not a link, with "No files yet" instead of the count and no ring (#167). Students never see the stored semester number: `semesterInYear`,
+  Home › Second year, a header with the year's circle (`YearCircle` in `PageTitle`'s `leading` slot, 48px, 56px from md, the year colour as on the home cards)
+  beside the title "Second year" and the yellow bar under it, then an `h2` "Semester 1" (`id="semester-1"`, scroll margin) and
+  "Semester 2" (`semester-2`), each followed by a muted "3 courses" and its course cards (one column on a phone, two from sm,
+  three from lg) or a dashed "No courses yet." box. In the shared design language (#185): a course card is a `rounded-3xl`
+  link with the code in a chip of the year's tint, the title, "N resources" and a round arrow in the year's tint; it lifts
+  (`motion-safe:`) with the year's border on hover and rises in on load (`rise-in`, staggered), and the signed-in progress
+  ring from the one shared `GET /api/v1/progress` request sits in its top-right corner, a spot the card keeps clear. Card
+  content aligns to the top. A course with no visible file is a muted dashed card that is not a link, with "No files yet"
+  instead of the count and no ring (#167). Students never see the stored semester number: `semesterInYear`,
   `semesterLabel` and `yearHref(year, semester?)` in `src/lib/years.ts` (the one place year URLs are built; anything
   that lists years iterates `YEARS`, so a fourth year can be added). Backed by `listCoursesByYear(viewer, year)`
   (`src/services/courses/courses.ts`; both semesters always present). The page never reads the session. Old
@@ -505,7 +511,7 @@ mock exam generation, personalization.
   here." and "Browse courses". Backed by `getProgressOverview` (`src/services/progress`; one grouped count over all My
   courses, sharing its counting with `getCourseProgress`) and `GET /api/v1/progress` (`{ courses: [{ code, title,
   semester, lastCompletedAt, course, exams, chapters, general }] }`). Year pages (`/years/N`) show a small ring
-  (34px, `data-personal`, labelled "Your progress: 62% done") at the right of the course card of each started course,
+  (34px, `data-personal`, labelled "Your progress: 62% done") in the top-right corner of the course card of each started course,
   loaded by the browser after the page shows from the same `GET /api/v1/progress` (`useProgressOverview`, one request
   per page, none for a visitor); a finished course shows a check in the ring.
   "This week" panel above the course list (`this-week.tsx`; shown whenever the student has ever marked a file, i.e.
