@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sign in</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/f06a240b7ebab6cecf503433b4f525de">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.panel{background:#3e4eb8;color:#fff;padding:48px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.feat{display:flex;gap:12px;align-items:flex-start;color:#e6e9ff}
+.feat .fi{width:36px;height:36px;border-radius:12px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;flex:none}
+.inp{height:48px;border:1px solid var(--bd);border-radius:14px;background:var(--card);display:flex;align-items:center;padding:0 6px 0 14px;color:var(--hd)}
+.inp input{flex:1;border:0;background:transparent;font:inherit;color:var(--hd);outline:none}
+</style>
+</helmet>
+<div class="ua {{cls}}" style="width:1280px;height:800px;display:grid;grid-template-columns:1fr 1fr">
+<aside class="panel">
+<div style="display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px">
+<span style="background:#fff;border-radius:12px;width:44px;height:44px;display:flex;align-items:center;justify-content:center"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><g transform="rotate(-8 7 14)"><rect x="2" y="3" width="10" height="10" rx="3" fill="#0EA5E9"/><rect x="2" y="15" width="10" height="10" rx="3" fill="#8B5CF6"/></g><g transform="rotate(8 21 14)"><rect x="16" y="3" width="10" height="10" rx="3" fill="#10B981"/><rect x="16" y="15" width="10" height="10" rx="3" fill="#F59E0B"/></g></svg></span>
+<span>Uni<span style="color:#C9D1FF">Mate</span></span></div>
+<h2 style="color:#fff;font-size:40px;line-height:1.1;font-weight:650;margin-top:auto;max-width:440px">Find any course, exam or lecture.</h2>
+<div style="width:40px;height:4px;border-radius:4px;background:#fdb91f;margin-top:18px"></div>
+<ul style="display:flex;flex-direction:column;gap:16px;margin-top:32px">
+<li class="feat"><span class="fi"><svg class="i" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></span><span><b style="color:#fff">Save files for later</b><br>Keep the lectures and exams you need in one place.</span></li>
+<li class="feat"><span class="fi"><svg class="i" viewBox="0 0 24 24"><path d="M11 12H3"/><path d="M16 6H3"/><path d="M16 18H3"/><path d="M18 9v6"/><path d="M21 12h-6"/></svg></span><span><b style="color:#fff">Plan with a to-do board</b><br>Turn a file into a card and move it to Done.</span></li>
+<li class="feat"><span class="fi"><svg class="i" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span><b style="color:#fff">Track what you finished</b><br>Mark files as done and see each chapter fill up.</span></li>
+</ul>
+<div style="display:flex;gap:6px;margin-top:40px" aria-hidden="true"><span style="width:28px;height:6px;border-radius:6px;background:#0EA5E9"></span><span style="width:28px;height:6px;border-radius:6px;background:#8B5CF6"></span><span style="width:28px;height:6px;border-radius:6px;background:#10B981"></span><span style="width:28px;height:6px;border-radius:6px;background:#F59E0B"></span></div>
+</aside>
+<section style="display:flex;flex-direction:column;padding:16px 32px">
+<div style="display:flex;justify-content:flex-end"><button class="ib" aria-label="Toggle theme"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button></div>
+<form style="width:400px;margin:auto;display:flex;flex-direction:column;gap:16px" method="post">
+<p class="sm mut" style="margin-bottom:-8px">Sign in to see your saved files</p>
+<h1 class="h1">Welcome back</h1>
+<div><label class="lbl" for="em">Email</label><div class="inp"><input id="em" value="student@example.com" autocapitalize="none" spellcheck="false"></div></div>
+<div><label class="lbl" for="pw">Password</label><div class="inp"><input id="pw" type="password" value="password123"><button class="btn btn-g" type="button" style="height:36px;padding:0 10px;font-size:13px">Show</button></div></div>
+<button class="btn btn-p" type="submit" style="height:48px;border-radius:14px;margin-top:4px">Sign in</button>
+<div class="card" style="padding:14px 16px;border-radius:16px;display:flex;justify-content:space-between;align-items:center"><span>New here?</span><a href="#" class="b">Create an account</a></div>
+<a href="#" class="sm" style="text-align:center;color:var(--mfg)">‹ Back to courses</a>
+</form>
+<p class="sm mut" style="text-align:center">Independent student project. Not an official Lebanese University website.</p>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+renderVals() { return { cls: this.props.dark ? 'dark' : '' }; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Year page — Second year</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.ua{--bg:#f5f5f5;--fg:#575757;--hd:#41454f;--card:#fff;--muted:#f8f8f8;--mfg:#6b6b6b;--bd:#e4e4e7;--track:rgba(65,69,79,.1);--pr:#3e4eb8;--prf:#fff;--prt:rgba(62,78,184,.08);--link:#3e4eb8;--ok:#166534;--okf:#fff;--okt:rgba(22,101,52,.08);
+--y1:#0369a1;--y1f:#fff;--y1t:rgba(14,165,233,.15);--y1x:#075985;--y1b:rgba(14,165,233,.7);
+--y2:#7c3aed;--y2f:#fff;--y2t:rgba(139,92,246,.15);--y2x:#5b21b6;--y2b:rgba(139,92,246,.7);
+--y3:#047857;--y3f:#fff;--y3t:rgba(16,185,129,.15);--y3x:#065f46;--y3b:rgba(16,185,129,.7);
+--y4:#fbbf24;--y4f:#000;--y4t:rgba(245,158,11,.2);--y4x:#78350f;--y4b:rgba(245,158,11,.7);
+--lec:rgba(59,130,246,.15);--lecx:#1e40af;--not:rgba(20,184,166,.15);--notx:#115e59;--exe:rgba(249,115,22,.15);--exex:#9a3412;--exa:rgba(244,63,94,.15);--exax:#9f1239;
+font-family:Geist,ui-sans-serif,system-ui,sans-serif;background:var(--bg);color:var(--fg);font-size:14px;line-height:1.5;overflow:hidden}
+.ua.dark{--bg:#14161c;--fg:#c9ccd3;--hd:#eeeff2;--card:#1c1f27;--muted:#232733;--mfg:#9aa0ad;--bd:#2d3140;--track:rgba(255,255,255,.1);--pr:#5473ff;--prf:#0e1220;--prt:rgba(84,115,255,.16);--link:#8da2ff;--ok:#4ade80;--okf:#0b1a10;--okt:rgba(74,222,128,.1);--y1x:#7dd3fc;--y2x:#c4b5fd;--y3x:#6ee7b7;--y4x:#fcd34d;--lecx:#93c5fd;--notx:#5eead4;--exex:#fdba74;--exax:#fda4af}
+a{color:var(--link);text-decoration:none}
+h1,h2,h3,p{margin:0}h1,h2,h3{color:var(--hd);letter-spacing:-.01em}
+.wrap{max-width:1280px;margin:0 auto;padding:0 32px}
+.h1{font-size:32px;font-weight:650;line-height:1.15}.h2{font-size:20px;font-weight:600}
+.ybar{width:40px;height:4px;border-radius:4px;background:#fdb91f}
+.mut{color:var(--mfg)}.sm{font-size:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:24px}
+.chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:550;white-space:nowrap}
+.c-y1{background:var(--y1t);color:var(--y1x)}.c-y2{background:var(--y2t);color:var(--y2x)}.c-y3{background:var(--y3t);color:var(--y3x)}.c-y4{background:var(--y4t);color:var(--y4x)}
+.c-lec{background:var(--lec);color:var(--lecx)}.c-not{background:var(--not);color:var(--notx)}.c-exe{background:var(--exe);color:var(--exex)}.c-exa{background:var(--exa);color:var(--exax)}
+.c-neu{border:1px solid var(--bd);color:var(--mfg)}
+.circ{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-weight:700;flex:none}
+.s-y1{background:var(--y1);color:var(--y1f)}.s-y2{background:var(--y2);color:var(--y2f)}.s-y3{background:var(--y3);color:var(--y3f)}.s-y4{background:var(--y4);color:var(--y4f)}
+.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 16px;border-radius:12px;font:inherit;font-weight:550;border:1px solid transparent;cursor:pointer}
+.btn-p{background:var(--pr);color:var(--prf)}.btn-o{background:var(--card);border-color:var(--bd);color:var(--hd)}
+.hdr{background:var(--card);border-bottom:1px solid var(--bd)}
+.hdr-in{height:64px;display:flex;align-items:center;gap:20px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:18px;color:var(--hd)}
+.nav{display:flex;align-items:center;gap:2px;height:64px}
+.nav a{height:64px;display:flex;align-items:center;gap:6px;padding:0 12px;color:var(--fg);font-weight:500;border-bottom:2px solid transparent}
+.nav a.on{color:var(--link);border-bottom-color:var(--pr)}
+.vsep{width:1px;height:20px;background:var(--bd);margin:0 6px}
+.av{width:36px;height:36px;border-radius:999px;background:var(--prt);color:var(--link);display:flex;align-items:center;justify-content:center;font-weight:650;font-size:13px}
+.ib{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:transparent;border:0;color:var(--fg)}
+.crumb{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--mfg);padding-top:24px}.crumb a{color:var(--mfg)}
+.foot{border-top:1px solid var(--bd);padding:24px 0;font-size:13px;color:var(--mfg)}
+.cc{padding:20px;display:flex;flex-direction:column;gap:12px;min-height:150px}
+.cc.hov{border-color:var(--y2b);transform:translateY(-2px);box-shadow:0 8px 24px -12px rgba(0,0,0,.18)}
+.dash{background:transparent;border:1.5px dashed var(--bd)}
+.ring{position:relative;width:34px;height:34px;flex:none}.ring span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:650;color:var(--hd)}
+.pill{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-radius:999px;font-weight:550}
+</style>
+</helmet>
+<div class="ua {{cls}}" style="width:1280px;height:1100px">
+<header class="hdr"><div class="wrap hdr-in">
+<a class="brand" href="#"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><g transform="rotate(-8 7 14)"><rect x="2" y="3" width="10" height="10" rx="3" fill="#0EA5E9"/><rect x="2" y="15" width="10" height="10" rx="3" fill="#8B5CF6"/></g><g transform="rotate(8 21 14)"><rect x="16" y="3" width="10" height="10" rx="3" fill="#10B981"/><rect x="16" y="15" width="10" height="10" rx="3" fill="#F59E0B"/></g></svg><span>Uni<span style="color:var(--link)">Mate</span></span></a>
+<nav class="nav" aria-label="Main" style="margin-left:12px"><a class="on" href="#">Browse</a><a href="#">Exams</a><a href="#">Search</a><span class="vsep"></span><a href="#">Saved</a><a href="#">To-do</a><a href="#">Progress</a></nav>
+<div style="margin-left:auto;display:flex;align-items:center;gap:8px"><button class="ib" aria-label="Toggle theme"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button><span class="av">SD</span></div>
+</div></header>
+
+<main class="wrap">
+<div class="crumb"><a href="#">Home</a><span>›</span><span style="color:var(--hd)">Second year</span></div>
+
+<section style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-top:20px">
+<div style="display:flex;align-items:center;gap:16px">
+<span class="circ s-y2" style="width:56px;height:56px;font-size:22px">2</span>
+<div><h1 class="h1">Second year</h1><p class="mut" style="margin-top:4px">7 courses · 101 files</p></div>
+</div>
+<nav aria-label="Semesters" style="display:flex;gap:8px">
+<a class="pill c-y2" href="#semester-1">Semester 1 <span class="sm" style="opacity:.8">4 courses</span></a>
+<a class="pill c-neu" href="#semester-2" style="color:var(--hd)">Semester 2 <span class="sm mut">3 courses</span></a>
+</nav>
+</section>
+<div class="ybar" style="margin-top:16px"></div>
+
+<section id="semester-1" style="margin-top:36px">
+<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px"><h2 class="h2">Semester 1</h2><span class="mut sm">4 courses</span></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
+<a class="card cc" href="#"><div style="display:flex;justify-content:space-between;align-items:center"><span class="chip c-y2">DEMO301</span><span class="ring" aria-label="Your progress: 62% done"><svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="14" fill="none" style="stroke:var(--track)" stroke-width="4"/><circle cx="17" cy="17" r="14" fill="none" style="stroke:var(--pr)" stroke-width="4" stroke-dasharray="55 88" stroke-linecap="round" transform="rotate(-90 17 17)"/></svg><span>62</span></span></div><h3 style="font-size:16px;font-weight:600">Demo Algorithms</h3><p class="mut sm" style="margin-top:auto">5 chapters · 24 files</p></a>
+<a class="card cc hov" href="#"><div style="display:flex;justify-content:space-between;align-items:center"><span class="chip c-y2">DEMO302</span></div><h3 style="font-size:16px;font-weight:600">Demo Databases</h3><p class="mut sm" style="margin-top:auto">4 chapters · 19 files</p></a>
+<a class="card cc" href="#"><div style="display:flex;justify-content:space-between;align-items:center"><span class="chip c-y2">DEMO303</span><span class="ring" aria-label="Your progress: finished"><svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="14" fill="none" style="stroke:var(--ok)" stroke-width="4"/></svg><span><svg class="i" viewBox="0 0 24 24" style="color:var(--ok);width:14px;height:14px"><path d="M20 6 9 17l-5-5"/></svg></span></span></div><h3 style="font-size:16px;font-weight:600">Demo Operating Systems</h3><p class="mut sm" style="margin-top:auto">16 files</p></a>
+<div class="card cc dash"><span class="chip c-neu" style="align-self:flex-start">DEMO304</span><h3 style="font-size:16px;font-weight:600;color:var(--mfg)">Demo Networks</h3><p class="mut sm" style="margin-top:auto">No files yet</p></div>
+</div>
+</section>
+
+<section id="semester-2" style="margin-top:36px">
+<div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px"><h2 class="h2">Semester 2</h2><span class="mut sm">3 courses</span></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">
+<a class="card cc" href="#"><span class="chip c-y2" style="align-self:flex-start">DEMO401</span><h3 style="font-size:16px;font-weight:600">Sample Course C</h3><p class="mut sm" style="margin-top:auto">3 chapters · 14 files</p></a>
+<a class="card cc" href="#"><span class="chip c-y2" style="align-self:flex-start">DEMO402</span><h3 style="font-size:16px;font-weight:600">Demo Software Engineering</h3><p class="mut sm" style="margin-top:auto">18 files</p></a>
+<a class="card cc" href="#"><span class="chip c-y2" style="align-self:flex-start">DEMO410</span><h3 style="font-size:16px;font-weight:600">Demo Web Programming</h3><p class="mut sm" style="margin-top:auto">10 files</p></a>
+</div>
+</section>
+
+<section style="margin-top:36px" aria-label="Other years">
+<p class="mut sm" style="margin-bottom:10px">Other years</p>
+<div style="display:flex;gap:8px">
+<a class="pill c-neu" href="#" style="color:var(--hd)"><span class="circ s-y1" style="width:24px;height:24px;font-size:12px">1</span>First year</a>
+<a class="pill c-neu" href="#" style="color:var(--hd)"><span class="circ s-y3" style="width:24px;height:24px;font-size:12px">3</span>Third year</a>
+<a class="pill c-neu" href="#" style="color:var(--hd)"><span class="circ s-y4" style="width:24px;height:24px;font-size:11px">M1</span>Master 1</a>
+</div>
+</section>
+</main>
+<footer class="foot" style="margin-top:48px"><div class="wrap">Independent student project. Not an official Lebanese University website.</div></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":1100}}'>
+class Component extends DCLogic {
+renderVals() { return { cls: this.props.dark ? 'dark' : '' }; }
+}
+</script>
+</body>
+</html>

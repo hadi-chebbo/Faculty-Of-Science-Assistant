@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Search page</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/f06a240b7ebab6cecf503433b4f525de">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.sbox{display:flex;align-items:center;gap:10px;height:60px;padding:0 8px 0 18px;border:1px solid var(--bd);border-radius:20px;background:var(--card);box-shadow:0 0 0 4px var(--prt)}
+.sbox input{flex:1;border:0;background:transparent;font:inherit;font-size:17px;color:var(--hd);outline:none;height:100%}
+.fchip{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--bd);background:var(--card);color:var(--hd);font-weight:550;display:inline-flex;align-items:center;gap:6px}
+.fchip.on{background:var(--hd);color:var(--card);border-color:var(--hd)}
+.sh{display:flex;align-items:baseline;gap:8px;margin:28px 0 10px}
+.cr{padding:16px 18px;display:flex;flex-direction:column;gap:6px;border-radius:20px}
+</style>
+</helmet>
+<div class="ua {{cls}}" style="width:1280px;height:1120px">
+<header class="hdr"><div class="wrap hdr-in">
+<a class="brand" href="#"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><g transform="rotate(-8 7 14)"><rect x="2" y="3" width="10" height="10" rx="3" fill="#0EA5E9"/><rect x="2" y="15" width="10" height="10" rx="3" fill="#8B5CF6"/></g><g transform="rotate(8 21 14)"><rect x="16" y="3" width="10" height="10" rx="3" fill="#10B981"/><rect x="16" y="15" width="10" height="10" rx="3" fill="#F59E0B"/></g></svg><span>Uni<span style="color:var(--link)">Mate</span></span></a>
+<nav class="nav" aria-label="Main"><a href="#">Browse</a><a href="#">Exams</a><a class="on" href="#">Search</a><span class="vsep"></span><a href="#">Saved</a><a href="#">To-do</a><a href="#">Progress</a></nav>
+<div style="margin-left:auto;display:flex;align-items:center;gap:8px"><button class="ib" aria-label="Toggle theme"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button><span class="av">SD</span></div>
+</div></header>
+
+<main class="wrap" style="max-width:1000px">
+<h1 class="h1" style="margin-top:32px">Search</h1>
+<div class="ybar" style="margin-top:12px"></div>
+<form role="search" style="margin-top:20px">
+<label class="sbox"><svg class="i" viewBox="0 0 24 24" style="width:20px;height:20px;color:var(--mfg)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span style="position:absolute;width:1px;height:1px;overflow:hidden">Search courses, chapters and files</span><input value="graphs"><button class="btn btn-p" type="submit" style="height:44px;border-radius:14px">Search</button></label>
+</form>
+<div style="display:flex;gap:8px;margin-top:16px" role="list" aria-label="Filter results">
+<a class="fchip on" href="#" aria-current="true">All</a><a class="fchip" href="#">Courses</a><a class="fchip" href="#"><span style="width:8px;height:8px;border-radius:9px;background:var(--lecx)"></span>Lectures &amp; notes</a><a class="fchip" href="#"><span style="width:8px;height:8px;border-radius:9px;background:var(--exex)"></span>Exercises</a><a class="fchip" href="#"><span style="width:8px;height:8px;border-radius:9px;background:var(--exax)"></span>Exams</a>
+</div>
+
+<div class="sh"><h2 class="h3">Courses</h2><span class="sm mut">1</span></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+<a class="card cr" href="#"><div style="display:flex;gap:8px;align-items:center"><span class="chip c-y3">DEMO510</span><span class="sm mut">Third year · Semester 1</span></div><span class="b hdc"><span class="mark">Graph</span> Theory</span><span class="sm mut">4 chapters · 21 files</span></a>
+</div>
+
+<div class="sh"><h2 class="h3">Chapters</h2><span class="sm mut">2</span></div>
+<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+<a class="card cr" href="#"><div style="display:flex;gap:8px;align-items:center"><span class="chip c-y2">DEMO301</span><span class="sm mut">Chapter 2</span></div><span class="b hdc"><span class="mark">Graphs</span> and traversals</span><span class="sm mut">6 files</span></a>
+<a class="card cr" href="#"><div style="display:flex;gap:8px;align-items:center"><span class="chip c-y3">DEMO510</span><span class="sm mut">Chapter 1</span></div><span class="b hdc">Planar <span class="mark">graphs</span></span><span class="sm mut">5 files</span></a>
+</div>
+
+<div class="sh"><h2 class="h3">Files</h2><span class="sm mut">7</span></div>
+<ul class="list">
+<li class="row"><span class="done y" role="img" aria-label="Done"><svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px;stroke-width:3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="tbox c-lec" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span><a class="rt" href="#"><span class="rtt" style="display:block"><span class="chip c-y2" style="margin-right:6px">DEMO301</span><span class="mut" style="font-weight:500">Demo Algorithms</span> <span class="mut" aria-hidden="true">·</span> <span class="mark">Graph</span> representations</span><span class="rmeta"><span class="chip c-lec">Lecture</span><span class="chip c-neu">EN</span><span class="lect">Dr. Ada Example</span></span></a><button class="bm on" aria-label="Remove Graph representations from saved"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></button></li>
+<li class="row"><span class="done" role="img" aria-label="Not done"></span><span class="tbox c-lec" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg></span><a class="rt" href="#"><span class="rtt" style="display:block"><span class="chip c-y3" style="margin-right:6px">DEMO510</span><span class="mut" style="font-weight:500">Graph Theory</span> <span class="mut" aria-hidden="true">·</span> Coloring <span class="mark">graphs</span></span><span class="rmeta"><span class="chip c-lec">Lecture</span><span class="chip c-neu">FR</span><span class="lect">Dr. Alan Sample</span></span></a><button class="bm" aria-label="Save Coloring graphs"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></button></li>
+<li class="row"><span class="done" role="img" aria-label="Not done"></span><span class="tbox c-exe" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg></span><a class="rt" href="#"><span class="rtt" style="display:block"><span class="chip c-y3" style="margin-right:6px">DEMO510</span><span class="mut" style="font-weight:500">Graph Theory</span> <span class="mut" aria-hidden="true">·</span> Exercise sheet 1</span><span class="sm mut" style="display:block;margin-top:2px">…prove that every planar <span class="mark">graph</span> is 5-colourable…</span><span class="rmeta"><span class="chip c-exe">Exercise</span><span class="chip c-neu">EN</span></span></a><button class="bm" aria-label="Save Exercise sheet 1"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></button></li>
+<li class="row"><span class="done" role="img" aria-label="Not done"></span><span class="tbox c-exa" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><a class="rt" href="#"><span class="rtt" style="display:block"><span class="chip c-y3" style="margin-right:6px">DEMO510</span><span class="mut" style="font-weight:500">Graph Theory</span> <span class="mut" aria-hidden="true">·</span> Partial exam 2024</span><span class="rmeta"><span class="chip c-exa">Exam</span><span class="chip c-neu">Partial · 2023–2024</span><span class="chip c-neu">EN</span></span></a><button class="bm" aria-label="Save Partial exam 2024"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></button></li>
+</ul>
+<a href="#" class="btn btn-o" style="margin-top:12px">Show all 7 files</a>
+</main>
+<footer class="foot" style="position:absolute;left:0;right:0;bottom:0"><div class="wrap">Independent student project. Not an official Lebanese University website.</div></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":1120}}'>
+class Component extends DCLogic {
+renderVals() { return { cls: this.props.dark ? 'dark' : '' }; }
+}
+</script>
+</body>
+</html>

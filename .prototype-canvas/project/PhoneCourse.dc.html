@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phone — course page</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/f06a240b7ebab6cecf503433b4f525de">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}
+.lc{flex:0 0 160px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:18px;border:1px solid var(--bd);background:var(--card);min-height:56px}
+.lc.on{border-color:var(--pr);background:var(--prt)}
+.ini{width:36px;height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-weight:650;font-size:12px;background:var(--muted);color:var(--hd);border:1px solid var(--bd);flex:none}
+.lc.on .ini{background:var(--pr);color:var(--prf);border-color:var(--pr)}
+.chc{padding:16px;border-radius:20px;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px}
+.chc .edge{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--track)}.chc .edge>i{display:block;height:100%;background:var(--pr)}
+.chc.fin{border-color:color-mix(in srgb,var(--ok) 45%,var(--bd))}.chc.fin .edge>i{background:var(--ok)}
+.tab{height:44px}
+</style>
+</helmet>
+<div class="ua phone {{cls}}">
+<header class="phdr">
+<button class="ib" aria-label="Open menu" style="width:44px;height:44px"><svg class="i" viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></button>
+<a class="brand" href="#" style="font-size:17px"><svg width="24" height="24" viewBox="0 0 28 28" aria-hidden="true"><g transform="rotate(-8 7 14)"><rect x="2" y="3" width="10" height="10" rx="3" fill="#0EA5E9"/><rect x="2" y="15" width="10" height="10" rx="3" fill="#8B5CF6"/></g><g transform="rotate(8 21 14)"><rect x="16" y="3" width="10" height="10" rx="3" fill="#10B981"/><rect x="16" y="15" width="10" height="10" rx="3" fill="#F59E0B"/></g></svg><span>Uni<span style="color:var(--link)">Mate</span></span></a>
+<span style="margin-left:auto"></span><button class="ib" aria-label="Toggle theme" style="width:44px;height:44px"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button><span class="av">SD</span>
+</header>
+<main>
+<div class="ph">
+<a href="#" style="display:flex;align-items:center;gap:6px;height:44px;color:var(--fg);font-weight:500"><svg class="i" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>Second year</a>
+<div style="display:flex;align-items:center;justify-content:space-between"><span class="chip c-y2">DEMO301</span>
+<span class="ringw" aria-label="Your progress: 62% done, 8 of 13 files. Exams: 2 of 6 done."><svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="18" fill="none" style="stroke:var(--track)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" style="stroke:var(--pr)" stroke-width="5" stroke-dasharray="70 113" stroke-linecap="round" transform="rotate(-90 22 22)"/></svg><span style="font-size:11px">62%</span></span></div>
+<h1 style="font-size:26px;font-weight:650;margin-top:2px">Demo Algorithms</h1>
+<div class="ybar" style="margin-top:10px"></div>
+<p class="eyebrow" style="margin-top:18px">Taught by</p>
+</div>
+<ul aria-label="Lecturer" style="display:flex;gap:10px;overflow:hidden;padding:8px 16px 0">
+<li class="lc on"><span class="ini">All</span><span><span class="b hdc sm" style="display:block">All lecturers</span><span class="sm mut">24 files</span></span></li>
+<li class="lc"><span class="ini">AE</span><span><span class="b hdc sm" style="display:block">Dr. Ada Example</span><span class="sm mut">11 files</span></span></li>
+<li class="lc"><span class="ini">AS</span><span><span class="b hdc sm" style="display:block">Dr. Alan Sample</span><span class="sm mut">8 files</span></span></li>
+</ul>
+<nav aria-label="Course areas" style="display:flex;gap:6px;overflow:hidden;padding:16px 16px 0">
+<a class="tab on y2" href="#" style="background:var(--y2);color:#fff">Chapters <span class="n" style="color:#fff">5</span></a><a class="tab" href="#" style="border:1px solid var(--bd);background:var(--card)">Previous exams <span class="n">6</span></a><a class="tab" href="#" style="border:1px solid var(--bd);background:var(--card)">Other <span class="n">3</span></a>
+</nav>
+<div class="ph" style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+<a class="card chc fin" href="#"><div style="display:flex;justify-content:space-between"><span class="eyebrow">Chapter 1</span><span class="chip c-ok">Finished</span></div><span class="b hdc">Introduction and complexity</span><div style="display:flex;gap:6px"><span class="chip c-lec">2 lectures</span><span class="chip c-exe">1 exercise</span></div><span class="edge"><i style="width:100%"></i></span></a>
+<a class="card chc" href="#"><div style="display:flex;justify-content:space-between"><span class="eyebrow">Chapter 2</span><span class="sm hdc b">4 of 5 done</span></div><span class="b hdc">Graphs and traversals</span><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="chip c-lec">2 lectures</span><span class="chip c-not">1 notes</span><span class="chip c-exe">2 exercises</span></div><span class="edge"><i style="width:80%"></i></span></a>
+<a class="card chc" href="#"><div style="display:flex;justify-content:space-between"><span class="eyebrow">Chapter 3</span><span class="sm mut">Not started · 5 files</span></div><span class="b hdc">Dynamic programming</span><span class="edge"><i style="width:0"></i></span></a>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return { cls: this.props.dark ? 'dark' : '' }; }
+}
+</script>
+</body>
+</html>

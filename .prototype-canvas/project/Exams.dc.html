@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Exams page</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/f06a240b7ebab6cecf503433b4f525de">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.dd{height:44px;border:1px solid var(--bd);border-radius:12px;background:var(--card);display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 12px;color:var(--hd);font:inherit;width:100%}
+.dd.set{border-color:var(--pr);background:var(--prt)}
+.pg{min-width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--bd);background:var(--card);color:var(--hd);font-weight:550;padding:0 12px}
+.pg.on{background:var(--pr);color:var(--prf);border-color:var(--pr)}
+</style>
+</helmet>
+<div class="ua {{cls}}" style="width:1280px;height:1120px">
+<header class="hdr"><div class="wrap hdr-in">
+<a class="brand" href="#"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><g transform="rotate(-8 7 14)"><rect x="2" y="3" width="10" height="10" rx="3" fill="#0EA5E9"/><rect x="2" y="15" width="10" height="10" rx="3" fill="#8B5CF6"/></g><g transform="rotate(8 21 14)"><rect x="16" y="3" width="10" height="10" rx="3" fill="#10B981"/><rect x="16" y="15" width="10" height="10" rx="3" fill="#F59E0B"/></g></svg><span>Uni<span style="color:var(--link)">Mate</span></span></a>
+<nav class="nav" aria-label="Main"><a href="#">Browse</a><a class="on" href="#">Exams</a><a href="#">Search</a><span class="vsep"></span><a href="#">Saved</a><a href="#">To-do</a><a href="#">Progress</a></nav>
+<div style="margin-left:auto;display:flex;align-items:center;gap:8px"><button class="ib" aria-label="Toggle theme"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button><span class="av">SD</span></div>
+</div></header>
+
+<main class="wrap">
+<div class="crumb"><a href="#">Home</a><span>›</span><span class="hdc">Previous exams</span></div>
+<div style="display:flex;align-items:center;gap:14px;margin-top:20px">
+<span class="tbox c-exa" style="width:48px;height:48px;border-radius:14px" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:22px;height:22px"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span>
+<div><h1 class="h1">Previous exams</h1><p class="mut" style="margin-top:2px">Partial, final and second-session exams of every course.</p></div>
+</div>
+<div class="ybar" style="margin-top:16px"></div>
+
+<form class="card" style="margin-top:24px;padding:18px;border-radius:24px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) auto;gap:12px;align-items:end">
+<div><span class="lbl">Semester</span><button type="button" class="dd"><span style="display:flex;align-items:center;gap:8px"><span class="circ s-y2" style="width:20px;height:20px;font-size:11px">2</span>Semester 1</span><svg class="i" viewBox="0 0 24 24" style="color:var(--mfg)"><path d="m6 9 6 6 6-6"/></svg></button></div>
+<div><span class="lbl">Course</span><button type="button" class="dd"><span>All</span><svg class="i" viewBox="0 0 24 24" style="color:var(--mfg)"><path d="m6 9 6 6 6-6"/></svg></button></div>
+<div><span class="lbl">Academic year</span><button type="button" class="dd"><span>All</span><svg class="i" viewBox="0 0 24 24" style="color:var(--mfg)"><path d="m6 9 6 6 6-6"/></svg></button></div>
+<div><span class="lbl">Session</span><button type="button" class="dd set"><span>Final</span><svg class="i" viewBox="0 0 24 24" style="color:var(--mfg)"><path d="m6 9 6 6 6-6"/></svg></button></div>
+<div><span class="lbl">Lecturer</span><button type="button" class="dd"><span>All</span><svg class="i" viewBox="0 0 24 24" style="color:var(--mfg)"><path d="m6 9 6 6 6-6"/></svg></button></div>
+<button class="btn btn-p" type="submit" style="height:44px">Apply</button>
+</form>
+
+<div style="display:flex;justify-content:space-between;align-items:center;margin:24px 0 10px">
+<p class="hdc b">23 exams <span class="mut" style="font-weight:400">· page 1 of 2</span></p>
+<a href="#" class="sm">Clear filters</a>
+</div>
+
+<ul class="list">
+<li class="row"><span class="done y" role="img" aria-label="Done"><svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px;stroke-width:3"><path d="M20 6 9 17l-5-5"/></svg></span><span class="tbox c-exa" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><a class="rt" href="#"><span class="rtt" style="display:block"><span class="chip c-y2" style="margin-right:6px">DEMO301</span><span class="mut" style="font-weight:500">Demo Algorithms</span> <span aria-hidden="true" class="mut">·</span> Final exam 2025</span><span class="rmeta"><span class="chip c-exa">Exam</span><span class="chip c-neu">Final · 2024–2025</span><span class="chip c-neu">EN</span><span class="lect">Dr. Ada Example</span></span></a><button class="bm" aria-label="Save Final exam 2025"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></button></li>
+<li style="padding:0 0 6px 0"><a class="sol" href="#"><svg class="i" viewBox="0 0 24 24" style="width:14px;height:14px"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>Solution: Final exam 2025, correction</a></li>
+<li class="row hov"><span class="done" role="img" aria-label="Not done"></span><span class="tbox c-exa" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><a class="rt" href="#"><span class="rtt" style="display:block"><span class="chip c-y2" style="margin-right:6px">DEMO302</span><span class="mut" style="font-weight:500">Demo Databases</span> <span aria-hidden="true" class="mut">·</span> Final exam 2025</span><span class="rmeta"><span class="chip c-exa">Exam</span><span class="chip c-neu">Final · 2024–2025</span><span class="chip c-neu">FR</span></span></a><button class="bm on" aria-label="Remove Final exam 2025 from saved"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></button></li>
+<li class="row"><span class="done" role="img" aria-label="Not done"></span><span class="tbox c-exa" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><a class="rt" href="#"><span class="rtt" style="display:block"><span class="chip c-y2" style="margin-right:6px">DEMO303</span><span class="mut" style="font-weight:500">Demo Operating Systems</span> <span aria-hidden="true" class="mut">·</span> Final exam 2024</span><span class="rmeta"><span class="chip c-exa">Exam</span><span class="chip c-neu">Final · 2023–2024</span><span class="chip c-neu">EN</span><span class="lect">Dr. Alan Sample</span></span></a><button class="bm" aria-label="Save Final exam 2024"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></button></li>
+<li class="row"><span class="done" role="img" aria-label="Not done"></span><span class="tbox c-exa" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><a class="rt" href="#"><span class="rtt" style="display:block"><span class="chip c-y2" style="margin-right:6px">DEMO301</span><span class="mut" style="font-weight:500">Demo Algorithms</span> <span aria-hidden="true" class="mut">·</span> Final exam 2024</span><span class="rmeta"><span class="chip c-exa">Exam</span><span class="chip c-neu">Final · 2023–2024</span><span class="chip c-neu">EN</span><span class="lect">Dr. Ada Example</span></span></a><button class="bm" aria-label="Save Final exam 2024"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></button></li>
+<li class="row"><span class="done" role="img" aria-label="Not done"></span><span class="tbox c-exa" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><a class="rt" href="#"><span class="rtt" style="display:block"><span class="chip c-y2" style="margin-right:6px">DEMO302</span><span class="mut" style="font-weight:500">Demo Databases</span> <span aria-hidden="true" class="mut">·</span> Final exam 2023</span><span class="rmeta"><span class="chip c-exa">Exam</span><span class="chip c-neu">Final · 2022–2023</span><span class="chip c-neu">FR</span></span></a><button class="bm" aria-label="Save Final exam 2023"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></button></li>
+<li class="row"><span class="done" role="img" aria-label="Not done"></span><span class="tbox c-exa" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span><a class="rt" href="#"><span class="rtt" style="display:block"><span class="chip c-y2" style="margin-right:6px">DEMO303</span><span class="mut" style="font-weight:500">Demo Operating Systems</span> <span aria-hidden="true" class="mut">·</span> Final exam 2022</span><span class="rmeta"><span class="chip c-exa">Exam</span><span class="chip c-neu">Final · 2021–2022</span><span class="chip c-neu">EN</span><span class="lect">Pr. Grace Placeholder</span></span></a><button class="bm" aria-label="Save Final exam 2022"><svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg></button></li>
+</ul>
+
+<nav aria-label="Pages" style="display:flex;gap:8px;justify-content:center;margin-top:24px"><a class="pg on" href="#" aria-current="page">1</a><a class="pg" href="#">2</a><a class="pg" href="#">Next ›</a></nav>
+</main>
+<footer class="foot" style="position:absolute;left:0;right:0;bottom:0"><div class="wrap">Independent student project. Not an official Lebanese University website.</div></footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":1120}}'>
+class Component extends DCLogic {
+renderVals() { return { cls: this.props.dark ? 'dark' : '' }; }
+}
+</script>
+</body>
+</html>

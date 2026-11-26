@@ -1,0 +1,29 @@
+{"v":3,"createdOnFiles":{"v":1,"at":"2026-11-26T10:00:00Z"},"title":"UniMate redesign — inner pages","launch":{"view":"canvas"},"pages":[],
+"boards":{
+"Main.dc.html":{"x":0,"y":0,"w":1280,"h":1100,"title":"Year page — /years/2 (#185)"},
+"Course.dc.html":{"x":1360,"y":0,"w":1280,"h":960,"title":"Course page — /courses/DEMO301 (#186)"},
+"Chapter.dc.html":{"x":2720,"y":0,"w":1280,"h":1140,"title":"Chapter page — /courses/DEMO301/chapters/2 (#186)"},
+"Exams.dc.html":{"x":0,"y":1800,"w":1280,"h":1120,"title":"Exams — /exams (#187)"},
+"Search.dc.html":{"x":1360,"y":1800,"w":1280,"h":1120,"title":"Search — /search?q=graphs (#187)"},
+"Reader.dc.html":{"x":2720,"y":1800,"w":1280,"h":980,"title":"Reader chrome — /resources/ID (#188)"},
+"Saved.dc.html":{"x":0,"y":3520,"w":1280,"h":1000,"title":"Saved — /saved (#189)"},
+"Progress.dc.html":{"x":1360,"y":3520,"w":1280,"h":1160,"title":"Progress — /progress (#189)"},
+"Todo.dc.html":{"x":2720,"y":3520,"w":1280,"h":920,"title":"To-do board — /todo (#189)"},
+"SignIn.dc.html":{"x":0,"y":5280,"w":1280,"h":800,"title":"Sign in — /sign-in (#190)"},
+"NotFound.dc.html":{"x":1360,"y":5280,"w":1280,"h":660,"title":"404 + header/footer (#190)"},
+"PhoneYear.dc.html":{"x":0,"y":6680,"w":390,"h":844,"title":"Phone — year page"},
+"PhoneCourse.dc.html":{"x":470,"y":6680,"w":390,"h":844,"title":"Phone — course page"},
+"PhoneReader.dc.html":{"x":940,"y":6680,"w":390,"h":844,"title":"Phone — reader"},
+"PhoneTodo.dc.html":{"x":1410,"y":6680,"w":390,"h":844,"title":"Phone — to-do board"}
+},
+"order":["Main.dc.html","Course.dc.html","Chapter.dc.html","Exams.dc.html","Search.dc.html","Reader.dc.html","Saved.dc.html","Progress.dc.html","Todo.dc.html","SignIn.dc.html","NotFound.dc.html","PhoneYear.dc.html","PhoneCourse.dc.html","PhoneReader.dc.html","PhoneTodo.dc.html"],
+"notes":{
+"tA":{"x":0,"y":-300,"text":"Browse: year, course, chapter","kind":"title1","maxW":4000},
+"tB":{"x":0,"y":1500,"text":"Find and read: exams, search, reader","kind":"title1","maxW":4000},
+"tC":{"x":0,"y":3220,"text":"Your pages: saved, progress, to-do","kind":"title1","maxW":4000},
+"tD":{"x":0,"y":4980,"text":"Account pages and site chrome","kind":"title1","maxW":2640},
+"tE":{"x":0,"y":6380,"text":"Phone, 390 px","kind":"title1","maxW":1800},
+"n1":{"x":2720,"y":5280,"w":420,"size":"m","fill":"blue","text":"How to read this canvas\n\n• Every board has a Dark switch in Tweaks.\n• Colours are the real tokens from src/lib/design-language.ts: first year sky, second violet, third emerald, Master 1 amber; lecture blue, notes teal, exercise orange, exam rose.\n• Success green only for done / finished; primary blue for in progress; yellow only the 4px bar under titles.\n• Behaviour, URLs and copy that tests rely on are unchanged. Data is placeholder (DEMO codes)."},
+"n2":{"x":3220,"y":5280,"w":420,"size":"m","fill":"orange","text":"Common changes on every page\n\n• Page title gets the year colour: a year circle or code chip beside it.\n• Cards become flat rounded-3xl surfaces; hover = year-coloured border + small lift (motion-safe).\n• Every resource row: type-coloured icon box + type-name chip + language badge.\n• Active tabs use the year's solid colour.\n• Section headings use a small count beside them instead of a sentence."}
+},
+"designSystems":[]}

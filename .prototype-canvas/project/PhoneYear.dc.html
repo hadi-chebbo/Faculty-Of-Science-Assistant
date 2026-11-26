@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phone — year page</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/f06a240b7ebab6cecf503433b4f525de">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>body{margin:0}
+.pc{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:20px;min-height:72px}
+</style>
+</helmet>
+<div class="ua phone {{cls}}">
+<header class="phdr">
+<button class="ib" aria-label="Open menu" style="width:44px;height:44px"><svg class="i" viewBox="0 0 24 24" style="width:20px;height:20px"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></svg></button>
+<a class="brand" href="#" style="font-size:17px"><svg width="24" height="24" viewBox="0 0 28 28" aria-hidden="true"><g transform="rotate(-8 7 14)"><rect x="2" y="3" width="10" height="10" rx="3" fill="#0EA5E9"/><rect x="2" y="15" width="10" height="10" rx="3" fill="#8B5CF6"/></g><g transform="rotate(8 21 14)"><rect x="16" y="3" width="10" height="10" rx="3" fill="#10B981"/><rect x="16" y="15" width="10" height="10" rx="3" fill="#F59E0B"/></g></svg><span>Uni<span style="color:var(--link)">Mate</span></span></a>
+<span style="margin-left:auto"></span><button class="ib" aria-label="Toggle theme" style="width:44px;height:44px"><svg class="i" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button><span class="av">SD</span>
+</header>
+<main class="ph">
+<a href="#" style="display:flex;align-items:center;gap:6px;height:44px;color:var(--fg);font-weight:500"><svg class="i" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>Home</a>
+<div style="display:flex;align-items:center;gap:12px"><span class="circ s-y2" style="width:44px;height:44px;font-size:18px">2</span><div><h1 style="font-size:26px;font-weight:650">Second year</h1><p class="sm mut">7 courses · 101 files</p></div></div>
+<div class="ybar" style="margin-top:12px"></div>
+<nav aria-label="Semesters" style="display:flex;gap:8px;margin-top:16px">
+<a class="pill c-y2" href="#" style="height:44px">Semester 1</a><a class="pill c-neu" href="#" style="height:44px;color:var(--hd)">Semester 2</a>
+</nav>
+<div style="display:flex;align-items:baseline;gap:8px;margin:20px 0 10px"><h2 class="h2" style="font-size:18px">Semester 1</h2><span class="sm mut">4 courses</span></div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<a class="card pc" href="#"><div style="flex:1;min-width:0"><span class="chip c-y2">DEMO301</span><p class="b hdc" style="margin-top:4px">Demo Algorithms</p><p class="sm mut">5 chapters · 24 files</p></div><span class="ringw" aria-label="Your progress: 62% done"><svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="14" fill="none" style="stroke:var(--track)" stroke-width="4"/><circle cx="17" cy="17" r="14" fill="none" style="stroke:var(--pr)" stroke-width="4" stroke-dasharray="55 88" stroke-linecap="round" transform="rotate(-90 17 17)"/></svg><span style="font-size:10px">62</span></span></a>
+<a class="card pc" href="#"><div style="flex:1;min-width:0"><span class="chip c-y2">DEMO302</span><p class="b hdc" style="margin-top:4px">Demo Databases</p><p class="sm mut">4 chapters · 19 files</p></div><svg class="i" viewBox="0 0 24 24" style="color:var(--mfg)"><path d="m9 18 6-6-6-6"/></svg></a>
+<a class="card pc" href="#"><div style="flex:1;min-width:0"><span class="chip c-y2">DEMO303</span><p class="b hdc" style="margin-top:4px">Demo Operating Systems</p><p class="sm mut">16 files</p></div><span class="ringw" aria-label="Your progress: finished"><svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="14" fill="none" style="stroke:var(--ok)" stroke-width="4"/></svg><span><svg class="i" viewBox="0 0 24 24" style="color:var(--ok);width:14px;height:14px"><path d="M20 6 9 17l-5-5"/></svg></span></span></a>
+<div class="card pc dash"><div style="flex:1"><span class="chip c-neu">DEMO304</span><p class="b" style="margin-top:4px;color:var(--mfg)">Demo Networks</p><p class="sm mut">No files yet</p></div></div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return { cls: this.props.dark ? 'dark' : '' }; }
+}
+</script>
+</body>
+</html>
