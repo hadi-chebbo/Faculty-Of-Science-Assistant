@@ -25,6 +25,7 @@ function Field({ id, label, name, noun, value, options }: { id: string; label: s
         emptyLabel="All"
         options={options}
         submitOnChange
+        className="rounded-xl md:h-11"
         fallback={
           <NativeSelect id={`${id}-native`} name={name} defaultValue={value} aria-label={label} className="w-full [&_select]:h-11">
             <NativeSelectOption value="">All</NativeSelectOption>
@@ -60,7 +61,7 @@ export function ExamFilters({ options, params }: { options: ExamFilterOptions; p
 
   return (
     <FilterForm activeCount={countActiveFilters(params)}>
-      <div className="rounded-xl border bg-card p-4">
+      <div className="rounded-3xl border bg-card p-4 md:p-5">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Field id="exam-semester" label="Semester" name="semester" noun="semester" value={values.semester} options={semesterOptions} />
           <Field id="exam-course" label="Course" name="course" noun="course" value={values.course} options={courseOptions} />
@@ -90,11 +91,11 @@ export function ExamFilters({ options, params }: { options: ExamFilterOptions; p
           />
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button type="submit" className="h-11 px-4 md:h-9 md:px-3">
+          <Button type="submit" className="h-11 rounded-xl px-5">
             Apply
           </Button>
           {hasActiveFilters(params) && (
-            <Button asChild variant="ghost" className="h-11 px-4 md:h-9 md:px-3">
+            <Button asChild variant="ghost" className="h-11 rounded-xl px-4">
               <Link href="/exams">Clear filters</Link>
             </Button>
           )}

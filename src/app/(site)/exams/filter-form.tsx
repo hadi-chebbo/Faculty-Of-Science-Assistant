@@ -34,7 +34,7 @@ export function FilterForm({ activeCount, children }: { activeCount: number; chi
       }}
     >
       <details ref={detailsRef} className="filters-details group">
-        <summary className="flex h-11 cursor-pointer list-none items-center justify-between rounded-xl border bg-card px-4 text-sm font-medium text-heading marker:hidden md:hidden [&::-webkit-details-marker]:hidden">
+        <summary className="flex h-11 cursor-pointer list-none items-center justify-between rounded-2xl border bg-card px-4 text-sm font-medium text-heading marker:hidden md:hidden [&::-webkit-details-marker]:hidden">
           <span>{activeCount > 0 ? `Filters (${activeCount})` : "Filters"}</span>
           <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
         </summary>

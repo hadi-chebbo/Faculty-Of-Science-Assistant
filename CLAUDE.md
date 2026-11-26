@@ -210,7 +210,7 @@ mock exam generation, personalization.
 - Shared design language (spec #179, calm and friendly; owner-approved on the home prototype, 2026-11-25): defined once in
   `src/lib/design-language.ts` (`YEAR_STYLES`, `TYPE_STYLES`) with `YearCircle` / `YearChip`
   (`src/components/site/year-badge.tsx`) and the `rise-in` utility in `globals.css`; no page hard-codes its own year or
-  file-type colours. Status: the foundation is in (#180: the module, the row's type colour and name, `rise-in`), and the home (#181 to #184) and the year page (#185) use it; pages adopt
+  file-type colours. Status: the foundation is in (#180: the module, the row's type colour and name, `rise-in`), and the home (#181 to #184) the year page (#185) and the Exams and Search pages (#187) use it; pages adopt
   year colours and the other styles ticket by ticket (#181 to #191). Each year has its own colour on every page (first sky, second violet, third emerald, Master 1
   amber; solid for circles and tabs, a tinted chip, a hover border); each file type has its own colour and icon on
   every resource row (lecture blue book, notes teal document, exercise orange pencil, exam rose clipboard; solutions
@@ -373,7 +373,7 @@ mock exam generation, personalization.
   hidden and the filters are always shown. The count line reads "117 exams · page 1 of 6". Unusable URL values are
   ignored, not errors. Results are one flat list (newest year first), 20 per page, reusing the
   course-page resource row, which here names the course by code and title before the file's title ("DEMO521 Algorithms · Final exam 2025"; `showCourse`,
-  `courseTitle` on `ResourceListItem`, loaded in the same query as the rows). Course and chapter pages never repeat it. Dropdowns only offer values that have a visible exam.
+  `courseTitle` on `ResourceListItem`, loaded in the same query as the rows). Course and chapter pages never repeat it. Dropdowns only offer values that have a visible exam. Look (#187): the title is on one line with a 48px rounded exam-coloured icon box (`TYPE_STYLES.exam`, `ClipboardCheck`), the plain line "Partial, final and second-session exams of every course." and the yellow bar; the filters sit in a `rounded-3xl` card with `rounded-xl` 44px dropdown triggers and Apply; the count line is a larger heading-colour line; rows are the shared `ResourceRow` and the pager keeps Previous / "Page N of M" / Next. The page header is built inline in `page.tsx` (not `PageTitle`).
 - Search page (`/search?q=…&type=…`, public, never reads the session; opened by the Search nav
   item; the home hero also has a field that opens it with `?q=`). A course result says "Second year · Semester 1" before its chapter and file counts; a course with no files is the same muted, non-link card and says "No files yet". The chips row has the `scroll-fade` edge fade. It searches course codes and titles, chapter titles and
   the title, description and lecturer name of published files (the name is matched like the title
@@ -391,7 +391,7 @@ mock exam generation, personalization.
   type word selects its chip. Chips: All, Courses, Lectures & notes, Exercises, Exams (solutions
   and other files appear only under All). Matches are bold heading-colour text with no background
   (never yellow); a file matched only in its description shows a snippet. No results: the tips,
-  a link to drop the chip, and Browse courses / Previous exams.
+  a link to drop the chip, and Browse courses / Previous exams. Look (#187): content is at most `max-w-4xl`; the title has the yellow bar; the search box is styled like the home hero's field (`rounded-2xl` bordered container, search icon in link colour, soft primary shadow, focus ring, `rounded-xl` Search button, still hidden on a phone until focused; the clear button sits inside); "Or browse a year" links carry the year circle and take the year's hover border; section headings (`Courses · 1`) are `text-lg` heading-colour (no longer small uppercase); Courses and Chapters are two-column `rounded-3xl` cards from md up (a course card's code chip takes the year's tint via `YEAR_STYLES`, an empty course stays the dashed muted card; a chapter card shows "Chapter N" in a neutral chip and keeps "CODE · Course title · N files"); "Show all N files" is a bordered `rounded-xl` link; the no-results card is `rounded-3xl`. The chips keep the shared `chipClass` (primary fill when chosen, no type-colour dots).
 - Reader page (`/resources/ID`, public, published resources only; anything else is the 404 page):
   PDF.js draws every page of the file on canvases in one vertical scroll, drawn lazily. The document
   dominates the page: a card with a top row (only Contents on the left and Search and "More actions"

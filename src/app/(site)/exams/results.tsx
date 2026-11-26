@@ -44,11 +44,11 @@ export async function ExamResults({ params }: { params: ExamParams }) {
   const { pages, previous, next } = pagerLinks(params, result.total, result.pageSize);
   return (
     <>
-      <p className="mb-3 text-sm font-medium" aria-live="polite">
+      <p className="mb-3 text-base font-semibold text-heading" aria-live="polite">
         {result.total} {result.total === 1 ? "exam" : "exams"}
         {pages > 1 && ` · page ${result.page} of ${pages}`}
       </p>
-      <ul className="space-y-2">
+      <ul className="space-y-2.5">
         {result.items.map((exam) => (
           <ResourceRow key={exam.id} resource={exam} showCourse />
         ))}
@@ -58,7 +58,7 @@ export async function ExamResults({ params }: { params: ExamParams }) {
           <PaginationContent>
             {previous && (
               <PaginationItem>
-                <PaginationPrevious href={previous} className="min-h-11" />
+                <PaginationPrevious href={previous} className="min-h-11 rounded-xl" />
               </PaginationItem>
             )}
             <PaginationItem className="px-2 text-sm">
@@ -66,7 +66,7 @@ export async function ExamResults({ params }: { params: ExamParams }) {
             </PaginationItem>
             {next && (
               <PaginationItem>
-                <PaginationNext href={next} className="min-h-11" />
+                <PaginationNext href={next} className="min-h-11 rounded-xl" />
               </PaginationItem>
             )}
           </PaginationContent>
