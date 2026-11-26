@@ -23,6 +23,11 @@ marks its circle and course-code chips on the home year cards and on its year pa
 chips, arrows and hover borders of its course cards).
 _Avoid_: Theme colour, category colour
 
+**Course colour**:
+A course's year colour, used on its course and chapter pages: the code chip, the current area or type tab and the
+hover border of its chapter cards. A course has no colour of its own.
+_Avoid_: Course theme
+
 **Numbers row**:
 The row of live catalogue numbers on Home, under the year cards: files, courses, previous exams and the span of exam
 years covered. Counts only published material. It replaced the "Jump straight to a course" course browser (2026-11-25).

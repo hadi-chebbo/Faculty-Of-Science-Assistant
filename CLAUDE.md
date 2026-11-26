@@ -343,6 +343,29 @@ mock exam generation, personalization.
   counted files show at the right of the "Chapter N" line "4 of 5 done", "Not started · 5 files" or a
   green "Finished", plus a 4px bar along the bottom edge (primary, success green when finished, which
   also tints the border); a chapter with no counted file shows neither, an empty card is unchanged.
+  In the shared design language (#186): the course takes its year's colour (`yearOfSemester`). The header (`<header>`, no
+  `PageTitle`) has, from md up, the year circle (24px) and "Second year · Semester 1" (`courseYearSemesterLabel`), then an
+  `h1` holding the code as a chip in the year's tint and the title (on a phone the chip sits on its own 44px line with the
+  ring at its right and the title under it; the phone has the back link instead of the year line), and the yellow bar.
+  The progress block is a `rounded-2xl` card, 288px wide. The area tabs show their count ("Chapters 5", "Previous exams 6",
+  "Other material 3"; chapters, exam rows and files with no chapter as shown, so narrowed by a chosen lecturer;
+  `areaCounts`): from md up one segmented control (`rounded-2xl` border, current tab in the year's solid colour), on a phone
+  44px pills in a sideways-scrolling row, the third reading "Other" below sm (its name stays "Other material"). The type
+  tabs of a course without chapters look the same (`YEAR_STYLES[year].tab`, the `data-active` classes for shadcn Tabs).
+  Chapter cards are `rounded-3xl` (one column on a phone, two from sm, three from lg), with "CHAPTER N" small and
+  uppercase, the title, and one chip per kind of file in the type's colour ("2 lectures", "1 exercise"; `groupCounts` in
+  `src/lib/labels.ts`), the year's border and a `motion-safe:` lift on hover, rising in on load (`rise-in`); "Finished" is
+  a success-green chip and "4 of 5 done" is in the heading colour. An empty chapter is a dashed card saying "No files
+  yet". Exam years and Other material types are `h2`s in the heading colour; a type heading has its count beside it
+  (`TypeSection`). The Taught by cards are `rounded-2xl`, the "All lecturers" circle shows a people icon, and the chosen
+  card's count uses the body text colour (muted falls under 4.5:1 on its tint). Chapter page: a header with the code chip
+  in the year's tint and "Course title · Chapter N" above the `h1` (the chapter's title) and the yellow bar; for a
+  signed-in student "Your progress" and "4 of 5 files done" over a 6px bar (success green with a check once finished;
+  `ChapterProgressHeader`, from the course page's one `GET /api/v1/progress/courses/CODE`, none for a visitor), at the
+  right of the title from md up (title keeps `md:pr-80`) and under it on a phone in a slot kept only while
+  `html[data-signed-in]` is set, so nothing moves. The "In this chapter" jump links are chips in each type's colour, the
+  sections are `TypeSection`s, and Previous / All chapters / Next are `rounded-2xl` cards ("Previous · Chapter 1" small
+  above the chapter's title; an empty side takes no room on a phone).
 - Taught by (course page and chapter page `/courses/CODE/chapters/N`; `taught-by.tsx`): when two or more lecturers have published
   files in scope (the course; the chapter on a chapter page), a "TAUGHT BY" strip (a list labelled "Lecturer") sits above the area tabs
   (above the lists on a chapter page): "All lecturers" (every published file in scope, files with no lecturer included) then one card per

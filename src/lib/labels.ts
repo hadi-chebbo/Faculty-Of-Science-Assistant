@@ -46,16 +46,17 @@ const RESOURCE_TYPE_COUNT_NAMES: Record<ResourceType, [one: string, many: string
   other: ["other item", "other items"],
 };
 
-// "3 lectures · 1 note · 2 exercises": what a list of groups holds, in the order given.
-export function describeGroups(groups: { type: ResourceType; resources: unknown[] }[]): string {
+// What a list of groups holds, one entry per non-empty type in the order given: { type, label: "3 lectures" }.
+export function groupCounts<T extends ResourceType>(
+  groups: { type: T; resources: unknown[] }[],
+): { type: T; label: string }[] {
   return groups
     .filter((group) => group.resources.length > 0)
     .map((group) => {
       const count = group.resources.length;
       const [one, many] = RESOURCE_TYPE_COUNT_NAMES[group.type];
-      return `${count} ${count === 1 ? one : many}`;
-    })
-    .join(" · ");
+      return { type: group.type, label: `${count} ${count === 1 ? one : many}` };
+    });
 }
 
 // An academic year is stored by its start year: 2024 is shown as "2024-2025".
