@@ -210,7 +210,7 @@ mock exam generation, personalization.
 - Shared design language (spec #179, calm and friendly; owner-approved on the home prototype, 2026-11-25): defined once in
   `src/lib/design-language.ts` (`YEAR_STYLES`, `TYPE_STYLES`) with `YearCircle` / `YearChip`
   (`src/components/site/year-badge.tsx`) and the `rise-in` utility in `globals.css`; no page hard-codes its own year or
-  file-type colours. Status: the foundation is in (#180: the module, the row's type colour and name, `rise-in`), and the home (#181 to #184), the year page (#185) and the Exams and Search pages (#187) use it; pages adopt
+  file-type colours. Status: the foundation is in (#180: the module, the row's type colour and name, `rise-in`), and the home (#181 to #184), the year page (#185) and the Exams and Search pages (#187) and the reader chrome (#188) use it; pages adopt
   year colours and the other styles ticket by ticket (#181 to #191). Each year has its own colour on every page (first sky, second violet, third emerald, Master 1
   amber; solid for circles and tabs, a tinted chip, a hover border); each file type has its own colour and icon on
   every resource row (lecture blue book, notes teal document, exercise orange pencil, exam rose clipboard; solutions
@@ -507,7 +507,7 @@ mock exam generation, personalization.
   it answers with the toast "Saved. Find it any time under Saved." ("Removed from
   saved." when removing), and a failure puts the state back with a toast. Signed out, the same
   controls show and using one opens the sign-in dialog over the page (see "Sign-in dialog for
-  actions"); after signing in the tapped save is done with its usual toast. There is no AI panel yet and no text about one.
+  actions"); after signing in the tapped save is done with its usual toast. There is no AI panel yet and no text about one. Look (#188, chrome only, no behaviour change): the title line (`data-reader-title`) is the type's icon box (`TYPE_STYLES` tint, `rounded-xl`, `aria-hidden`, centred on the line) beside the title and its chips, which sit on the title's line and wrap under it only when space runs out: a type chip (`TYPE_STYLES`), a muted language chip ("EN", with "(English)" for screen readers) and, when there are any, muted academic-year and session chips; the yellow bar under the title is gone here. On a phone the document card runs the full width of the screen (it bleeds past the page's side padding), with rounded top corners only (`rounded-t-3xl`), no side borders and no bottom rounding; its top row stays sticky as before. From md it is a `rounded-3xl` bordered card. The page-and-zoom bar is a pill with a soft shadow, the More actions dropdown is `rounded-2xl` and its phone sheet `rounded-t-3xl`. Icon buttons in the top row, floating bar, search bar and menu are 44px on a phone and 40px from md up, and the details buttons are `rounded-xl` (sizes in `src/app/(site)/resources/[id]/chrome.ts`). The details column is 224px at md and 280px from lg up. Saved is a filled primary button, Done stays success green.
 - Saved page (`/saved`): private, server-rendered, `noindex` and `no-store` (header set in
   `next.config.ts`), reached from "Saved" in the main navigation (also in the phone sidebar).
   `getSignedInPageViewer` (`src/lib/auth/page-guard.ts`) returns null without a valid access token, and the

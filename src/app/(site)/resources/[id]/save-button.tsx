@@ -1,5 +1,6 @@
 "use client";
 
+import { DETAILS_BUTTON } from "./chrome";
 import { Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,11 +14,11 @@ export function SaveButton({ resourceId }: { resourceId: string }) {
   return (
     <Button
       type="button"
-      variant="outline"
+      variant={saved ? "default" : "outline"}
       aria-pressed={saved}
       disabled={pending}
       onClick={() => void toggle()}
-      className={cn("min-h-11 w-full md:min-h-9", saved && "text-link")}
+      className={DETAILS_BUTTON}
     >
       <Bookmark aria-hidden className={cn(saved && "fill-current")} />
       {saved ? "Saved" : "Save for later"}

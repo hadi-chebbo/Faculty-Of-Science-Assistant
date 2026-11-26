@@ -5,7 +5,8 @@ import { BackLink } from "@/components/site/back-link";
 import { Crumbs, type Crumb } from "@/components/site/crumbs";
 import { StateBlock } from "@/components/site/state-block";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EXAM_SESSION_LABELS, LANGUAGE_NAMES, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
+import { TYPE_STYLES } from "@/lib/design-language";
+import { EXAM_SESSION_LABELS, LANGUAGE_LABELS, LANGUAGE_NAMES, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
 import { yearCrumb } from "@/lib/years";
 import { readForPage } from "@/lib/page-errors";
 import { readerBackTarget } from "@/services/resources/back-target";
@@ -15,6 +16,9 @@ import { PdfViewer } from "./pdf-viewer-loader";
 import { ReaderDetails } from "./reader-details";
 import { RememberLastRead } from "./remember-last-read";
 import { ViewerSkeleton } from "./viewer-skeleton";
+
+const CHIP = "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium";
+const MUTED_CHIP = `${CHIP} bg-muted text-foreground`;
 
 // One read per request, shared by the page and its metadata. Public page: it reads as an anonymous
 // viewer and never looks at the session, so only published resources are found.
@@ -47,9 +51,9 @@ function ReaderSkeleton() {
   return (
     <div role="status" aria-label="Loading resource">
       <Skeleton className="mb-4 h-6 w-24 md:hidden" />
-      <div className="mb-4">
+      <div className="mb-4 flex items-center gap-3">
+        <Skeleton className="size-10 rounded-xl" />
         <Skeleton className="h-8 w-64 max-w-full" />
-        <Skeleton className="mt-3 h-1 w-12" />
       </div>
       <ViewerSkeleton />
     </div>
@@ -82,11 +86,10 @@ async function ReaderContent({ id }: { id: string }) {
     { label: resource.title },
   ];
 
-  const facts = [
-    RESOURCE_TYPE_SINGULAR_LABELS[resource.type],
-    LANGUAGE_NAMES[resource.language],
-    ...(resource.academicYearStart !== null ? [formatAcademicYear(resource.academicYearStart)] : []),
-    ...(resource.examSession ? [EXAM_SESSION_LABELS[resource.examSession]] : []),
+  const TypeIcon = TYPE_STYLES[resource.type].icon;
+  const metaChips = [
+    ...(resource.academicYearStart !== null ? [{ key: "year", text: formatAcademicYear(resource.academicYearStart) }] : []),
+    ...(resource.examSession ? [{ key: "session", text: EXAM_SESSION_LABELS[resource.examSession] }] : []),
   ];
 
   return (
@@ -99,16 +102,28 @@ async function ReaderContent({ id }: { id: string }) {
       </BackLink>
       <Crumbs items={crumbs} />
 
-      {/* Compact title: type and language beside the title from md up, below it on a phone. */}
-      <div className="mb-4 grid gap-x-3 md:grid-cols-[auto_1fr] md:items-baseline">
-        <h1 className="text-[1.375rem] font-semibold tracking-tight md:col-start-1 md:row-start-1 md:text-2xl">
-          {resource.title}
-        </h1>
-        <div className="mt-3 h-1 w-12 rounded-full bg-highlight md:col-span-2 md:row-start-2 md:mt-2" aria-hidden />
-        <p className="mt-3 text-sm md:col-start-2 md:row-start-1 md:mt-0">{facts.join(" · ")}</p>
+      {/* Title line: the type's icon box, the title, then the type and language chips (the type is also
+          named in words, never colour alone). */}
+      <div data-reader-title className="mb-4 flex items-center gap-3">
+        <span aria-hidden className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${TYPE_STYLES[resource.type].chip}`}>
+          <TypeIcon className="size-[18px]" />
+        </span>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
+          <h1 className="text-xl leading-tight font-semibold tracking-tight md:text-2xl">{resource.title}</h1>
+          <span className={`${CHIP} ${TYPE_STYLES[resource.type].chip}`}>{RESOURCE_TYPE_SINGULAR_LABELS[resource.type]}</span>
+          <span className={MUTED_CHIP}>
+            {LANGUAGE_LABELS[resource.language]}
+            <span className="sr-only"> ({LANGUAGE_NAMES[resource.language]})</span>
+          </span>
+          {metaChips.map((chip) => (
+            <span key={chip.key} className={MUTED_CHIP}>
+              {chip.text}
+            </span>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-[minmax(0,1fr)_14rem] md:items-start md:gap-4">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-[minmax(0,1fr)_14rem] lg:grid-cols-[minmax(0,1fr)_280px] md:items-start md:gap-4">
         {resource.hasFile ? (
           <>
             <RememberLastRead id={resource.id} title={resource.title} courseCode={resource.courseCode} type={resource.type} />

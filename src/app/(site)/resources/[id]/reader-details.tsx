@@ -1,4 +1,5 @@
 import { CheckCircle2, Download, ExternalLink } from "lucide-react";
+import { DETAILS_BUTTON } from "./chrome";
 import Link from "next/link";
 import { EXAM_SESSION_LABELS, LANGUAGE_NAMES, RESOURCE_TYPE_SINGULAR_LABELS, formatAcademicYear } from "@/lib/labels";
 import { isMarkable } from "@/services/progress/markable";
@@ -42,7 +43,7 @@ export function ReaderDetails({ resource }: { resource: ReaderResource }) {
         {/* A plain <a>, not next/link: the download route redirects to the file and must not be
             prefetched. Downloading never marks the file as done. */}
         {resource.hasFile && (
-          <Button asChild variant="outline" className="min-h-11 w-full md:min-h-9">
+          <Button asChild variant="outline" className={DETAILS_BUTTON}>
             <a href={downloadHref(resource.id)}>
               <Download aria-hidden />
               Download PDF
