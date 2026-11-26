@@ -13,11 +13,11 @@ export function SaveButton({ resourceId }: { resourceId: string }) {
   return (
     <Button
       type="button"
-      variant="outline"
+      variant={saved ? "default" : "outline"}
       aria-pressed={saved}
       disabled={pending}
       onClick={() => void toggle()}
-      className={cn("min-h-11 w-full md:min-h-9", saved && "text-link")}
+      className="min-h-11 w-full rounded-xl md:min-h-10"
     >
       <Bookmark aria-hidden className={cn(saved && "fill-current")} />
       {saved ? "Saved" : "Save for later"}

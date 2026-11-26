@@ -109,7 +109,8 @@ test.describe("the reader page", () => {
     await page.goto(`/resources/${id}`);
     await expect(page).toHaveTitle("Sample lecture 1 (DEMO301) | UniMate");
     await expect(page.getByRole("heading", { level: 1, name: "Sample lecture 1" })).toBeVisible();
-    await expect(page.getByText("Lecture · English")).toBeVisible();
+    await expect(page.getByText("Lecture", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("EN (English)")).toBeVisible();
 
     const canvas = page.getByRole("img", { name: "Page 1 of 1" });
     await expect(canvas).toBeVisible();

@@ -60,7 +60,7 @@ export function ReaderSearchBar({
               onClose();
             }
           }}
-          className="h-10 rounded-lg bg-card pr-28 pl-9 focus-visible:border-primary focus-visible:ring-primary/25 dark:bg-card [&::-webkit-search-cancel-button]:hidden"
+          className="h-11 rounded-lg bg-card md:h-10 pr-28 pl-9 focus-visible:border-primary focus-visible:ring-primary/25 dark:bg-card [&::-webkit-search-cancel-button]:hidden"
         />
         <div className="pointer-events-none absolute top-1/2 right-3 flex -translate-y-1/2 items-center gap-2 text-sm whitespace-nowrap text-muted-foreground tabular-nums">
           {/* Only the finished count is announced; the percentage while searching is for the eye. */}
@@ -68,13 +68,13 @@ export function ReaderSearchBar({
           {status.kind === "searching" && <span aria-hidden>Searching… {status.percent}%</span>}
         </div>
       </div>
-      <Button variant="ghost" size="icon" className="size-10" aria-label="Previous match" disabled={matches === 0} onClick={() => onStep(-1)}>
+      <Button variant="ghost" size="icon" className="size-11 md:size-10" aria-label="Previous match" disabled={matches === 0} onClick={() => onStep(-1)}>
         <ChevronUp aria-hidden />
       </Button>
-      <Button variant="ghost" size="icon" className="size-10" aria-label="Next match" disabled={matches === 0} onClick={() => onStep(1)}>
+      <Button variant="ghost" size="icon" className="size-11 md:size-10" aria-label="Next match" disabled={matches === 0} onClick={() => onStep(1)}>
         <ChevronDown aria-hidden />
       </Button>
-      <Button variant="ghost" size="icon" className="size-10" aria-label="Close search" onClick={onClose}>
+      <Button variant="ghost" size="icon" className="size-11 md:size-10" aria-label="Close search" onClick={onClose}>
         <X aria-hidden />
       </Button>
     </div>

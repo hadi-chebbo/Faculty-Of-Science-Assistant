@@ -9,7 +9,7 @@ import { useAddToTodo } from "@/lib/add-to-todo";
 export function AddToTodoButton({ resourceId }: { resourceId: string }) {
   const { pending, add } = useAddToTodo(resourceId);
   return (
-    <Button type="button" variant="outline" disabled={pending} onClick={() => void add()} className="min-h-11 w-full md:min-h-9">
+    <Button type="button" variant="outline" disabled={pending} onClick={() => void add()} className="min-h-11 w-full rounded-xl md:min-h-10">
       <ListPlus aria-hidden />
       Add to to-do
     </Button>

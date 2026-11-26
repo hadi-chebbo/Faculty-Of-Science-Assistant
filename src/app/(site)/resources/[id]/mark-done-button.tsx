@@ -28,7 +28,7 @@ export function MarkDoneButton({ resourceId, isExam }: { resourceId: string; isE
         data-done-button={resourceId}
         onAnimationEnd={(event) => event.target === event.currentTarget && setPlayed(pulse)}
         onClick={() => void toggle()}
-        className={cn("min-h-11 w-full md:min-h-9", done && "bg-success text-success-foreground hover:bg-success/90", pulse !== played && "done-ring")}
+        className={cn("min-h-11 w-full rounded-xl md:min-h-10", done && "bg-success text-success-foreground hover:bg-success/90", pulse !== played && "done-ring")}
       >
         {done ? <Check aria-hidden /> : <Circle aria-hidden />}
         {done ? "Done" : "Mark as done"}

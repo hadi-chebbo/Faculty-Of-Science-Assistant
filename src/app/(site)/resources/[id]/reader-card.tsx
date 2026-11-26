@@ -643,14 +643,14 @@ export function ReaderCard({
       }}
       className={cn(
         "flex flex-col border bg-card outline-none",
-        focus ? "fixed inset-0 z-50 h-dvh overflow-hidden border-0" : "rounded-xl",
+        focus ? "fixed inset-0 z-50 h-dvh overflow-hidden border-0" : "rounded-3xl",
         desktop && !focus && "h-[max(30rem,calc(100dvh-13rem))] overflow-hidden",
       )}
     >
       {/* The top row holds only Contents (left) and Search and More actions (right), plus Exit focus mode on a
           phone while focus mode is on. The search bar,
           when open, hangs under it inside the same sticky box. */}
-      <div ref={topRowRef} className={cn("z-20 shrink-0 border-b bg-card", !focus && "rounded-t-xl", !inner && "sticky top-14")}>
+      <div ref={topRowRef} className={cn("z-20 shrink-0 border-b bg-card", !focus && "rounded-t-3xl", !inner && "sticky top-14")}>
         <div className={cn("flex items-center gap-1 px-2", desktop ? "h-12" : "h-[52px]")}>
           {desktop ? (
             <Button
@@ -672,7 +672,7 @@ export function ReaderCard({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={cn("size-10 border border-transparent", sheetOpen && "border-primary/30 bg-accent text-accent-foreground")}
+                  className={cn("size-11 md:size-10 border border-transparent", sheetOpen && "border-primary/30 bg-accent text-accent-foreground")}
                   aria-label="Contents"
                 >
                   <PanelLeft aria-hidden />
@@ -698,7 +698,7 @@ export function ReaderCard({
             ref={searchButtonRef}
             variant="ghost"
             size="icon"
-            className={cn("size-10", searchOpen && "bg-accent text-accent-foreground")}
+            className={cn("size-11 md:size-10", searchOpen && "bg-accent text-accent-foreground")}
             aria-label="Search in document"
             aria-expanded={searchOpen}
             onClick={() => (searchOpen ? search.close() : search.openSearch())}
@@ -775,7 +775,7 @@ export function ReaderCard({
               if (keyboardInBar()) bar.show();
               else bar.toggle();
             }}
-            className={cn("touch-manipulation bg-reader-surface [overflow-anchor:none]", inner ? "absolute inset-0 overflow-auto" : "overflow-x-auto rounded-b-xl")}
+            className={cn("touch-manipulation bg-reader-surface [overflow-anchor:none]", inner ? "absolute inset-0 overflow-auto" : "overflow-x-auto rounded-b-3xl")}
           >
             <div className={cn("flex w-max min-w-full flex-col items-center gap-3 p-4", !ready && "invisible")}>
               {sizes.map((size, i) => {
@@ -821,7 +821,7 @@ export function ReaderCard({
                 >
                   <span>Continue where you left off, page {offer}?</span>
                   <Button
-                    className="h-10"
+                    className="h-11 md:h-10"
                     onClick={() => {
                       goTo(offer);
                       setOffer(null);
@@ -829,7 +829,7 @@ export function ReaderCard({
                   >
                     Go
                   </Button>
-                  <Button variant="ghost" size="icon" className="size-10" aria-label="Dismiss" onClick={() => setOffer(null)}>
+                  <Button variant="ghost" size="icon" className="size-11 md:size-10" aria-label="Dismiss" onClick={() => setOffer(null)}>
                     <X aria-hidden />
                   </Button>
                 </div>
@@ -843,7 +843,7 @@ export function ReaderCard({
                 onPointerDownCapture={bar.show}
                 onKeyDownCapture={bar.show}
                 className={cn(
-                  "flex items-center gap-0.5 rounded-full border bg-card px-1.5 py-0.5 text-sm text-heading shadow-lg",
+                  "flex items-center gap-0.5 rounded-full border bg-card p-1 text-sm text-heading shadow-[0_10px_30px_-12px_rgba(0,0,0,0.35)]",
                   "duration-200 motion-reduce:transition-none",
                   // Hiding waits for the fade before the bar leaves the tab order and stops taking
                   // presses (visibility: hidden does both); showing makes it focusable at once (a Tab
@@ -855,7 +855,7 @@ export function ReaderCard({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-10 rounded-full"
+                  className="size-11 md:size-10 rounded-full"
                   aria-label="Previous page"
                   disabled={current <= 1}
                   onClick={() => goTo(current - 1)}
@@ -897,7 +897,7 @@ export function ReaderCard({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-10 rounded-full"
+                  className="size-11 md:size-10 rounded-full"
                   aria-label="Next page"
                   disabled={current >= total}
                   onClick={() => goTo(current + 1)}
@@ -908,7 +908,7 @@ export function ReaderCard({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-10 rounded-full"
+                  className="size-11 md:size-10 rounded-full"
                   aria-label="Zoom out"
                   disabled={percent <= MIN_ZOOM + 0.5}
                   onClick={() => zoomBy(-1)}
@@ -921,7 +921,7 @@ export function ReaderCard({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-10 rounded-full"
+                  className="size-11 md:size-10 rounded-full"
                   aria-label="Zoom in"
                   disabled={percent >= MAX_ZOOM - 0.5}
                   onClick={() => zoomBy(1)}

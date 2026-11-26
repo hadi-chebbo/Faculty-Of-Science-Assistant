@@ -86,7 +86,7 @@ export function ReaderMenu(props: ReaderMenuProps) {
   const { sheet, open, onOpenChange, triggerRef } = props;
   const groups = entriesOf(props);
   const trigger = (
-    <Button ref={triggerRef} variant="ghost" size="icon" className="size-10" aria-label="More actions">
+    <Button ref={triggerRef} variant="ghost" size="icon" className="size-11 md:size-10" aria-label="More actions">
       <MoreHorizontal aria-hidden />
     </Button>
   );
@@ -96,7 +96,7 @@ export function ReaderMenu(props: ReaderMenuProps) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetTrigger asChild>{trigger}</SheetTrigger>
-        <SheetContent side="bottom" showCloseButton={false} className="gap-0 rounded-t-2xl px-2 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <SheetContent side="bottom" showCloseButton={false} className="gap-0 rounded-t-3xl px-2 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <SheetHeader className="sr-only">
             <SheetTitle>More actions</SheetTitle>
             <SheetDescription>Zoom, focus mode, save for later, add to to-do, mark as done, download and open outside the reader.</SheetDescription>
@@ -140,7 +140,7 @@ export function ReaderMenu(props: ReaderMenuProps) {
   return (
     <DropdownMenu open={open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1.5">
         {groups.map(({ group }, g) => (
           <Fragment key={g}>
             {g > 0 && <DropdownMenuSeparator />}
