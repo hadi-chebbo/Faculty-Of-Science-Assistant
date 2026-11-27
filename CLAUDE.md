@@ -263,7 +263,7 @@ mock exam generation, personalization.
   (`LOADING_GIVE_UP_MS`; a band arriving later then moves the years once); it sets it when a band shows, follows sign-in
   and sign-out events and stores the measured height, under the key for the width it was measured at). A visitor without the hint gets the static page and no
   extra request. The hint only drives CSS. Order: desktop hero, band, years; phone a visitor sees hero, years, numbers row; a
-  signed-in student band, hero, years, numbers row (`.home-*` rules in `globals.css`; no content is rendered twice).
+  signed-in student hero, band, years, numbers row (`.home-*` rules in `globals.css`; no content is rendered twice).
 - Home "Recently added" and previous-exam shortcuts (ticket #183; `recent.tsx`, in the same Suspense boundary as the year
   cards, after the numbers row on desktop and phone, `.home-recent` / `.home-exams` order 5 and 6 below md): "Recently added" is a
   region of the newest published files (`listRecentResources(null)` in `src/services/resources/recent.ts`, newest
@@ -289,7 +289,7 @@ mock exam generation, personalization.
   there is no visible exam (the span alone when no exam has a year). On a phone it comes after the years (`.home-stats`);
   `YearCardsSkeleton` covers it. A
   signed-in student also gets one card (`ProgressBand`, `data-personal`, flat, `rounded-3xl`, no gradient and no
-  percentage bar) after the hero on desktop and first on a phone, loaded by the browser from `GET /api/v1/progress` after
+  percentage bar) after the hero on desktop and on a phone, loaded by the browser from `GET /api/v1/progress` after
   the page shows (Home stays static; a visitor gets no card and no request). It has three parts. First, "Continue where
   you left off": the last file read in this browser (`reader:last-read`, see the Reader page bullet), its title, "DEMO301 ·
   Lecture · Page 7" (the page only after the first, read from `reader:last-page:ID`) and a "Resume" button

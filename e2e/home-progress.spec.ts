@@ -97,15 +97,15 @@ async function top(locator: import("@playwright/test").Locator): Promise<number>
   return locator.evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
 }
 
-test("on a phone a signed-in student sees progress first, then the hero, then the years", async ({ page, isMobile }) => {
+test("on a phone a signed-in student sees the hero first, then progress, then the years", async ({ page, isMobile }) => {
   test.skip(!isMobile, "phone layout");
   await signIn(page, DEMO_EMAIL);
   const band = page.getByRole("heading", { name: "Your progress" });
   await expect(band).toBeVisible();
   const headline = page.getByRole("heading", { level: 1 });
   const years = page.getByRole("heading", { name: "Choose your year" });
-  expect(await top(band)).toBeLessThan(await top(headline));
-  expect(await top(headline)).toBeLessThan(await top(years));
+  expect(await top(headline)).toBeLessThan(await top(band));
+  expect(await top(band)).toBeLessThan(await top(years));
   await expect(page.getByRole("searchbox", { name: /Search courses/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Previous exams" }).first()).toBeVisible();
 });
