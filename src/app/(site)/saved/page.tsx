@@ -1,3 +1,4 @@
+import { Bookmark } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Crumbs } from "@/components/site/crumbs";
@@ -17,7 +18,15 @@ export default function SavedPage() {
   return (
     <main id="main" tabIndex={-1} className="scroll-mt-20 outline-none page-container py-6 md:py-8">
       <Crumbs items={[{ label: "Home", href: "/" }, { label: "Saved" }]} />
-      <PageTitle>Saved</PageTitle>
+      <PageTitle
+        leading={
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-link" aria-hidden>
+            <Bookmark className="size-6" />
+          </span>
+        }
+      >
+        Saved
+      </PageTitle>
       <Suspense fallback={<SavedSkeleton />}>
         <SavedContent />
       </Suspense>

@@ -15,7 +15,7 @@ export function AddToTodoIconButton({ resourceId, title }: { resourceId: string;
       aria-label={`Add ${title} to to-do`}
       disabled={pending}
       onClick={() => void add()}
-      className="size-11 md:size-9"
+      className="size-11 rounded-xl md:size-10"
     >
       <ListPlus aria-hidden className="size-5 text-muted-foreground" />
     </Button>

@@ -46,10 +46,13 @@ export function SavedSkeleton() {
     <div className="space-y-8" role="status" aria-label="Loading saved files">
       {Array.from({ length: 2 }, (_, i) => (
         <div key={i}>
-          <Skeleton className="mb-3 h-6 w-64 max-w-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-[4.5rem] w-full" />
-            <Skeleton className="h-[4.5rem] w-full" />
+          <div className="mb-3 flex items-center gap-3">
+            <Skeleton className="size-7 rounded-full" />
+            <Skeleton className="h-6 w-56 max-w-full" />
+          </div>
+          <div className="space-y-1 rounded-3xl border bg-card p-1.5">
+            <Skeleton className="h-[4.5rem] w-full rounded-2xl" />
+            <Skeleton className="h-[4.5rem] w-full rounded-2xl" />
           </div>
         </div>
       ))}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { IconCard } from "@/components/site/icon-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { renew } from "@/lib/auth/client-session";
 import { announceSessionChange } from "@/lib/auth/session-events";
@@ -51,36 +52,40 @@ export function SignedOutState({ page }: { page: PrivatePage }) {
 
   if (checking) {
     return (
-      <div data-testid="signed-out-checking" aria-hidden className="mx-auto flex max-w-md flex-col items-center gap-4 py-12 text-center md:py-16">
-        <Skeleton className="size-14 rounded-full" />
-        <Skeleton className="h-7 w-64 max-w-full" />
-        <Skeleton className="h-10 w-80 max-w-full" />
-        <Skeleton className="h-11 w-56 max-w-full" />
-      </div>
+      <IconCard icon={Icon} loading data-testid="signed-out-checking" aria-hidden className="mx-auto max-w-md">
+        <Skeleton className="mt-4 h-7 w-64 max-w-full" />
+        <Skeleton className="mt-3 h-10 w-80 max-w-full" />
+        <Skeleton className="mt-6 h-11 w-56 max-w-full" />
+      </IconCard>
     );
   }
 
   return (
-    <section data-testid="signed-out-state" className="mx-auto flex max-w-md flex-col items-center py-12 text-center md:py-16">
-      <span className="flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
-        <Icon className="size-6" aria-hidden />
-      </span>
+    <IconCard
+      icon={Icon}
+      data-testid="signed-out-state"
+      className="mx-auto max-w-md"
+      actions={
+        <>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button asChild className="h-11 rounded-xl px-6">
+              <Link href={`/sign-in?next=${encodeURIComponent(path)}`}>Sign in</Link>
+            </Button>
+            <Button asChild variant="outline" className="h-11 rounded-xl px-6">
+              <Link href="/sign-up">Create an account</Link>
+            </Button>
+          </div>
+          <Link
+            href="/"
+            className="mt-4 inline-flex min-h-11 items-center rounded-md text-sm font-medium text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          >
+            Browse courses
+          </Link>
+        </>
+      }
+    >
       <h2 className="mt-4 text-xl font-semibold text-heading">{title}</h2>
       <p className="mt-2 text-muted-foreground">{line}</p>
-      <div className="mt-6 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-        <Button asChild className="h-11 px-6">
-          <Link href={`/sign-in?next=${encodeURIComponent(path)}`}>Sign in</Link>
-        </Button>
-        <Button asChild variant="outline" className="h-11 px-6">
-          <Link href="/sign-up">Create an account</Link>
-        </Button>
-      </div>
-      <Link
-        href="/"
-        className="mt-4 inline-flex min-h-11 items-center rounded-md text-sm font-medium text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
-      >
-        Browse courses
-      </Link>
-    </section>
+    </IconCard>
   );
 }
