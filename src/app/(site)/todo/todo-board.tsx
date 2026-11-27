@@ -16,7 +16,7 @@ import type { MoveResult, TodoCard } from "@/services/todos/types";
 import { BOARD_FULL_MESSAGE, boardRequest } from "@/lib/board-api";
 import { BoardFilterBar } from "./board-filter-bar";
 import { courseCodes, effectiveChip, isFiltering, matchesFilter, NO_FILTER, realIndexFor, type BoardFilter } from "./board-filter";
-import { CardComposer } from "./card-composer";
+import { AddCardDialog } from "./add-card-dialog";
 import { CardViewDialog } from "./card-view-dialog";
 import type { PickedFile } from "./saved-file-picker";
 import { ColumnEmpty, DONE_AND_MARKED_MESSAGE, focusMovedCard, moveMessage, titleOf, TodoCardView, visibleElement, type BoardCard, type MoveHow } from "./todo-card";
@@ -27,7 +27,7 @@ import { useCardSaver, type Edit } from "./use-card-saver";
 const SIGN_IN = `/sign-in?next=${encodeURIComponent("/todo")}`;
 
 // Puts the focus back on whichever "add" control is on screen (the column's "Add a card" on
-// desktop, the round "+" on a phone) once the composer has gone.
+// desktop, the round "+" on a phone).
 function focusAddControl(status: TodoStatus, delay = 0) {
   setTimeout(() => {
     const visible = [...document.querySelectorAll<HTMLElement>("[data-add-card]")].filter(
@@ -81,7 +81,13 @@ function place(all: BoardCard[], id: string, status: TodoStatus, index: number, 
 export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[]; serverNow: string }) {
   const router = useRouter();
   const [cards, setCards] = useState<BoardCard[]>(initialCards);
-  const [adding, setAdding] = useState<TodoStatus | null>(null);
+  // The new-card dialog: open or not, and the column it was opened for (kept while it closes).
+  const [adding, setAdding] = useState<{ open: boolean; status: TodoStatus }>({ open: false, status: "todo" });
+  // The control that opened it (focus returns there on Esc / Cancel), and the card just added
+  // (focus goes to it instead).
+  const addOpener = useRef<HTMLElement | null>(null);
+  // `closed`: the dialog has finished closing; `realId`: the server's card has arrived.
+  const focusNew = useRef<{ tempId: string; realId: string | null; closed: boolean } | null>(null);
   const [phoneTab, setPhoneTab] = useState<TodoStatus>("todo");
   const [openId, setOpenId] = useState<string | null>(null);
   // The filter lives in this state only: not saved, not in the address.
@@ -137,18 +143,33 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
     return () => clearInterval(timer);
   }, []);
 
-  function openComposer(status: TodoStatus) {
+  function openAddDialog(status: TodoStatus) {
+    focusNew.current = null;
+    addOpener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setPhoneTab(status);
-    setAdding(status);
+    setAdding({ open: true, status });
   }
 
-  function closeComposer() {
-    const status = adding;
-    setAdding(null);
-    if (status) focusAddControl(status);
+  const closeAddDialog = () => setAdding((a) => ({ ...a, open: false }));
+
+  // Esc / Cancel: the focus goes back to the control that opened the dialog (else the column's add
+  // control). After Add card it goes to the new card, once the server's card has replaced the temporary one.
+  function addDialogCloseFocus() {
+    const target = focusNew.current;
+    if (target) {
+      target.closed = true;
+      if (target.realId) {
+        focusCard(target.realId);
+        focusNew.current = null;
+      }
+      return;
+    }
+    const opener = addOpener.current;
+    if (opener?.isConnected && opener.getClientRects().length > 0) opener.focus();
+    else focusAddControl(adding.status);
   }
 
-  // N opens the To do composer, unless the student is typing or holding a modifier key.
+  // N opens the new-card dialog, unless the student is typing or holding a modifier key.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
@@ -156,31 +177,44 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
       if (target?.closest("input, textarea, select, [contenteditable], [role=dialog]")) return;
       if (dragGuard.current.active) return;
       event.preventDefault();
-      setPhoneTab("todo");
-      setAdding("todo");
+      openAddDialog("todo");
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  function add(status: TodoStatus, title: string, file: PickedFile | null = null) {
+  function add(status: TodoStatus, title: string, file: PickedFile | null = null, note = "") {
     const tempId = `pending-${++tempCounter.current}`;
     const stamp = new Date().toISOString();
     const temp: BoardCard = {
-      id: tempId, status, position: 0, title, note: "", createdAt: stamp, updatedAt: stamp, statusChangedAt: stamp, resource: file, pending: true,
+      id: tempId, status, position: 0, title, note, createdAt: stamp, updatedAt: stamp, statusChangedAt: stamp, resource: file, pending: true,
     };
     setCards((all) => [temp, ...all]);
     // A card the filter would hide is not hidden from the student who just made it.
     if (filtering && !matches(temp)) setFilter(NO_FILTER);
-    const drop = () => setCards((all) => all.filter((c) => c.id !== tempId));
+    const drop = () => {
+      setCards((all) => all.filter((c) => c.id !== tempId));
+      if (focusNew.current?.tempId === tempId) {
+        const { closed } = focusNew.current;
+        focusNew.current = null;
+        if (closed) addDialogCloseFocus();
+      }
+    };
 
     queue.current = queue.current.then(async () => {
       try {
-        const response = await boardRequest("POST", "", file ? { title, status, resourceId: file.id } : { title, status });
+        const response = await boardRequest("POST", "", { title, status, ...(note ? { note } : {}), ...(file ? { resourceId: file.id } : {}) });
         if (response.ok) {
           const { card } = (await response.json()) as { card: TodoCard };
           saved.current.set(card.id, { title: card.title, note: card.note, resource: card.resource });
           setCards((all) => all.map((c) => (c.id === tempId ? card : c)));
+          const target = focusNew.current;
+          if (target?.tempId === tempId) {
+            if (target.closed) {
+              focusNew.current = null;
+              focusCard(card.id);
+            } else target.realId = card.id;
+          }
         } else if (response.status === 401) {
           drop();
           router.push(SIGN_IN);
@@ -199,6 +233,13 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
         toast.error("Couldn't add the card. Try again.");
       }
     });
+  }
+
+  // Add card in the dialog: the card goes in optimistically and the dialog closes.
+  function submitAdd(status: TodoStatus, title: string, file: PickedFile | null, note: string) {
+    focusNew.current = { tempId: `pending-${tempCounter.current + 1}`, realId: null, closed: false };
+    add(status, title, file, note);
+    closeAddDialog();
   }
 
   function openCard(id: string) {
@@ -462,23 +503,20 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
         const items = inColumn(status);
         return (
           <DesktopColumn key={status} status={status} count={items.length}>
-            {adding === status && <CardComposer status={status} onAdd={add} onClose={closeComposer} />}
             {sortable ? (
-              <SortableColumn cards={items} status={status} showEmpty={adding !== status} {...listProps} />
+              <SortableColumn cards={items} status={status} {...listProps} />
             ) : (
-              <CardList cards={items} status={status} showEmpty={adding !== status} {...listProps} />
+              <CardList cards={items} status={status} {...listProps} />
             )}
-            {adding !== status && (
-              <Button
-                type="button"
-                variant="ghost"
-                data-add-card={status}
-                onClick={() => openComposer(status)}
-                className="justify-start text-foreground hover:bg-card hover:text-heading"
-              >
-                <Plus aria-hidden /> Add a card
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="ghost"
+              data-add-card={status}
+              onClick={() => openAddDialog(status)}
+              className="justify-start text-foreground hover:bg-card hover:text-heading"
+            >
+              <Plus aria-hidden /> Add a card
+            </Button>
           </DesktopColumn>
         );
       })}
@@ -489,7 +527,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
     <>
       <div className="mb-4 flex items-center gap-4">
         <BoardFilterBar filter={effective} codes={codes} onChange={setFilter} />
-        <Button className="hidden md:inline-flex" onClick={() => openComposer("todo")}>
+        <Button className="hidden md:inline-flex" onClick={() => openAddDialog("todo")}>
           <Plus aria-hidden /> New card
           <kbd className="ml-1 rounded border border-primary-foreground/40 px-1 text-xs leading-4" aria-hidden>
             N
@@ -519,12 +557,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
         </TabsList>
         {TODO_STATUSES.map((status) => (
           <TabsContent key={status} value={status} className={`-mx-4 min-h-80 px-4 pt-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6 md:pb-4 ${STATUS_LOOK[status].tint}`}>
-            {adding === status && (
-              <div className="mb-3">
-                <CardComposer status={status} onAdd={add} onClose={closeComposer} />
-              </div>
-            )}
-            <CardList cards={inColumn(status)} status={status} showEmpty={adding !== status} {...listProps} />
+            <CardList cards={inColumn(status)} status={status} {...listProps} />
           </TabsContent>
         ))}
       </Tabs>
@@ -533,7 +566,7 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
         id="add-card-fab"
         aria-label="New card"
         className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-30 size-14 rounded-full shadow-lg md:hidden"
-        onClick={() => openComposer(phoneTab)}
+        onClick={() => openAddDialog(phoneTab)}
       >
         <Plus className="size-6" aria-hidden />
       </Button>
@@ -548,6 +581,9 @@ export function TodoBoard({ initialCards, serverNow }: { initialCards: TodoCard[
       ) : (
         columns(false)
       )}
+
+      {/* One new-card dialog for the whole board, opened by every "add" control. */}
+      <AddCardDialog open={adding.open} status={adding.status} onAdd={submitAdd} onClose={closeAddDialog} onCloseFocus={addDialogCloseFocus} />
 
       {/* One card view for the whole board, outside both layouts. */}
       <CardViewDialog
@@ -599,7 +635,6 @@ function CardList({
   status,
   now,
   celebrating,
-  showEmpty,
   filtering,
   onOpen,
   onDelete,
@@ -609,13 +644,12 @@ function CardList({
   status: TodoStatus;
   now: string;
   celebrating: string | null;
-  showEmpty: boolean;
   filtering: boolean;
   onOpen: (id: string) => void;
   onDelete: (id: string) => void;
   onMove: (id: string, status: TodoStatus, index: number, how: MoveHow) => void;
 }) {
-  if (cards.length === 0) return showEmpty ? <ColumnEmpty status={status} filtered={filtering} /> : null;
+  if (cards.length === 0) return <ColumnEmpty status={status} filtered={filtering} />;
   return (
     <ul className="flex flex-col gap-2.5">
       {cards.map((card, index) => (

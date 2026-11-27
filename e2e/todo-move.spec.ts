@@ -103,9 +103,9 @@ test("desktop: Start, Done and Undo move a card between columns, and the state s
   ]);
   await signInOnBoard(page, isMobile);
   await column(page, "To do").getByRole("button", { name: "Add a card", exact: true }).click();
-  await page.getByRole("textbox", { name: "New card in To do" }).fill("Revise sorting");
+  await page.getByRole("dialog", { name: "New card" }).getByRole("textbox", { name: "Title" }).fill("Revise sorting");
   await page.keyboard.press("Enter");
-  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "New card" })).toHaveCount(0);
   await expect(cardsIn(page, "To do")).toHaveText(["Revise sorting"]);
   // Only To do cards have Start; only In progress cards have Done.
   await expect(card(page, "Existing in progress").getByRole("button", { name: "Start" })).toHaveCount(0);

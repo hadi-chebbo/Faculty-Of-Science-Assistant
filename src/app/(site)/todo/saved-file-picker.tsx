@@ -22,7 +22,7 @@ async function loadSaved(): Promise<Response> {
 }
 
 // An inline list of the student's saved files, opened under the button that asked for it (the card
-// view and the composer share it). Loaded when it first opens. Choosing a file calls `onPick`;
+// view and the new-card dialog share it). Loaded when it first opens. Choosing a file calls `onPick`;
 // Cancel or Esc calls `onClose` (the owner puts the focus back on its button). Esc closes only the
 // picker: the card view's own Esc handling is told to stand down while a picker is on screen
 // (`data-saved-picker`).

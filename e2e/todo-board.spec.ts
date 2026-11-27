@@ -65,6 +65,7 @@ async function signInOnBoard(page: Page, isMobile: boolean) {
 
 const column = (page: Page, name: string) => page.getByRole("region", { name, exact: true });
 const cardsIn = (page: Page, name: string) => column(page, name).getByRole("heading", { level: 3 });
+const newCardDialog = (page: Page) => page.getByRole("dialog", { name: "New card" });
 const added = (page: Page) => page.waitForResponse((r) => r.url().endsWith("/api/v1/todos") && r.request().method() === "POST");
 
 test("signed out, /todo shows the in-page state and signing in from it returns to the board", async ({ page, isMobile }) => {
@@ -107,48 +108,70 @@ test("desktop: empty columns, adding cards at the top of their column, N key, an
 
   // Add to In progress.
   await column(page, "In progress").getByRole("button", { name: "Add a card", exact: true }).click();
-  await page.getByRole("textbox", { name: "New card in In progress" }).fill("Read the routing lecture");
+  // The dialog opens with this column chosen.
+  await expect(newCardDialog(page).getByRole("radio", { name: "In progress" })).toBeChecked();
+  await newCardDialog(page).getByRole("textbox", { name: "Title" }).fill("Read the routing lecture");
   const first = added(page);
   await page.keyboard.press("Enter");
   await first;
+  await expect(newCardDialog(page)).toHaveCount(0);
   await expect(cardsIn(page, "In progress")).toHaveText(["Read the routing lecture"]);
   await expect(column(page, "In progress").getByText("1", { exact: true })).toBeVisible();
   await expect(column(page, "In progress").getByText("Added just now")).toBeVisible();
-  // An empty title does nothing; Esc closes the form and puts the focus back.
-  await page.keyboard.press("Enter");
-  await expect(cardsIn(page, "In progress")).toHaveCount(1);
+  // The new card takes the focus.
+  await expect(column(page, "In progress").getByRole("button", { name: "Read the routing lecture", exact: true })).toBeFocused();
+
+  // An empty title cannot be added; Esc closes the dialog and puts the focus back on the button that opened it.
+  await column(page, "In progress").getByRole("button", { name: "Add a card", exact: true }).click();
+  await expect(newCardDialog(page).getByRole("button", { name: "Add card" })).toBeDisabled();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("textbox", { name: "New card in In progress" })).toHaveCount(0);
+  await expect(newCardDialog(page)).toHaveCount(0);
+  await expect(cardsIn(page, "In progress")).toHaveCount(1);
   await expect(column(page, "In progress").getByRole("button", { name: "Add a card", exact: true })).toBeFocused();
 
   // Two cards in To do: the newest is on top.
   await column(page, "To do").getByRole("button", { name: "Add a card", exact: true }).click();
-  const input = page.getByRole("textbox", { name: "New card in To do" });
-  await input.fill("Revise chapter 1");
+  await expect(newCardDialog(page).getByRole("radio", { name: "To do" })).toBeChecked();
+  await newCardDialog(page).getByRole("textbox", { name: "Title" }).fill("Revise chapter 1");
   const second = added(page);
-  await input.press("Enter");
+  await page.keyboard.press("Enter");
   await second;
-  await input.fill("Redo exercise 4");
+  await column(page, "To do").getByRole("button", { name: "Add a card", exact: true }).click();
+  await newCardDialog(page).getByRole("textbox", { name: "Title" }).fill("Redo exercise 4");
+  await newCardDialog(page).getByRole("textbox", { name: "Note (optional)" }).fill("Pages 10 to 12");
+  await expect(newCardDialog(page).getByText("14 / 2000")).toBeVisible();
   const third = added(page);
-  await input.press("Enter");
-  await third;
-  await input.press("Escape");
+  await newCardDialog(page).getByRole("button", { name: "Add card" }).click();
+  expect((await third).request().postDataJSON()).toMatchObject({ title: "Redo exercise 4", note: "Pages 10 to 12", status: "todo" });
   await expect(cardsIn(page, "To do")).toHaveText(["Redo exercise 4", "Revise chapter 1"]);
 
-  // N opens the To do form when nothing is focused.
+  // N opens the dialog with To do chosen when nothing is focused.
   await page.locator("body").click({ position: { x: 2, y: 2 } });
   await page.keyboard.press("n");
-  await expect(page.getByRole("textbox", { name: "New card in To do" })).toBeFocused();
+  await expect(newCardDialog(page).getByRole("textbox", { name: "Title" })).toBeFocused();
+  await expect(newCardDialog(page).getByRole("radio", { name: "To do" })).toBeChecked();
   // Typing "n" inside the form is text, not a shortcut.
   await page.keyboard.type("nn");
-  await expect(page.getByRole("textbox", { name: "New card in To do" })).toHaveValue("nn");
+  await expect(newCardDialog(page).getByRole("textbox", { name: "Title" })).toHaveValue("nn");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("textbox", { name: "New card in To do" })).toHaveCount(0);
+  await expect(newCardDialog(page)).toHaveCount(0);
 
-  // The New card button does the same.
-  await page.getByRole("button", { name: /New card/ }).click();
-  await expect(page.getByRole("textbox", { name: "New card in To do" })).toBeVisible();
-  await page.keyboard.press("Escape");
+  // The New card button does the same, and Cancel returns the focus to it.
+  const newCard = page.getByRole("button", { name: /New card/ });
+  await newCard.click();
+  await expect(newCardDialog(page).getByRole("radio", { name: "To do" })).toBeChecked();
+  await newCardDialog(page).getByRole("button", { name: "Cancel" }).click();
+  await expect(newCardDialog(page)).toHaveCount(0);
+  await expect(newCard).toBeFocused();
+
+  // The column can be changed in the dialog: the card lands there.
+  await newCard.click();
+  await newCardDialog(page).getByRole("textbox", { name: "Title" }).fill("Straight to done");
+  await newCardDialog(page).getByText("Done", { exact: true }).click();
+  const toDone = added(page);
+  await page.keyboard.press("Enter");
+  expect((await toDone).request().postDataJSON()).toMatchObject({ status: "done" });
+  await expect(cardsIn(page, "Done")).toHaveText(["Straight to done"]);
 
   // Everything survives a reload, in the same order.
   await page.reload();
@@ -187,19 +210,19 @@ test("phone: tabs with counts, the round + adds to the shown tab and stays insid
   expect(topmost).toBe(true);
 
   await plus.click();
-  await page.getByRole("textbox", { name: "New card in To do" }).fill("Phone card");
+  await newCardDialog(page).getByRole("textbox", { name: "Title" }).fill("Phone card");
   const first = added(page);
   await page.keyboard.press("Enter");
   await first;
   await expect(tab("To do")).toHaveText("To do1");
   await expect(page.getByRole("heading", { level: 3, name: "Phone card" })).toBeVisible();
-  await page.keyboard.press("Escape");
 
   // The + adds to the tab that is shown.
   await tab("In progress").click();
   await expect(page.getByRole("tabpanel").getByText("Nothing in progress. Add a card for what you are working on.")).toBeVisible();
   await plus.click();
-  await page.getByRole("textbox", { name: "New card in In progress" }).fill("Second");
+  await expect(newCardDialog(page).getByRole("radio", { name: "In progress" })).toBeChecked();
+  await newCardDialog(page).getByRole("textbox", { name: "Title" }).fill("Second");
   const second = added(page);
   await page.keyboard.press("Enter");
   await second;

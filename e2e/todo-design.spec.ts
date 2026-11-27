@@ -101,8 +101,9 @@ test("on a phone the board has no sideways scroll, 44px targets and text of 12px
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 
   await page.getByRole("button", { name: "New card" }).click();
-  await expect(page.getByRole("textbox", { name: /^New card in/ })).toBeVisible();
-  expect(await phoneProblems(page, "main"), "composer open").toEqual([]);
+  await expect(page.getByRole("dialog", { name: "New card" })).toBeVisible();
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+  expect(await phoneProblems(page, '[role="dialog"]'), "new card dialog open").toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
   await page.keyboard.press("Escape");
 
@@ -114,7 +115,7 @@ test("on a phone the board has no sideways scroll, 44px targets and text of 12px
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });
 
-test("the board, the composer and the card view do not animate under reduced motion", async ({ page, isMobile }) => {
+test("the board, the new-card dialog and the card view do not animate under reduced motion", async ({ page, isMobile }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await signInOnBoard(page, isMobile);
   await expect(page.getByRole("button", { name: "Sign in", exact: true })).toHaveCount(0); // the sign-in form (and its spinner) is gone
@@ -128,8 +129,8 @@ test("the board, the composer and the card view do not animate under reduced mot
   expect(await animating(), "board").toEqual([]);
 
   await page.getByRole("button", { name: isMobile ? "New card" : "Add a card" }).first().click();
-  await expect(page.getByRole("textbox", { name: /^New card in/ })).toBeVisible();
-  expect(await animating(), "composer").toEqual([]);
+  await expect(page.getByRole("dialog", { name: "New card" })).toBeVisible();
+  expect(await animating(), "new card dialog").toEqual([]);
   await page.keyboard.press("Escape");
 
   await page.getByRole("button", { name: "Revise the graph lecture", exact: true }).first().click();
