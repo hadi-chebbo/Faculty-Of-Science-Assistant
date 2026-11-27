@@ -32,7 +32,7 @@ export function ProgressOverviewList({ courses }: { courses: CourseEntry[] }) {
     );
   }
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       {groupCoursesByYear(courses).map((group) => (
         <section key={group.year} aria-labelledby={`year-${group.year}`}>
           <div className="mb-3 flex items-center gap-2.5">
@@ -41,7 +41,7 @@ export function ProgressOverviewList({ courses }: { courses: CourseEntry[] }) {
               {yearLabel(group.year)}
             </h2>
           </div>
-          <ul className="grid gap-3 md:grid-cols-2">
+          <ul className="grid gap-4 md:grid-cols-2">
             {group.courses.map((course) => (
               <CourseCard key={course.code} course={course} year={group.year} />
             ))}
@@ -72,13 +72,13 @@ function CourseCard({ course, year }: { course: CourseEntry; year: Year }) {
           </span>
         </div>
         <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">{semesterLabel(course.semester)}</p>
           <h3 className="text-base font-semibold leading-snug">
             <Link href={`/courses/${code}`} className={`block rounded-sm py-3 text-heading hover:underline md:py-1 ${FOCUS}`}>
               <span className={`inline-flex h-[22px] items-center rounded-full px-2 align-middle text-xs font-medium ${YEAR_STYLES[year].chip}`}>{code}</span>{" "}
               {title}
             </Link>
           </h3>
-          <p className="text-xs text-muted-foreground">{semesterLabel(course.semester)}</p>
           <p className="mt-0.5 text-sm text-muted-foreground">
             {files.finished && (
               <>
@@ -103,7 +103,7 @@ function CourseCard({ course, year }: { course: CourseEntry; year: Year }) {
           {rows.map((row) => (
             <li
               key={row.key}
-              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 text-sm md:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_3rem]"
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 text-sm md:grid-cols-[minmax(0,1fr)_120px_44px]"
             >
               <span className="truncate text-heading">{row.label}</span>
               <span aria-hidden className="order-3 col-span-2 block h-1.5 overflow-hidden rounded-full bg-border md:order-none md:col-span-1">
@@ -113,7 +113,7 @@ function CourseCard({ course, year }: { course: CourseEntry; year: Year }) {
                 />
               </span>
               {row.finished ? (
-                <span className="inline-flex items-center justify-end gap-1 font-semibold tabular-nums text-success">
+                <span className="inline-flex items-center justify-end gap-1 whitespace-nowrap font-semibold tabular-nums text-success">
                   <Check aria-hidden className="size-3.5" /> {row.done}/{row.total}
                 </span>
               ) : (

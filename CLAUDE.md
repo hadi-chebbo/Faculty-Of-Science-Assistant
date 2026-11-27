@@ -555,8 +555,8 @@ mock exam generation, personalization.
   Look (#189, part B; same texts, labels and numbers): each year heading has its `YearCircle` (28px) before the `h2`
   (`id="year-N"` unchanged); course cards, the This week panel, the Milestones panel and the empty state are `rounded-3xl`
   with 20px padding; the course code is a chip in the year's tint (`YEAR_STYLES[year].chip`) followed by the title in the
-  heading colour inside the one link (accessible name still "DEMO610 Sample Full Course D", 48px tall on a phone); the chapter rows sit under a
-  rule. Earned milestone symbols use the link colour (the primary fails 4.5:1 on its tint in the dark theme). `WeekDots` is unchanged (Home shares it).
+  heading colour inside the one link (accessible name still "DEMO610 Sample Full Course D", at least 44px tall on a phone); the muted "Semester 1" line sits above that link; cards are 16px apart and year sections 28px apart (heading 12px above its cards); the chapter rows sit under a
+  rule, each a 3-column grid from md up (title, 120px bar, 44px count; on a phone the bar takes its own line). Earned milestone symbols use the link colour (the primary fails 4.5:1 on its tint in the dark theme). `WeekDots` is unchanged (Home shares it).
 - Save bookmark on rows: every resource row (`ResourceRow`: course page areas and tabs, chapter pages,
   exams, search results, Saved) carries a bookmark button in its own cell at the right, outside the
   row link, 44px on a phone, always rendered so nothing moves when the state arrives. Outline when not
