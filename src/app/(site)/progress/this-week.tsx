@@ -5,7 +5,7 @@ import type { ProgressOverview } from "@/services/progress/types";
 export function ThisWeek({ week }: { week: ProgressOverview["week"] }) {
   const count = week.activeDays.length;
   return (
-    <section aria-labelledby="this-week-label" className="rounded-xl border bg-card p-4 md:p-5">
+    <section aria-labelledby="this-week-label" className="rounded-3xl border bg-card p-5">
       <h2 id="this-week-label" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         This week
       </h2>

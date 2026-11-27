@@ -18,7 +18,7 @@ const SYMBOLS: Record<MilestoneKey, ReactNode> = {
 export function Milestones({ milestones }: { milestones: ProgressOverview["milestones"] }) {
   const count = milestones.filter((m) => m.earnedAt).length;
   return (
-    <section aria-labelledby="milestones-label" className="rounded-xl border bg-card p-4 max-md:pr-0 md:p-5">
+    <section aria-labelledby="milestones-label" className="rounded-3xl border bg-card p-5 max-md:pr-0">
       <h2 id="milestones-label" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Milestones · {count} of {milestones.length}
       </h2>
@@ -35,7 +35,7 @@ export function Milestones({ milestones }: { milestones: ProgressOverview["miles
               <span
                 aria-hidden
                 className={`flex size-[52px] items-center justify-center rounded-full border-2 text-base font-semibold ${
-                  earned ? "border-primary bg-primary/10 text-primary" : "border-dashed border-border bg-muted text-muted-foreground"
+                  earned ? "border-primary bg-primary/10 text-link" : "border-dashed border-border bg-muted text-muted-foreground"
                 }`}
               >
                 {SYMBOLS[m.key]}

@@ -59,11 +59,17 @@ export function SavedSkeleton() {
 
 export function ProgressSkeleton() {
   return (
-    <div role="status" aria-label="Loading your progress">
-      <Skeleton className="mb-3 h-6 w-32" />
-      <div className="grid gap-3 md:grid-cols-2">
-        <Skeleton className="h-48 w-full rounded-xl" />
-        <Skeleton className="h-48 w-full rounded-xl" />
+    <div role="status" aria-label="Loading your progress" className="space-y-7">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[360px_minmax(0,1fr)]">
+        <Skeleton className="h-36 w-full rounded-3xl" />
+        <Skeleton className="h-36 w-full rounded-3xl" />
+      </div>
+      <div>
+        <Skeleton className="mb-3 h-7 w-40" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <Skeleton className="h-60 w-full rounded-3xl" />
+          <Skeleton className="h-60 w-full rounded-3xl" />
+        </div>
       </div>
     </div>
   );
