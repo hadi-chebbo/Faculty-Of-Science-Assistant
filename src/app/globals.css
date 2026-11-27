@@ -377,18 +377,18 @@
 
 /* Home below md (phone): the order of <main>'s children. A visitor sees the hero, then the years. A signed-in
    student (html[data-signed-in], set before paint from the hint cookie and kept true by ProgressBand) sees the
-   progress band first, then the hero and the years. Desktop keeps the DOM order (hero, band, years). */
+   hero (with the search) first, then the progress band, then the years. Desktop keeps the DOM order (hero, band, years). */
 @media (max-width: 767px) {
   .home-band-slot {
     display: none;
-    order: 1;
+    order: 2;
   }
   html[data-signed-in] .home-band-slot {
     display: block;
     min-height: var(--home-band-h, 28.5rem);
   }
   .home-hero {
-    order: 2;
+    order: 1;
   }
   .home-years {
     order: 3;
