@@ -51,8 +51,8 @@ export function SignedOutState({ page }: { page: PrivatePage }) {
 
   if (checking) {
     return (
-      <div data-testid="signed-out-checking" aria-hidden className="mx-auto flex max-w-md flex-col items-center gap-4 py-12 text-center md:py-16">
-        <Skeleton className="size-14 rounded-full" />
+      <div data-testid="signed-out-checking" aria-hidden className="mx-auto flex max-w-md flex-col items-center gap-4 rounded-3xl border bg-card px-4 py-12 text-center md:py-16">
+        <Skeleton className="size-14 rounded-2xl" />
         <Skeleton className="h-7 w-64 max-w-full" />
         <Skeleton className="h-10 w-80 max-w-full" />
         <Skeleton className="h-11 w-56 max-w-full" />
@@ -61,17 +61,17 @@ export function SignedOutState({ page }: { page: PrivatePage }) {
   }
 
   return (
-    <section data-testid="signed-out-state" className="mx-auto flex max-w-md flex-col items-center py-12 text-center md:py-16">
-      <span className="flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+    <section data-testid="signed-out-state" className="mx-auto flex max-w-md flex-col items-center rounded-3xl border bg-card px-4 py-12 text-center md:px-8 md:py-16">
+      <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-link">
         <Icon className="size-6" aria-hidden />
       </span>
       <h2 className="mt-4 text-xl font-semibold text-heading">{title}</h2>
       <p className="mt-2 text-muted-foreground">{line}</p>
       <div className="mt-6 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-        <Button asChild className="h-11 px-6">
+        <Button asChild className="h-11 rounded-xl px-6">
           <Link href={`/sign-in?next=${encodeURIComponent(path)}`}>Sign in</Link>
         </Button>
-        <Button asChild variant="outline" className="h-11 px-6">
+        <Button asChild variant="outline" className="h-11 rounded-xl px-6">
           <Link href="/sign-up">Create an account</Link>
         </Button>
       </div>

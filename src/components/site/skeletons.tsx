@@ -48,8 +48,8 @@ export function SavedSkeleton() {
         <div key={i}>
           <Skeleton className="mb-3 h-6 w-64 max-w-full" />
           <div className="space-y-2">
-            <Skeleton className="h-[4.5rem] w-full" />
-            <Skeleton className="h-[4.5rem] w-full" />
+            <Skeleton className="h-[4.5rem] w-full rounded-3xl" />
+            <Skeleton className="h-[4.5rem] w-full rounded-3xl" />
           </div>
         </div>
       ))}

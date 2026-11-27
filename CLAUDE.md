@@ -520,6 +520,11 @@ mock exam generation, personalization.
   and a course with nothing left disappears. Empty state: a bookmark icon, "Nothing saved yet. Tap
   the bookmark on any file to keep it here." and a "Browse courses" button. `GET /api/v1/saved` returns the same
   groups.
+  Look (#189): the title has a 48px tinted bookmark box before it; each course group starts with a 28px year circle
+  (`YearCircle`, from `yearOfSemester`) and the course code as a link chip in the year's tint (`YEAR_STYLES`, 44px tall on a
+  phone), then the title and the muted year and semester; the rows sit in one `rounded-3xl` bordered card per course (the
+  shared row inside it loses its own border); the "Add to to-do" button is `rounded-xl`; the empty state is a `rounded-3xl`
+  card with a tinted icon box. No count line under the title (not built; not confirmed).
 - Progress page (`/progress`): private like `/saved` (server-rendered, `noindex`, `no-store`, `getSignedInPageViewer`; signed out it shows the
   in-page sign-in state), reached from "Progress" in the main navigation, after To-do, on phone and desktop (the course
   page's progress block also links to it). Breadcrumb Home › Progress, title "Your progress" with "Based only on the
@@ -686,6 +691,8 @@ mock exam generation, personalization.
   cookie is scoped to `/api/v1/auth`, so a server page cannot see it; on mount the browser renews the session once (`renew`, the shared
   lock), shows a same-size skeleton meanwhile, then `announceSessionChange()` and `router.refresh()` render the real page; only a failed
   renewal shows the prompt. `/api/v1/auth/restore` is unchanged and still used by the admin pages (`requireSignedInPage`).
+  Look (#189): the state is a `rounded-3xl` bordered card (max-w-md, centred) with a 56px `rounded-2xl` icon box in the brand
+  tint (`bg-primary/10 text-link`), and `rounded-xl` 44px buttons; the checking skeleton has the same card and size.
 - Sign-in dialog for actions (`sign-in-dialog-host.tsx` mounted once in `SiteChrome`, store `src/lib/sign-in-dialog.ts`, `requestSignIn(action)`):
   a signed-out tap on Save for later (reader, menu, row bookmark), Add to to-do (reader, menu, Saved page) or Mark as done (reader, menu), and
   a 401 in the middle of such an action, open a dialog over the current page instead of leaving it. Title "Sign in to save this file" / "Sign
