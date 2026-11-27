@@ -30,7 +30,7 @@ export function CardComposer({
 
   return (
     <form
-      className="rounded-xl border bg-card p-2 shadow-sm"
+      className="rounded-[20px] border bg-card p-3"
       onSubmit={(event) => {
         event.preventDefault();
         const trimmed = title.trim();

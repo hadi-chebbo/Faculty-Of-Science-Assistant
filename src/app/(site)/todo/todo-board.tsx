@@ -579,11 +579,11 @@ function DesktopColumn({ status, count, children }: { status: TodoStatus; count:
   return (
     <section
       aria-label={look.label}
-      className={`overflow-hidden rounded-2xl transition-shadow motion-reduce:transition-none ${look.tint} ${highlighted ? "ring-2 ring-primary" : ""}`}
+      className={`overflow-hidden rounded-3xl transition-shadow motion-reduce:transition-none ${look.tint} ${highlighted ? "ring-2 ring-primary" : ""}`}
     >
       <div className={`h-1 ${look.bar}`} aria-hidden />
-      <div className="flex flex-col gap-3 p-3">
-        <div className="flex items-center gap-2 px-1">
+      <div className="flex flex-col gap-2.5 p-3.5">
+        <div className="flex items-center gap-2 px-1 pt-1">
           <Icon className={`size-4 ${look.iconTone}`} aria-hidden />
           <h2 className="text-sm font-semibold text-heading">{look.label}</h2>
           <span className="rounded-full bg-card px-2 py-0.5 text-xs font-medium text-muted-foreground ring-1 ring-border">{count}</span>
