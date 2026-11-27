@@ -552,6 +552,11 @@ mock exam generation, personalization.
   label (no "missing" or "locked" wording). Items read "10 files done, earned" / "50 files done, not yet earned".
   On a phone the row scrolls sideways (88px items, bleeding to the panel's right edge). Primary only. The overview
   also returns `milestones: { key, label, earnedAt | null }[]`, all six in order.
+  Look (#189, part B; same texts, labels and numbers): each year heading has its `YearCircle` (28px) before the `h2`
+  (`id="year-N"` unchanged); course cards, the This week panel, the Milestones panel and the empty state are `rounded-3xl`
+  with 20px padding; the course code is a chip in the year's tint (`YEAR_STYLES[year].chip`) followed by the title in the
+  heading colour inside the one link (accessible name still "DEMO610 Sample Full Course D", 48px tall on a phone); the chapter rows sit under a
+  rule. Earned milestone symbols use the link colour (the primary fails 4.5:1 on its tint in the dark theme). `WeekDots` is unchanged (Home shares it).
 - Save bookmark on rows: every resource row (`ResourceRow`: course page areas and tabs, chapter pages,
   exams, search results, Saved) carries a bookmark button in its own cell at the right, outside the
   row link, 44px on a phone, always rendered so nothing moves when the state arrives. Outline when not
