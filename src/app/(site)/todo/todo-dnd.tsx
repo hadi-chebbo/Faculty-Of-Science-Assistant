@@ -296,7 +296,6 @@ function refocus(id: string) {
 export function SortableColumn({
   status,
   cards,
-  showEmpty,
   filtering,
   now,
   celebrating,
@@ -306,7 +305,6 @@ export function SortableColumn({
 }: {
   status: TodoStatus;
   cards: BoardCard[];
-  showEmpty: boolean;
   filtering: boolean;
   now: string;
   celebrating: string | null;
@@ -326,7 +324,7 @@ export function SortableColumn({
     <div ref={setNodeRef} className="flex min-h-16 flex-col gap-3">
       <SortableContext items={items} strategy={verticalListSortingStrategy}>
         {shown.length === 0 ? (
-          showEmpty && <ColumnEmpty status={status} filtered={filtering} />
+          <ColumnEmpty status={status} filtered={filtering} />
         ) : (
           <ul className="flex flex-col gap-2.5">
             {shown.map((card, index) => (

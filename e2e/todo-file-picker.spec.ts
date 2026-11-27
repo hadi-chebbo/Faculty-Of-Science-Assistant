@@ -136,13 +136,13 @@ test("removing the file of a card with no title of its own keeps the file's titl
   await expect(dialog(page).getByRole("textbox", { name: "Title" })).toHaveValue("Sample notes");
 });
 
-test("the composer links a saved file; with an empty title the card takes the file's title and Open works", async ({ page, isMobile }) => {
+test("the new-card dialog links a saved file; with an empty title the card takes the file's title and Open works", async ({ page, isMobile }) => {
   const id = await resourceId("DEMO301", "Sample notes");
   await saveFile(isMobile, id);
   await signInOnBoard(page, isMobile);
 
   await page.getByRole("button", { name: "New card", exact: true }).click();
-  const input = page.getByRole("textbox", { name: "New card in To do" });
+  const input = page.getByRole("dialog", { name: "New card" }).getByRole("textbox", { name: "Title" });
   await page.getByRole("button", { name: "Link a saved file" }).click();
   await page.getByRole("button", { name: "Sample notes" }).click();
   await expect(page.getByRole("button", { name: "Remove Sample notes" })).toBeVisible();
@@ -151,17 +151,15 @@ test("the composer links a saved file; with an empty title the card takes the fi
   await page.getByRole("button", { name: "Add card" }).click();
   await expect(topCard(page).getByRole("heading", { level: 3 })).toHaveText("Sample notes");
   await expect(topCard(page)).toContainText("DEMO301");
-  // The form stays open and is clear again.
-  await expect(input).toHaveValue("");
-  await expect(page.getByRole("button", { name: "Link a saved file" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Remove Sample notes" })).toHaveCount(0);
+  // The dialog closes.
+  await expect(page.getByRole("dialog", { name: "New card" })).toHaveCount(0);
 
   await expect.poll(async () => withDb(async (c) => (await c.query(`SELECT count(*)::int AS n FROM todos t JOIN users u ON u.id = t.user_id WHERE t.resource_id = $1 AND u.email = $2`, [id, emailFor(isMobile)])).rows[0].n)).toBe(1);
   await topCard(page).getByRole("link", { name: /^Open/ }).click();
   await expect(page).toHaveURL(`/resources/${id}`);
 });
 
-test("Esc closes only the picker, in the composer", async ({ page, isMobile }) => {
+test("Esc closes only the picker, in the new-card dialog", async ({ page, isMobile }) => {
   await saveFile(isMobile, await resourceId("DEMO301", "Sample notes"));
   await signInOnBoard(page, isMobile);
   await page.getByRole("button", { name: "New card", exact: true }).click();
@@ -169,18 +167,18 @@ test("Esc closes only the picker, in the composer", async ({ page, isMobile }) =
   await expect(page.getByRole("button", { name: "Sample notes" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Sample notes" })).toHaveCount(0);
-  await expect(page.getByRole("textbox", { name: "New card in To do" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "New card" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Link a saved file" })).toBeFocused();
 
   // Also with the focus back in the title field: Esc closes the picker, then the form.
   await page.getByRole("button", { name: "Link a saved file" }).click();
   await expect(page.getByRole("button", { name: "Sample notes" })).toBeVisible();
-  await page.getByRole("textbox", { name: "New card in To do" }).focus();
+  await page.getByRole("dialog", { name: "New card" }).getByRole("textbox", { name: "Title" }).focus();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Sample notes" })).toHaveCount(0);
-  await expect(page.getByRole("textbox", { name: "New card in To do" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "New card" })).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("textbox", { name: "New card in To do" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "New card" })).toHaveCount(0);
 });
 
 test("the picker says so when nothing is saved", async ({ page, isMobile }) => {

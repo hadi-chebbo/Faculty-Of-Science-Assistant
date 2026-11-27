@@ -201,7 +201,7 @@ test("adding a card that the filter would hide clears the filter", async ({ page
   await signInOnBoard(page, isMobile);
   await chip(page, "DEMO301").click();
   await page.getByRole("button", { name: isMobile ? "New card" : "Add a card" }).locator("visible=true").first().click();
-  await page.getByRole("textbox", { name: /^New card in/ }).fill("Fresh note");
+  await page.getByRole("dialog", { name: "New card" }).getByRole("textbox", { name: "Title" }).fill("Fresh note");
   await page.keyboard.press("Enter");
   await expect(chip(page, "All")).toHaveAttribute("aria-pressed", "true");
   await expect(shown(page, isMobile).first()).toHaveText("Fresh note");
