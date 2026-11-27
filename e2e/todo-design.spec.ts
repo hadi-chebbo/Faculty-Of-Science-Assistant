@@ -73,7 +73,8 @@ async function phoneProblems(page: Page, scope: string): Promise<string[]> {
     const out: string[] = [];
     for (const root of document.querySelectorAll<HTMLElement>(selector)) {
       root.querySelectorAll<HTMLElement>("a, button").forEach((el) => {
-        const r = el.getBoundingClientRect();
+        // A card's title button is stretched over the whole card (an overlay), so its hit area is the card's box.
+        const r = (el.hasAttribute("data-card-open") ? el.closest("article") ?? el : el).getBoundingClientRect();
         if (r.width > 1 && r.height > 0 && getComputedStyle(el).visibility !== "hidden" && r.height < 43.5) {
           out.push(`${el.innerText || el.getAttribute("aria-label") || el.tagName} ${Math.round(r.height)}`);
         }
@@ -107,25 +108,41 @@ test("on a phone the board has no sideways scroll, 44px targets and text of 12px
 
   await page.getByRole("button", { name: "Revise the graph lecture", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await page.waitForTimeout(500); // the dialog opens with a zoom-in, which shrinks the boxes a little while it runs
+  // The dialog opens with a zoom-in that shrinks the boxes while it runs.
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
   expect(await phoneProblems(page, '[role="dialog"]'), "card view open").toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });
 
-test("the board does not animate under reduced motion", async ({ page, isMobile }) => {
+test("the board, the composer and the card view do not animate under reduced motion", async ({ page, isMobile }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await signInOnBoard(page, isMobile);
+  await expect(page.getByRole("button", { name: "Sign in", exact: true })).toHaveCount(0); // the sign-in form (and its spinner) is gone
   await expect(page.getByRole("heading", { level: 3, name: "Revise the graph lecture" }).first()).toBeVisible();
-  const animations = await page.evaluate(() =>
-    [...document.querySelectorAll("main *")].filter((n) => !n.closest('form[action*="sign-in"], form') && getComputedStyle(n).animationName !== "none")
-      .map((n) => n.outerHTML.slice(0, 120)),
-  );
-  expect(animations).toEqual([]);
+  const animating = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll("main#main *, [role=dialog], [role=dialog] *")]
+        .filter((n) => getComputedStyle(n).animationName !== "none")
+        .map((n) => n.outerHTML.slice(0, 120)),
+    );
+  expect(await animating(), "board").toEqual([]);
+
+  await page.getByRole("button", { name: isMobile ? "New card" : "Add a card" }).first().click();
+  await expect(page.getByRole("textbox", { name: /^New card in/ })).toBeVisible();
+  expect(await animating(), "composer").toEqual([]);
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Revise the graph lecture", exact: true }).first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  expect(await animating(), "card view").toEqual([]);
 });
 
 test("the linked file's icon box carries the lecture colour from the shared design language", async ({ page, isMobile }) => {
   await signInOnBoard(page, isMobile);
   const tile = page.getByRole("link", { name: /^Open Sample lecture 1 in the reader/ }).first();
   await expect(tile).toBeVisible();
-  await expect(tile.locator("span").first()).toHaveClass(new RegExp(TYPE_STYLES.lecture.chip.split(" ")[0].replace("/", "\\/")));
+  const box = tile.locator("span").first();
+  for (const token of TYPE_STYLES.lecture.chip.split(" ")) {
+    await expect(box).toHaveClass(new RegExp(`(^|\\s)${token.replace(/[/:.[\]]/g, "\\$&")}(\\s|$)`));
+  }
 });

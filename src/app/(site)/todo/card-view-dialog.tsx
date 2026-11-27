@@ -71,7 +71,7 @@ export function CardViewDialog({
           event.preventDefault();
           onCloseFocus();
         }}
-        className="inset-0 flex max-h-none w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-y-auto rounded-none p-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:max-h-[92vh] sm:max-w-3xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
+        className="motion-reduce:data-[state=closed]:animate-none motion-reduce:data-[state=open]:animate-none inset-0 flex max-h-none w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-y-auto rounded-none p-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:max-h-[92vh] sm:max-w-3xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
       >
         {card && <CardViewBody key={card.id} card={card} now={now} info={info} onEdit={onEdit} onLinkFile={onLinkFile} onDelete={onDelete} onMove={onMove} />}
       </DialogContent>

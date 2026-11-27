@@ -125,7 +125,7 @@ export const TodoCardView = memo(function TodoCardView({
             {...drag?.attributes}
             aria-haspopup="dialog"
             onClick={() => onOpen(card.id)}
-            className="flex min-h-11 w-full cursor-pointer items-center text-left outline-none md:inline md:min-h-0 after:absolute after:inset-0 after:rounded-[20px] focus-visible:after:ring-3 focus-visible:after:ring-ring/50"
+            className="cursor-pointer text-left outline-none after:absolute after:inset-0 after:rounded-[20px] focus-visible:after:ring-3 focus-visible:after:ring-ring/50"
           >
             {titleOf(card)}
           </button>
