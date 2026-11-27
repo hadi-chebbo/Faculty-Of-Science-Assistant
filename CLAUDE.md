@@ -495,9 +495,11 @@ mock exam generation, personalization.
   "Chapter 2: 4 of 5 files done", "Exams: 3 of 6 done" for an exam, or "DEMO301: 8 of 13 files done" for a
   file in General (the bar is primary, success green once finished). API: `PUT` / `DELETE
   /api/v1/completions/ID` (200 `{ created, progress, rewards: { milestones } }` / `{ progress }`; 404 for a file that cannot be
-  marked) and `GET /api/v1/completions/ids`. Opening or downloading never marks a file. Phone: a back link (the course code) above the title, the card's
-  top row sticky under the site bar with the window scrolling the pages, then the details below
-  (so the Save button is below the card there).
+  marked) and `GET /api/v1/completions/ids`. Opening or downloading never marks a file. Phone: a back link (the course code) above the title, the card with
+  the page gutter on both sides (16px, inset like on desktop, never edge to edge) and its own height, `max(24rem, 100dvh - 13rem)`, the pages scrolling
+  inside it as on desktop (the top row is not sticky; the floating bar sits at the bottom of the card; the pages keep a 16px gutter
+  inside the reading surface at fit width), then the details directly below, so Save for later is one screen away (#217; the loading
+  skeleton has the same height).
   Back leads to Previous exams for an exam, to the chapter page for a resource in a chapter,
   otherwise to the course (Other material when the course has chapters). Resource rows and solution
   links on public pages open the reader in the same tab. Saving needs an account but the page stays
