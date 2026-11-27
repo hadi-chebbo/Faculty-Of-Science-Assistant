@@ -146,5 +146,6 @@ test("a course's code chip takes its year's colour from the shared design langua
   await save(page, baseURL!, "DEMO301", "Sample notes"); // second year
   await page.reload();
   const chip = page.getByRole("region", { name: /DEMO301/ }).getByRole("link", { name: "DEMO301" });
-  await expect(chip).toHaveClass(new RegExp(YEAR_STYLES[2].chip.split(" ")[0].replace("/", "\\/")));
+  const classes = ((await chip.getAttribute("class")) ?? "").split(/\s+/);
+  for (const token of YEAR_STYLES[2].chip.split(" ")) expect(classes, token).toContain(token);
 });

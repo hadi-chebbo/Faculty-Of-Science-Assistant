@@ -4,6 +4,7 @@ import { Bookmark } from "lucide-react";
 import Link from "next/link";
 import { AddToTodoIconButton } from "@/components/site/add-to-todo-icon-button";
 import { ResourceRow } from "@/components/site/resource-row";
+import { IconCard } from "@/components/site/icon-card";
 import { YearCircle } from "@/components/site/year-badge";
 import { Button } from "@/components/ui/button";
 import { useSavedLookup } from "@/lib/saved-client";
@@ -22,17 +23,16 @@ export function SavedList({ groups }: { groups: SavedCourseGroup[] }) {
 
   if (visible.length === 0) {
     return (
-      <div className="flex flex-col items-center rounded-3xl border bg-card px-4 py-12 text-center md:py-16">
-        <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-link">
-          <Bookmark className="size-6" aria-hidden />
-        </span>
-        <p className="mt-4 max-w-md">Nothing saved yet. Tap the bookmark on any file to keep it here.</p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+      <IconCard
+        icon={Bookmark}
+        actions={
           <Button asChild className="h-11 rounded-xl px-5 md:h-10">
             <Link href="/#years">Browse courses</Link>
           </Button>
-        </div>
-      </div>
+        }
+      >
+        <p className="mt-4 max-w-md">Nothing saved yet. Tap the bookmark on any file to keep it here.</p>
+      </IconCard>
     );
   }
 
@@ -58,6 +58,8 @@ export function SavedList({ groups }: { groups: SavedCourseGroup[] }) {
                 <span className="text-sm font-normal text-muted-foreground">{courseYearSemesterLabel(group.semester)}</span>
               </h2>
             </div>
+            {/* The shared ResourceRow renders an `li` root with its own border, background and radius classes (and
+                I may not edit it), so inside this card they are overridden from here; the hover border (border-primary/40) stays. */}
             <ul className="space-y-1 rounded-3xl border bg-card p-1.5 [&>li]:rounded-2xl [&>li]:border-transparent [&>li]:bg-transparent">
               {group.items.map((resource) => (
                 <ResourceRow key={resource.id} resource={resource} action={<AddToTodoIconButton resourceId={resource.id} title={resource.title} />} />
