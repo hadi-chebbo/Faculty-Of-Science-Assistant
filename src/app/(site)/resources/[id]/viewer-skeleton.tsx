@@ -9,7 +9,7 @@ export function ViewerSkeleton({ percent }: { percent?: number | null }) {
     <div
       role="status"
       aria-label="Loading the file"
-      className="flex flex-col overflow-hidden rounded-xl border bg-card md:h-[max(30rem,calc(100dvh-13rem))]"
+      className="flex flex-col overflow-hidden rounded-xl border bg-card h-[max(24rem,calc(100dvh-13rem))] md:h-[max(30rem,calc(100dvh-13rem))]"
     >
       <div className="h-[52px] shrink-0 border-b md:h-12" />
       <div className="flex min-h-0 flex-1 flex-col items-center gap-3 bg-muted p-4">

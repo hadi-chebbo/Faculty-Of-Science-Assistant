@@ -43,10 +43,6 @@ const RESIZE_DEBOUNCE_MS = 150;
 const SAVE_DEBOUNCE_MS = 500;
 // Space around the pages inside the reading area (Tailwind p-4), on each side.
 const PADDING = 16;
-// On a phone the window scrolls: the site header and the document's top row take this much.
-const PHONE_CHROME = 56 + 52;
-// The search bar under the top row (a 40px box and its padding, and a border).
-const SEARCH_BAR_HEIGHT = 49;
 // Longer than a smooth scroll to any page takes.
 const JUMP_SETTLE_MS = 900;
 // After that, the scroll position is looked at this often until it has stopped moving.
@@ -90,9 +86,8 @@ interface Anchor {
   centre: number;
 }
 
-// The document card: a top row, the pages, and a floating bar with page and zoom controls. From
-// md up the card has a fixed height and the pages scroll inside it; on a phone the window scrolls
-// and the top row and the bar stay in view. Focus mode lets the card cover the whole viewport.
+// The document card: a top row, the pages, and a floating bar with page and zoom controls. The
+// card has its own height (on a phone too) and the pages scroll inside it. Focus mode lets the card cover the whole viewport.
 export function ReaderCard({
   pdf,
   sizes,
@@ -110,11 +105,8 @@ export function ReaderCard({
   const total = pdf.numPages;
   const desktop = useMediaQuery("(min-width: 768px)");
   const [focus, setFocus] = useState(false);
-  // Inside the card the pages scroll in their own box; otherwise the window scrolls them.
-  const inner = desktop || focus;
 
   const cardRef = useRef<HTMLElement>(null);
-  const topRowRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   // The scrolling box: in state so effects and the pages' observers follow it, and in a ref for
   // the code that moves its scroll position.
@@ -165,27 +157,19 @@ export function ReaderCard({
   // ---- Where the reader is ----------------------------------------------------------------
   // The part of the screen the pages are seen through.
   const viewport = useCallback(() => {
-    if (inner && scroller) {
-      const box = scroller.getBoundingClientRect();
-      return { top: box.top, bottom: box.bottom };
-    }
-    const bar = topRowRef.current?.getBoundingClientRect();
-    return { top: Math.max(0, bar?.bottom ?? 0), bottom: window.innerHeight };
-  }, [inner, scroller]);
+    const box = scroller?.getBoundingClientRect();
+    return { top: box?.top ?? 0, bottom: box?.bottom ?? window.innerHeight };
+  }, [scroller]);
 
   const pageElements = useCallback(
     () => (scroller ? Array.from(scroller.querySelectorAll<HTMLElement>("[data-page]")) : []),
     [scroller],
   );
 
-  // Scrolls the pages (the box in the card, or the window on a phone) by `delta` pixels.
-  const scrollPagesBy = useCallback(
-    (delta: number, behavior: ScrollBehavior = "instant") => {
-      if (inner) scrollerRef.current?.scrollBy({ top: delta, behavior });
-      else window.scrollBy({ top: delta, behavior });
-    },
-    [inner],
-  );
+  // Scrolls the pages (the box in the card) by `delta` pixels.
+  const scrollPagesBy = useCallback((delta: number, behavior: ScrollBehavior = "instant") => {
+    scrollerRef.current?.scrollBy({ top: delta, behavior });
+  }, []);
 
   const anchorRef = useRef<Anchor | null>(null);
   // While the reader is being taken to a page (a smooth scroll), the pages passing by do not
@@ -248,10 +232,10 @@ export function ReaderCard({
       centre: scroller.scrollWidth > 0 ? (scroller.scrollLeft + scroller.clientWidth / 2) / scroller.scrollWidth : 0.5,
     };
     let shown = page;
-    if (inner && scroller.scrollTop <= 0) shown = 1;
-    else if (inner && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) shown = total;
+    if (scroller.scrollTop <= 0) shown = 1;
+    else if (scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2) shown = total;
     if (performance.now() >= jumpUntil.current) setCurrent(shown);
-  }, [scroller, ready, viewport, pageElements, inner, total]);
+  }, [scroller, ready, viewport, pageElements, total]);
 
   useEffect(() => {
     if (!scroller) return;
@@ -262,12 +246,10 @@ export function ReaderCard({
       frame = requestAnimationFrame(update);
     };
     scroller.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("scroll", onScroll, { passive: true });
     frame = requestAnimationFrame(update);
     return () => {
       cancelAnimationFrame(frame);
       scroller.removeEventListener("scroll", onScroll);
-      window.removeEventListener("scroll", onScroll);
     };
   }, [scroller, update]);
 
@@ -275,7 +257,7 @@ export function ReaderCard({
   // part of the same page back at the top of the reading area.
   const lastLayout = useRef<string | null>(null);
   useLayoutEffect(() => {
-    const key = `${ready}|${Math.round(percent * 100)}|${inner}`;
+    const key = `${ready}|${Math.round(percent * 100)}`;
     const before = lastLayout.current;
     lastLayout.current = key;
     const anchor = anchorRef.current;
@@ -291,8 +273,7 @@ export function ReaderCard({
     const element = target ?? scroller.querySelector<HTMLElement>(`[data-page="${anchor.page}"]`);
     if (!element) return;
     // A smooth scroll still on its way would carry on to a place that no longer exists.
-    if (inner) area.scrollTo({ top: area.scrollTop, behavior: "instant" });
-    else window.scrollTo({ top: window.scrollY, behavior: "instant" });
+    area.scrollTo({ top: area.scrollTop, behavior: "instant" });
     const view = viewport();
     const box = element.getBoundingClientRect();
     const delta = target
@@ -300,7 +281,7 @@ export function ReaderCard({
       : box.top - view.top - anchor.gap + anchor.fraction * box.height;
     scrollPagesBy(delta);
     area.scrollLeft = anchor.centre * area.scrollWidth - area.clientWidth / 2;
-  }, [ready, percent, inner, scroller, viewport, scrollPagesBy]);
+  }, [ready, percent, scroller, viewport, scrollPagesBy]);
 
   const cancelJump = useCallback(() => {
     jumpPage.current = 0;
@@ -333,7 +314,7 @@ export function ReaderCard({
       // A long smooth scroll may still be moving then: wait until it has stopped, or the page
       // would be put back in place only for the scroll to carry on past it.
       const finish = (previous: number, checks: number) => {
-        const position = inner ? (scrollerRef.current?.scrollTop ?? 0) : window.scrollY;
+        const position = scrollerRef.current?.scrollTop ?? 0;
         if (position !== previous && checks < SETTLE_CHECKS) {
           settleTimer.current = setTimeout(() => finish(position, checks + 1), SETTLE_CHECK_MS);
           return;
@@ -343,7 +324,7 @@ export function ReaderCard({
       };
       settleTimer.current = setTimeout(() => finish(-1, 0), duration + 50);
     },
-    [scroller, viewport, inner, total, update, pokeBar, scrollPagesBy, alignPage],
+    [scroller, viewport, total, update, pokeBar, scrollPagesBy, alignPage],
   );
 
   // Jump to the page named by the address once the pages are there, then drop the hash.
@@ -447,9 +428,6 @@ export function ReaderCard({
   );
   const searchOpen = search.open;
 
-  // On a phone the window scrolls and the search bar takes room from the pages' view.
-  const phoneSearch = !inner && searchOpen;
-
   // The reading area's size, debounced so dragging a window edge does not redraw every page at
   // every step. The first measurement (and the first after the layout changes) is applied at once.
   useEffect(() => {
@@ -457,7 +435,7 @@ export function ReaderCard({
     let timer: ReturnType<typeof setTimeout> | undefined;
     let first = true;
     const measure = () => {
-      const height = inner ? scroller.clientHeight : window.innerHeight - PHONE_CHROME - (phoneSearch ? SEARCH_BAR_HEIGHT : 0);
+      const height = scroller.clientHeight;
       setAvailable({
         width: fitAreaWidth(scroller.clientWidth, desktop),
         height: Math.max(1, height - 2 * PADDING),
@@ -480,7 +458,7 @@ export function ReaderCard({
       observer.disconnect();
       window.removeEventListener("resize", schedule);
     };
-  }, [scroller, inner, desktop, phoneSearch]);
+  }, [scroller, desktop]);
 
   // ---- Focus mode -------------------------------------------------------------------------
   const usedFullscreen = useRef(false);
@@ -644,17 +622,16 @@ export function ReaderCard({
       }}
       className={cn(
         "flex flex-col bg-card outline-none",
-        // Phone: full width, bleeding to the screen edges (the page container's side padding), rounded top corners only.
+        // The card keeps the page gutter on every width and has its own height, the pages scrolling inside it.
         focus
           ? "fixed inset-0 z-50 h-dvh overflow-hidden"
-          : "-mx-4 rounded-t-3xl border-y-0 border-x-0 border-t sm:-mx-6 md:mx-0 md:rounded-3xl md:border",
-        desktop && !focus && "h-[max(30rem,calc(100dvh-13rem))] overflow-hidden",
+          : "h-[max(24rem,calc(100dvh-13rem))] overflow-hidden rounded-3xl border md:h-[max(30rem,calc(100dvh-13rem))]",
       )}
     >
       {/* The top row holds only Contents (left) and Search and More actions (right), plus Exit focus mode on a
           phone while focus mode is on. The search bar,
-          when open, hangs under it inside the same sticky box. */}
-      <div ref={topRowRef} className={cn("z-20 shrink-0 border-b bg-card", !focus && "rounded-t-3xl", !inner && "sticky top-14")}>
+          when open, hangs under it. */}
+      <div className={cn("z-20 shrink-0 border-b bg-card", !focus && "rounded-t-3xl")}>
         <div className={cn("flex items-center gap-1 px-2", desktop ? "h-12" : "h-[52px]")}>
           {desktop ? (
             <Button
@@ -746,7 +723,7 @@ export function ReaderCard({
         )}
       </div>
 
-      <div className={cn(inner && "flex min-h-0 flex-1")}>
+      <div className="flex min-h-0 flex-1">
         {panelShown && (
           <aside id="reader-contents" className="flex w-[200px] shrink-0 flex-col border-r bg-card pt-3">
             <p aria-hidden className="px-4 pb-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
@@ -755,7 +732,7 @@ export function ReaderCard({
             {contentsList}
           </aside>
         )}
-        <div className={cn("relative", inner && "min-h-0 min-w-0 flex-1")}>
+        <div className="relative min-h-0 min-w-0 flex-1">
           <div
             ref={setScroller}
             // The reader taking over with the wheel or a finger ends the pull towards a page.
@@ -779,7 +756,7 @@ export function ReaderCard({
               if (keyboardInBar()) bar.show();
               else bar.toggle();
             }}
-            className={cn("touch-manipulation bg-reader-surface [overflow-anchor:none]", inner ? "absolute inset-0 overflow-auto" : "overflow-x-auto")}
+            className={cn("touch-manipulation bg-reader-surface [overflow-anchor:none]", "absolute inset-0 overflow-auto")}
           >
             <div className={cn("flex w-max min-w-full flex-col items-center gap-3 p-4", !ready && "invisible")}>
               {sizes.map((size, i) => {
@@ -793,7 +770,7 @@ export function ReaderCard({
                     pointsWidth={size.width}
                     cssWidth={css.width}
                     cssHeight={css.height}
-                    root={inner ? scroller : null}
+                    root={scroller}
                     ready={ready}
                     hits={search.hits.get(i + 1)}
                   />
@@ -802,19 +779,18 @@ export function ReaderCard({
             </div>
           </div>
 
-          {/* On a phone this sits just above the screen bottom and follows the window; otherwise it
-              floats at the bottom of the reading area. Not a live region: the page number changes on
+          {/* Floats at the bottom of the reading area. Not a live region: the page number changes on
               every scroll step, and each page canvas is already labelled. */}
           <div
             className={cn(
               "pointer-events-none z-10",
-              inner ? "absolute inset-x-0 bottom-0" : "sticky bottom-[calc(0.75rem+env(safe-area-inset-bottom))] h-0",
+              "absolute inset-x-0 bottom-0",
             )}
           >
             <div
               className={cn(
                 "flex flex-col items-center gap-2 px-3",
-                inner ? barPadding : "absolute inset-x-0 bottom-0",
+                barPadding,
               )}
             >
               {offer !== null && (

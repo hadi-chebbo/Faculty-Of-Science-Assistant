@@ -58,11 +58,15 @@ async function tapPage(page: Page) {
 // shows it and restarts its timer, exactly as a real press on it does.
 // Waits for a smooth scroll to come to rest. Needed before a fast-forward of the page's clock,
 // which would otherwise run the reader's "scroll is over" timer while the scroll is still moving.
+// The pages scroll inside the card (on a phone too), so the box that holds them is what moves.
+const pagesTop = (page: Page) =>
+  page.evaluate(() => document.querySelector("[data-page]")?.closest<HTMLElement>(".overflow-auto")?.scrollTop ?? -1);
+
 async function scrollRest(page: Page) {
   let last = -1;
   await expect
     .poll(async () => {
-      const y = await page.evaluate(() => window.scrollY);
+      const y = await pagesTop(page);
       const rest = y === last;
       last = y;
       return rest;
@@ -304,6 +308,22 @@ test.describe("reading a long file", () => {
   }
 
   const pageCanvas = (page: Page, n: number) => page.getByRole("img", { name: `Page ${n} of ${PAGES}` });
+
+  test("on a phone the pages have side gutters and the details are one screen below the top", async ({ page, isMobile }) => {
+    test.skip(!isMobile, "phone layout");
+    await open(page);
+    const view = page.viewportSize()!;
+    const card = (await page.locator("section[aria-label='Document']").boundingBox())!;
+    // The card keeps the page gutter and the page has a gutter inside the reading surface.
+    expect(card.x).toBeGreaterThanOrEqual(16);
+    const first = (await page.getByRole("img", { name: `Page 1 of ${PAGES}` }).boundingBox())!;
+    expect(first.x - card.x).toBeGreaterThan(8);
+    expect(card.x + card.width - (first.x + first.width)).toBeGreaterThan(8);
+    // The card does not grow with the file: the save button is within one screen of scrolling.
+    await page.mouse.wheel(0, view.height);
+    const save = page.getByRole("button", { name: "Save for later" }).last();
+    await expect(save).toBeInViewport();
+  });
 
   test("next and previous move through the pages and stop at the start", async ({ page, isMobile }) => {
     await open(page);
@@ -689,8 +709,9 @@ test.describe("reading a long file", () => {
       await page.clock.fastForward(5000);
       await expect(bar(page)).toBeHidden();
 
+      await page.mouse.move(page.viewportSize()!.width / 2, page.viewportSize()!.height * 0.45);
       await page.mouse.wheel(0, 500);
-      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+      await expect.poll(() => pagesTop(page)).toBeGreaterThan(100);
       await expect(bar(page)).toBeHidden();
 
       // A finger dragged over the page is a scroll, not a tap.

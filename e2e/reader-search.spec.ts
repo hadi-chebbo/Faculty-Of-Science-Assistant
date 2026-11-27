@@ -722,12 +722,12 @@ test.describe("text, search and contents", () => {
       const row = (await searchBar(page).boundingBox())!;
       const card = (await page.locator("section[aria-label='Document']").boundingBox())!;
       expect(row.width).toBeGreaterThanOrEqual(card.width - 2);
-      // It sits right under the top row, which stays on screen with it.
+      // It sits right under the top row; the card has its own height, so both are on screen.
       await page.getByRole("button", { name: "Next match" }).click();
       await expect(currentHit(page, 4)).toBeInViewport();
       const top = (await page.getByRole("button", { name: "Search in document" }).boundingBox())!;
       expect(top.y).toBeGreaterThanOrEqual(0);
-      expect(top.y).toBeLessThan(200);
+      expect(top.y).toBeLessThan(page.viewportSize()!.height / 2);
     });
 
     test("the top row holds only Contents, Search and More actions", async ({ page }) => {
