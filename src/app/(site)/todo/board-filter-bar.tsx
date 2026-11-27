@@ -43,7 +43,7 @@ export function BoardFilterBar({
                   type="button"
                   aria-pressed={active}
                   onClick={() => onChange({ ...filter, chip: chip.key })}
-                  className={cn(chipClass(active), "cursor-pointer", chip.key !== ALL_COURSES && chip.key !== NOTES_ONLY && "font-mono text-xs")}
+                  className={cn(chipClass(active), "cursor-pointer", active && "border-heading bg-heading text-card", chip.key !== ALL_COURSES && chip.key !== NOTES_ONLY && "font-mono text-xs")}
                 >
                   {chip.label}
                 </button>

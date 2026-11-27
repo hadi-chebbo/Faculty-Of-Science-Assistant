@@ -1,7 +1,7 @@
 import { memo, useRef, type HTMLAttributes, type Ref } from "react";
 import { ArrowDown, ArrowUp, Check, ChevronRight, Clock, FileX, MoreHorizontal, PencilLine, Play, StickyNote, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { TYPE_ICONS } from "@/components/site/resource-row";
+import { TYPE_ICONS, TYPE_STYLES } from "@/lib/design-language";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -100,7 +100,7 @@ export const TodoCardView = memo(function TodoCardView({
     <article
       data-card-drag={drag ? "" : undefined}
       aria-busy={card.pending || undefined}
-      className={`relative rounded-xl border bg-card p-3 text-left shadow-xs transition-opacity hover:border-foreground/20 ${card.pending ? "opacity-70" : ""} ${done ? "bg-card/70" : ""} ${celebrating ? "done-ring" : ""}`}
+      className={`relative rounded-[20px] border bg-card p-3.5 text-left transition-opacity hover:border-foreground/20 ${card.pending ? "opacity-70" : ""} ${done ? "bg-card/70" : ""} ${celebrating ? "done-ring" : ""}`}
     >
       {/* A card with a file shows it in its own tile below; only a plain note keeps this label. */}
       {!file && (
@@ -125,7 +125,7 @@ export const TodoCardView = memo(function TodoCardView({
             {...drag?.attributes}
             aria-haspopup="dialog"
             onClick={() => onOpen(card.id)}
-            className="cursor-pointer text-left outline-none after:absolute after:inset-0 after:rounded-xl focus-visible:after:ring-3 focus-visible:after:ring-ring/50"
+            className="flex min-h-11 w-full cursor-pointer items-center text-left outline-none md:inline md:min-h-0 after:absolute after:inset-0 after:rounded-[20px] focus-visible:after:ring-3 focus-visible:after:ring-ring/50"
           >
             {titleOf(card)}
           </button>
@@ -253,7 +253,7 @@ export const TodoCardView = memo(function TodoCardView({
 function FileTile({ file, cardTitle, live }: { file: NonNullable<Card["resource"]>; cardTitle: string; live: boolean }) {
   if (!file.available) {
     return (
-      <div className="mt-2.5 flex items-center gap-2.5 rounded-lg border border-dashed bg-muted/40 p-2">
+      <div className="mt-2.5 flex items-center gap-2.5 rounded-[14px] border border-dashed bg-muted/40 p-2">
         <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground" aria-hidden>
           <FileX className="size-4" />
         </span>
@@ -269,7 +269,7 @@ function FileTile({ file, cardTitle, live }: { file: NonNullable<Card["resource"
   );
   const body = (
     <>
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-link" aria-hidden>
+      <span className={`flex size-8 shrink-0 items-center justify-center rounded-[10px] ${TYPE_STYLES[file.type].chip}`} aria-hidden>
         <Icon className="size-4" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
@@ -292,7 +292,7 @@ function FileTile({ file, cardTitle, live }: { file: NonNullable<Card["resource"
       </span>
     </>
   );
-  const look = "mt-2.5 flex min-h-11 items-center gap-2.5 rounded-lg border bg-muted/40 p-2 md:min-h-0";
+  const look = "mt-2.5 flex min-h-11 items-center gap-2.5 rounded-[14px] border bg-muted/40 p-2 md:min-h-0";
   if (!live) return <div className={look}>{body}</div>;
   return (
     <Link
